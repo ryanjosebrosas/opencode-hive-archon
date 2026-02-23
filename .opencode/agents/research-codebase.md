@@ -5,6 +5,7 @@ tools:
   read: true
   glob: true
   grep: true
+  archon_rag_search_code_examples: true
   bash: false
   write: false
   edit: false
@@ -52,6 +53,7 @@ For each relevant discovery:
   ```
 - **Relevance**: [why this matters for the research query]
 - **Connections**: [what other files/patterns this relates to]
+- **Implementer must read**: [yes/no — if yes, this file is required for implementation]
 
 ### Patterns Identified
 
@@ -64,9 +66,9 @@ For recurring patterns found across multiple files:
 
 ### File Map
 
-| File | Purpose | Relevance |
-|------|---------|-----------|
-| `path/to/file` | [what it does] | [why it matters for query] |
+| File | Purpose | Relevance | Must Read |
+|------|---------|-----------|-----------|
+| `path/to/file` | [what it does] | [why it matters for query] | [yes/no] |
 
 ### Summary
 

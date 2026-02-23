@@ -1,162 +1,349 @@
 ---
-description: Analyze implementation against plan for process improvements
+description: Analyze implementation against plan with auto-diff, code-review integration, and memory suggestions
 agent: build
 ---
 
-# System Review
+# System Review (Enhanced)
 
 Perform a meta-level analysis of how well the implementation followed the plan and identify process improvements.
 
 ## Purpose
 
-**System review is NOT code review.** You're not looking for bugs in the code — you're looking for bugs in the process.
+**System review is NOT code review.** You're looking for bugs in the **process**, not the code.
 
 **Your job:**
-
 - Analyze plan adherence and divergence patterns
-- Identify which divergences were justified vs problematic
-- Surface process improvements that prevent future issues
-- Suggest updates to Layer 1 assets (AGENTS.md, plan templates, commands)
+- Classify divergences as justified vs. problematic
+- Generate process improvements for Layer 1 assets
+- Auto-suggest lessons for `memory.md`
 
 **Philosophy:**
+- Good divergence → plan limitations → improve planning
+- Bad divergence → unclear requirements → improve communication
+- Repeated issues → missing automation → create commands
 
-- Good divergence reveals plan limitations — improve planning
-- Bad divergence reveals unclear requirements — improve communication
-- Repeated issues reveal missing automation — create commands
+---
 
-## Context & Inputs
+## Execution Workflow
 
-You will analyze four key artifacts:
+### Step 0: Pre-Check (Code Review Integration)
 
-**Plan Command:**
-Read this to understand the planning process and what instructions guide plan creation.
-@.opencode/commands/planning.md
+**Check if `/code-review` was run:**
+```bash
+# Look for code review artifacts or ask user
+```
 
-**Generated Plan:**
-Read this to understand what the agent was SUPPOSED to do.
-Plan file: $1
+**If NOT run:**
+```
+⚠️ Code review not detected. Running 4 parallel review agents now...
+```
+- Delegate to `@code-review-type-safety`, `@code-review-security`, `@code-review-architecture`, `@code-review-performance`
+- Aggregate findings → use in Step 4 (Code Quality Score)
 
-**Execute Command:**
-Read this to understand the execution process and what instructions guide implementation.
-@.opencode/commands/execute.md
+**If run:** Read code review findings for quality score.
 
-**Execution Report:**
-Read this to understand what the agent ACTUALLY did and why.
-Execution report: $2
+---
 
-## Analysis Workflow
+### Step 1: Auto-Diff (Plan vs. Reality)
 
-### Step 1: Understand the Planned Approach
+**Run auto-diff script:**
+```bash
+node scripts/analyze-plan-diff.js {plan-file} --json
+```
 
-Read the generated plan ($1) and extract:
+**Extract metrics:**
+- File Adherence % (planned files that were modified)
+- Pattern Compliance % (referenced patterns appear in diff)
+- Scope Creep (+N files not in plan)
+- Missed Files (N files in plan but not modified)
 
-- What features were planned?
-- What architecture was specified?
-- What validation steps were defined?
-- What patterns were referenced?
+**Calculate Plan Adherence Score:**
+```
+Plan Adherence = (File Adherence + Pattern Compliance) / 2
+```
 
-### Step 2: Understand the Actual Implementation
+---
 
-Read the execution report ($2) and extract:
+### Step 2: Plan Quality Assessment
 
-- What was implemented?
-- What diverged from the plan?
-- What challenges were encountered?
-- What was skipped and why?
+**Read plan file** and assess each section using `templates/PLAN-QUALITY-ASSESSMENT.md`:
 
-### Step 3: Classify Each Divergence
+| Section | Status | Points |
+|---------|--------|--------|
+| Feature Description | Complete/Partial/Missing | /10 |
+| User Story | Complete/Partial/Missing | /10 |
+| Solution Statement | Complete/Partial/Missing | /10 |
+| Relevant Files | Complete/Partial/Missing | /15 |
+| Patterns to Follow | Complete/Partial/Missing | /15 |
+| Step-by-Step Tasks | Complete/Partial/Missing | /15 |
+| Testing Strategy | Complete/Partial/Missing | /10 |
+| Validation Commands | Complete/Partial/Missing | /10 |
+| Acceptance Criteria | Complete/Partial/Missing | /5 |
+| **Total** | | **/100** |
 
-For each divergence identified in the execution report, classify as:
+**Plan Quality Score** = Total Points / 100 * 10
+
+---
+
+### Step 3: Read Execution Report
+
+**Read**: `requests/execution-reports/{feature}-report.md`
+
+**Extract:**
+- Completed tasks (count / total)
+- Divergences from plan (list each with reason)
+- Issues & Notes (challenges encountered)
+- Validation results (pass/fail status)
+
+**Classify each divergence:**
 
 **Good Divergence (Justified):**
-
-- Plan assumed something that didn't exist in the codebase
+- Plan assumed something that didn't exist
 - Better pattern discovered during implementation
-- Performance optimization needed
-- Security issue discovered that required different approach
+- Performance/security issue required different approach
 
 **Bad Divergence (Problematic):**
-
-- Ignored explicit constraints in plan
-- Created new architecture instead of following existing patterns
-- Took shortcuts that introduce tech debt
+- Ignored explicit constraints
+- Created new architecture vs. following patterns
+- Shortcuts introducing tech debt
 - Misunderstood requirements
 
-### Step 4: Trace Root Causes
+---
 
-For each problematic divergence, identify the root cause:
+### Step 4: Code Quality Score
 
-- Was the plan unclear? Where, why?
-- Was context missing? Where, why?
-- Was validation missing? Where, why?
-- Was a manual step repeated? Where, why?
+**From Step 0 code review findings:**
+- Type Safety Issues: count Critical/Major/Minor
+- Security Issues: count Critical/Major/Minor
+- Architecture Issues: count Critical/Major/Minor
+- Performance Issues: count Critical/Major/Minor
 
-### Step 5: Generate Process Improvements
+**Calculate Code Quality Score:**
+```
+Code Quality = 10 - (Critical*2 + Major*1 + Minor*0.5)
+Min: 0, Max: 10
+```
 
-Based on patterns across divergences, suggest:
+---
 
-- **AGENTS.md updates:** Universal patterns or anti-patterns to document
-- **Plan command updates:** Instructions that need clarification or missing steps
-- **Execute command updates:** Validation steps to add to execution checklist
-- **New commands:** Manual processes that should be automated
+### Step 5: Validation Pyramid Check
+
+**Verify 5-level validation was followed:**
+
+| Level | Check | Pass/Fail |
+|-------|-------|-----------|
+| 1: Syntax & Style | Lint commands run? | |
+| 2: Unit Tests | Unit tests created + pass? | |
+| 3: Integration Tests | Integration tests created + pass? | |
+| 4: Manual Validation | Manual steps documented + tested? | |
+| 5: Additional | Any extra validation specified? | |
+
+**Validation Score** = (Pass count / 5) * 10
+
+---
+
+### Step 6: Memory Suggestions
+
+**Generate lessons** using `templates/MEMORY-SUGGESTION-TEMPLATE.md`:
+
+**Extract from execution report:**
+1. Divergences → lessons about planning gaps
+2. Challenges → gotchas for future features
+3. Workarounds → patterns to replicate
+4. "Wish we knew" → decisions to document
+
+**Categorize each lesson:**
+- **gotcha**: Pitfalls, edge cases
+- **pattern**: Successful approaches to replicate
+- **decision**: Architecture/tech choices with rationale
+- **anti-pattern**: What not to do
+
+**Output format:**
+```markdown
+### {Date}: {Title}
+**Category:** {category}
+**What:** {one-liner}
+**Why:** {why this matters}
+**Applied to:** {which commands/templates/agents to update}
+```
+
+---
+
+### Step 7: Generate Report
+
+**Save to**: `requests/system-reviews/{feature}-review.md`
+
+**Overall Alignment Score:**
+```
+Alignment = (
+  Plan Adherence * 0.40 +
+  Plan Quality * 0.20 +
+  Divergence Justification * 0.30 +
+  Code Quality * 0.10
+)
+```
+
+**Scoring breakdown table:**
+| Component | Weight | Score |
+|-----------|--------|-------|
+| Plan Adherence | 40% | /10 |
+| Plan Quality | 20% | /10 |
+| Divergence Justification | 30% | /10 |
+| Code Quality | 10% | /10 |
+| **Total** | **100%** | **/10** |
+
+---
 
 ## Output Format
 
-Save your analysis to: `requests/system-reviews/[feature-name]-review.md`
-
 ### Overall Alignment Score: __/10
 
-Scoring guide:
+**Scoring breakdown:**
+| Component | Weight | Score |
+|-----------|--------|-------|
+| Plan Adherence | 40% | /10 |
+| Plan Quality | 20% | /10 |
+| Divergence Justification | 30% | /10 |
+| Code Quality | 10% | /10 |
 
-- 10: Perfect adherence, all divergences justified
-- 7-9: Minor justified divergences
-- 4-6: Mix of justified and problematic divergences
-- 1-3: Major problematic divergences
+**Classification:**
+- 9-10: Excellent — process working well
+- 7-8: Good — minor improvements needed
+- 5-6: Fair — significant gaps identified
+- <5: Poor — process breakdown, needs attention
+
+---
+
+### Auto-Diff Analysis
+
+```
+Planned Files: N
+Actual Files: N
+Overlap: N
+
+File Adherence: X%
+Pattern Compliance: X%
+Scope Creep: +N files
+Missed Files: N files
+```
+
+---
+
+### Plan Quality Assessment
+
+| Section | Status | Notes |
+|---------|--------|-------|
+| Feature Description | | |
+| User Story | | |
+| Solution Statement | | |
+| Relevant Files | | |
+| Patterns to Follow | | |
+| Step-by-Step Tasks | | |
+| Testing Strategy | | |
+| Validation Commands | | |
+| Acceptance Criteria | | |
+
+**Plan Quality Score:** __/10
+
+---
 
 ### Divergence Analysis
 
-For each divergence from the execution report:
+For each divergence from execution report:
 
 ```
-divergence: [what changed]
-planned: [what plan specified]
-actual: [what was implemented]
-reason: [agent's stated reason from report]
-classification: good | bad
-justified: yes/no
-root_cause: [unclear plan | missing context | missing validation | other]
+**Divergence:** {what changed}
+**Planned:** {what plan specified}
+**Actual:** {what was implemented}
+**Reason:** {agent's stated reason}
+**Classification:** Good / Bad
+**Root Cause:** {unclear plan | missing context | missing validation | other}
 ```
 
-### Pattern Compliance
+**Divergence Justification Score:** __/10
+- (Good divergences / Total divergences) * 10
 
-- Followed codebase architecture: yes/no
-- Used documented patterns (from AGENTS.md): yes/no
-- Applied testing patterns correctly: yes/no
-- Met validation requirements: yes/no
+---
+
+### Code Quality Summary
+
+| Review Type | Critical | Major | Minor |
+|-------------|----------|-------|-------|
+| Type Safety | | | |
+| Security | | | |
+| Architecture | | | |
+| Performance | | | |
+
+**Code Quality Score:** __/10
+
+---
+
+### Validation Pyramid
+
+| Level | Check | Pass/Fail |
+|-------|-------|-----------|
+| 1: Syntax & Style | | |
+| 2: Unit Tests | | |
+| 3: Integration Tests | | |
+| 4: Manual Validation | | |
+| 5: Additional | | |
+
+**Validation Score:** __/10
+
+---
+
+### Memory Suggestions
+
+> Review these before appending to `memory.md`. Remove duplicates, keep valuable lessons.
+
+```markdown
+<!-- Copy-approved entries to memory.md -->
+
+### {Date}: {Title}
+**Category:** {category}
+**What:** {one-liner}
+**Why:** {why this matters}
+**Applied to:** {affected areas}
+
+...
+```
+
+---
 
 ### System Improvement Actions
 
 **Update AGENTS.md:**
-- [specific patterns or anti-patterns to document]
+- {specific patterns or anti-patterns to document}
 
 **Update Plan Command:**
-- [instructions to clarify or steps to add]
+- {instructions to clarify or steps to add}
 
 **Update Execute Command:**
-- [validation steps to add to execution checklist]
+- {validation steps to add to execution checklist}
 
 **Create New Command:**
-- [manual processes repeated 3+ times to automate]
+- {manual processes repeated 3+ times to automate}
+
+---
 
 ### Key Learnings
 
-- What worked well
-- What needs improvement
-- Concrete improvements for next implementation
+**What worked well:**
+- {list 2-3 successes}
 
-## Important
+**What needs improvement:**
+- {list 2-3 gaps}
 
-- **Be specific:** Don't say "plan was unclear" — say "plan didn't specify which auth pattern to use"
-- **Focus on patterns:** One-off issues aren't actionable. Look for repeated problems.
+**Concrete improvements for next implementation:**
+1. {actionable item}
+2. {actionable item}
+3. {actionable item}
+
+---
+
+## Important Rules
+
+- **Be specific:** Don't say "plan was unclear" — say "plan didn't specify X"
+- **Focus on patterns:** Look for repeated problems, not one-offs
 - **Action-oriented:** Every finding should have a concrete asset update suggestion
-- **Be selective:** Only action on recommendations that will genuinely improve future PIV loops
+- **Be selective:** Only action on recommendations that genuinely improve future PIV loops

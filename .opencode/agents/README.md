@@ -1,6 +1,6 @@
 # Custom Subagents
 
-12 subagents for parallel research, code review, and specialist tasks.
+17 subagents for parallel research, code review, and specialist tasks.
 
 ## Research Agents
 
@@ -8,10 +8,11 @@
 |-------|---------|
 | `research-codebase` | Parallel codebase exploration: finds files, extracts patterns, reports findings |
 | `research-external` | Documentation search, best practices, version compatibility checks |
+| `research-ai-patterns` | AI/LLM integration patterns: prompt engineering, RAG, agent orchestration, model selection |
 
 ## Code Review Agents
 
-These four run in parallel during `/code-review`, each checking a different dimension:
+These run in parallel during `/code-review`, each checking a different dimension:
 
 | Agent | What It Catches |
 |-------|----------------|
@@ -19,6 +20,7 @@ These four run in parallel during `/code-review`, each checking a different dime
 | `code-review-security` | SQL injection, XSS, exposed secrets, insecure data handling |
 | `code-review-architecture` | Pattern violations, layer breaches, convention drift |
 | `code-review-performance` | N+1 queries, inefficient algorithms, memory leaks, unnecessary computation |
+| `code-review-ai-specific` | AI-specific issues: hardcoded prompts, missing fallbacks, rate limits, token overflow, context leakage |
 
 ## Utility Agents
 
@@ -26,6 +28,7 @@ These four run in parallel during `/code-review`, each checking a different dime
 |-------|---------|
 | `plan-validator` | Validates plan structure and completeness before execution |
 | `test-generator` | Analyzes changed code and suggests test cases following project patterns |
+| `memory-curator` | Analyzes completed work to identify what should be saved to memory.md |
 
 ## Specialist Agents
 

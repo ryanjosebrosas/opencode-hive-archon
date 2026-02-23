@@ -68,29 +68,22 @@ Read `templates/STRUCTURED-PLAN-TEMPLATE.md` now — it defines the exact struct
 
 **Goal**: Fill → Relevant Codebase Files, New Files to Create, Patterns to Follow
 
-After Phase 1 scopes the feature, launch **2 parallel Task agents** for codebase research. Craft each agent's prompt dynamically using the feature description, systems affected, and keywords from Phase 1.
+After Phase 1 scopes the feature, delegate to **2 parallel pre-defined research agents**. Craft focused queries using the feature description, systems affected, and keywords from Phase 1.
 
-**Launch simultaneously with Phase 3 and 3b agents** — all research agents run in parallel.
+**Launch simultaneously with Phase 3 agents** — all research agents run in parallel.
 
-### Agent A: Similar Implementations & Integration Points (Sonnet)
-- **subagent_type**: `general`
-- **description**: "Find similar code and integration points"
-- **Dynamic prompt must include**:
+### Agent A: @research-codebase — Similar Implementations & Integration Points
+- **Delegation query must include**:
   - The feature description and systems affected from Phase 1
-  - Specific Grep/Glob queries for relevant patterns (file types, function names, route patterns)
+  - Specific file patterns to search (e.g., "find route handlers in src/routes/", "find similar service patterns")
   - Instruction: "Document all relevant file paths WITH line numbers"
   - Instruction: "Identify which existing files need changes and what new files to create"
-  - Instruction: "Return free-form findings with code snippets and file:line references"
 
-### Agent B: Project Patterns & Conventions (Sonnet)
-- **subagent_type**: `general`
-- **description**: "Extract project patterns"
-- **Dynamic prompt must include**:
-  - Instruction to read 2-3 representative files in the feature area
-  - Extract: naming conventions, error handling, logging, type patterns, testing approach
-  - Include actual code snippets with file:line references
-  - Note conventions the new feature must follow
-  - Instruction: "Return free-form findings — no specific format required"
+### Agent B: @research-codebase — Project Patterns & Conventions
+- **Delegation query must include**:
+  - Instruction to focus on 2-3 representative files in the feature area
+  - Request to extract: naming conventions, error handling, logging, type patterns, testing approach
+  - Instruction: "Include actual code snippets with file:line references"
 
 **Fallback**: If the feature is trivially simple (1-2 file changes, obvious pattern), skip agents and explore directly with Glob/Grep.
 
@@ -100,35 +93,17 @@ After Phase 1 scopes the feature, launch **2 parallel Task agents** for codebase
 
 **Goal**: Fill → Relevant Documentation
 
-Launch **1 agent** simultaneously with Phase 2 agents. Skip if no external dependencies are involved (internal-only changes).
+Delegate to **1 pre-defined research agent** simultaneously with Phase 2 agents. Skip if no external dependencies are involved (internal-only changes).
 
-### Agent C: Documentation & Best Practices (Sonnet)
-- **subagent_type**: `general`
-- **description**: "Research external docs and best practices"
-- **Dynamic prompt must include**:
+### Agent C: @research-external — Documentation & Best Practices
+- **Delegation query must include**:
   - The specific libraries, frameworks, or APIs involved from Phase 1
-  - Instruction: "Find official documentation with specific section links"
-  - Instruction: "Check version compatibility and note any breaking changes"
-  - Instruction: "Identify known gotchas and recommended patterns"
-  - Instruction: "Return free-form findings with doc URLs and relevant excerpts"
+  - Request for official documentation with specific section links
+  - Instruction to check version compatibility and note breaking changes
+  - Request to identify known gotchas and recommended patterns
+  - If Archon MCP available: "Search Archon RAG with SHORT queries (2-5 keywords)"
 
 **Fallback**: If purely internal changes with no external dependencies, skip this agent and note "No external research needed."
-
-## PHASE 3b: Archon RAG Research (Parallel Agent)
-
-**Goal**: Fill → Relevant Documentation (from knowledge base)
-
-Launch **1 agent** simultaneously with Phase 2 and Phase 3 agents. Skip if Archon MCP tools are not available.
-
-### Agent D: Archon Knowledge Base (Sonnet)
-- **subagent_type**: `general`
-- **description**: "Search Archon RAG knowledge base"
-- **Dynamic prompt must include**:
-  - The feature description and key technologies from Phase 1
-  - Instruction: "Search with SHORT queries (2-5 keywords)"
-  - Instruction: "Return free-form findings with source references and relevant excerpts"
-
-**Fallback**: If Archon MCP tools are not available, skip this agent. The main agent falls back to web search if needed.
 
 ### Phase 2c: Memory Search (if memory.md exists)
 
@@ -151,9 +126,16 @@ After all agents return, validate their findings in the main conversation:
 
 **Goal**: Fill → Implementation Plan (phases), Testing Strategy, Acceptance Criteria
 
-1. **Synthesize agent findings and validated research** from Phases 2, 3, 3b, & 2c — aggregate free-form agent output (Agents A-D) into the template's Context References sections (Relevant Codebase Files, Patterns to Follow, Relevant Documentation)
+1. **Synthesize agent findings** from Phases 2, 3, & 2c:
+   - Extract file paths from Agent A/B "File Map" and "Findings" sections → populate **Relevant Codebase Files**
+   - Extract code snippets from Agent A/B "Patterns Identified" → populate **Patterns to Follow**
+   - Extract URLs and excerpts from Agent C "Findings" and "Best Practices" → populate **Relevant Documentation**
+   - Extract "Suggested files to create/modify" from Agent summaries → populate **New Files to Create**
+
 2. **Design implementation approach**: fit with existing architecture, dependency ordering, phases (Foundation → Core → Integration → Testing)
+
 3. **Plan testing strategy**: unit tests, integration tests, edge cases
+
 4. **Define acceptance criteria**: specific, measurable, includes functional requirements + test coverage + pattern compliance
 
 ---
@@ -162,11 +144,7 @@ After all agents return, validate their findings in the main conversation:
 
 **Decompose if**: High complexity, 4+ phases, 15+ tasks, 3+ systems, or user requests it.
 
-**If decomposing**:
-1. Read `templates/PLAN-OVERVIEW-TEMPLATE.md` and `templates/SUB-PLAN-TEMPLATE.md`
-2. Split into sub-plans (1 phase = 1 sub-plan, max 8 tasks each)
-3. Assign shared context to overview, per-phase context to sub-plans
-4. Proceed to Phase 5 in "decomposed mode"
+**If decomposing**: Create sub-plans manually (1 phase = 1 plan file, max 8 tasks each). Each sub-plan must be self-contained with full context.
 
 **If NOT decomposing** (default): Proceed to Phase 5 normally (single plan, 700-1000 lines).
 
@@ -215,10 +193,9 @@ Use `templates/STRUCTURED-PLAN-TEMPLATE.md`. Every section must be filled — sp
 <!-- PLAN-SERIES -->
 
 Save to multiple files:
-- `requests/{feature}-plan-overview.md` (use `templates/PLAN-OVERVIEW-TEMPLATE.md`)
-- `requests/{feature}-plan-01-{phase}.md` through `-NN-` (use `templates/SUB-PLAN-TEMPLATE.md`)
+- `requests/{feature}-plan-01-{phase}.md` through `-NN-` (use `templates/STRUCTURED-PLAN-TEMPLATE.md`)
 
-Include EXECUTION ROUTING in overview: Recommended model per sub-plan (e.g., Sonnet for execution, Opus for planning).
+Include EXECUTION ROUTING at top of first sub-plan: Recommended model, shared context summary, task dependencies.
 
 ### For Both Modes
 

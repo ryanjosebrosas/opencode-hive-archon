@@ -33,7 +33,7 @@ This is a **development methodology**: a structured collection of slash commands
 ### What You Get
 
 - **17 slash commands** that automate every phase of development, from planning to commit
-- **16 pre-built AI subagents** for parallel research, code review, specialist tasks, and swarm coordination
+- **19 pre-built AI subagents** for parallel research, code review, specialist tasks, and swarm coordination
 - **8 templates** for plans, PRDs, and agents — only the ones you will actually use
 - **16 reference guides** loaded on-demand, consolidated and focused
 - **1 skill** for systematic planning methodology
@@ -571,14 +571,14 @@ Then run `/init-c` to customize `CLAUDE.md` for your project's tech stack.
 
 ---
 
-## 16 Subagents
+## 19 Subagents
 
-16 subagents run in isolation with their own context windows. Research agents explore in parallel. Code review agents check 4 dimensions simultaneously. Specialist agents bring domain expertise. Swarm workers handle parallel execution with file reservations and quality gates.
+19 subagents run in isolation with their own context windows. Research agents explore in parallel. Code review agents check 5 dimensions simultaneously. Specialist agents bring domain expertise. Swarm workers handle parallel execution with file reservations and quality gates.
 
 Each agent is a markdown file with a system prompt in `.opencode/agents/`. The main agent delegates via the Task tool, and agents return structured results without polluting your implementation context.
 
 <details>
-<summary>All 16 agents — Research, Code Review, Utility, Specialist, Swarm Workers</summary>
+<summary>All 19 agents — Research, Code Review, Utility, Specialist, Swarm Workers</summary>
 
 ### Research Agents
 
@@ -586,10 +586,11 @@ Each agent is a markdown file with a system prompt in `.opencode/agents/`. The m
 |-------|-------|---------|
 | `research-codebase` | Sonnet | Parallel codebase exploration: finds files, extracts patterns, reports findings |
 | `research-external` | Sonnet | Documentation search, best practices, version compatibility checks |
+| `research-ai-patterns` | Sonnet | AI/LLM integration patterns: prompt engineering, RAG, agent orchestration, model selection |
 
 ### Code Review Agents
 
-These four run in parallel during `/code-review`, each checking a different dimension:
+These run in parallel during `/code-review`, each checking a different dimension:
 
 | Agent | Model | What It Catches |
 |-------|-------|----------------|
@@ -597,6 +598,7 @@ These four run in parallel during `/code-review`, each checking a different dime
 | `code-review-security` | Sonnet | SQL injection, XSS, exposed secrets, insecure data handling |
 | `code-review-architecture` | Sonnet | Pattern violations, layer breaches, convention drift |
 | `code-review-performance` | Sonnet | N+1 queries, inefficient algorithms, memory leaks, unnecessary computation |
+| `code-review-ai-specific` | Sonnet | AI-specific issues: hardcoded prompts, missing fallbacks, rate limits, token overflow, context leakage |
 
 ### Utility Agents
 
@@ -604,6 +606,7 @@ These four run in parallel during `/code-review`, each checking a different dime
 |-------|-------|---------|
 | `plan-validator` | Sonnet | Validates plan structure and completeness before `/execute` |
 | `test-generator` | Sonnet | Analyzes changed code and suggests test cases following project patterns |
+| `memory-curator` | Sonnet | Analyzes completed work to identify what should be saved to memory.md |
 
 ### Specialist Agents
 

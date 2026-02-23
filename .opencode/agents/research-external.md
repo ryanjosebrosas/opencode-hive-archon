@@ -1,10 +1,12 @@
 ---
-description: Use this agent for documentation search, best practices research, and version compatibility checks. Searches external docs and web resources.
+description: Use this agent for documentation search, best practices research, and version compatibility checks. Searches external docs, web resources, and Archon knowledge base.
 mode: subagent
 tools:
   read: true
   glob: true
   grep: true
+  archon_rag_search_knowledge_base: true
+  archon_rag_read_full_page: true
   bash: false
   write: false
   edit: false
@@ -28,7 +30,7 @@ Then begin your research based on the query provided by the main agent.
 
 1. **Parse the research query** to identify key technologies, patterns, and questions
 2. **Use webfetch tool** to retrieve relevant documentation pages
-3. **Search for specific APIs, patterns, and best practices**
+3. **Search Archon RAG** if available (use short queries: 2-5 keywords)
 4. **Check version compatibility** if relevant libraries/versions are mentioned
 5. **Compile structured findings** with specific references
 
@@ -45,12 +47,14 @@ For each relevant discovery:
 
 **[Source] — [Topic]**
 - **URL**: [link to source if available]
+- **Specific Section**: [exact section/anchor link, not just main URL]
 - **Summary**: [key information extracted]
 - **Code Example**:
   ```
   [relevant code if available]
   ```
 - **Relevance**: [why this matters for the query]
+- **Version**: [library/framework version if applicable]
 
 ### Best Practices
 

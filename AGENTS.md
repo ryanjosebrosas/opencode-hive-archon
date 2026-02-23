@@ -90,6 +90,8 @@ All guides in `reference/`. Load when the task requires it.
 | `command-design-framework` | Slash command design |
 | `subagents-deep-dive` | Subagent creation |
 | `archon-workflow` | Archon tasks / RAG |
+| `implementation-discipline` | Execution best practices |
+| `global-rules-optimization` | AGENTS.md optimization patterns |
 
 ---
 
@@ -128,15 +130,10 @@ Each level gates the next:
 | `/commit` | Creates conventional-format git commit | After implementation passes review |
 | `/code-review` | 4 parallel review agents | After implementation |
 | `/code-review-fix` | Applies fixes from code review | After code review surfaces issues |
-| `/end-to-end-feature` | Full autonomous pipeline | Trusted, well-defined features |
-| `/rca [issue]` | Root cause analysis | Investigating bugs |
-| `/implement-fix` | Implements fix from RCA | After root cause analysis |
-| `/create-prd` | Generates PRD | Defining new product/feature |
-| `/create-pr` | Creates GitHub Pull Request | After pushing a branch |
-| `/execution-report` | Post-implementation report | Reviewing what was built |
-| `/init-c` | Customizes AGENTS.md for new project | New project setup |
-| `/agents` | Creates new subagent definition | Extending the system |
-| `/system-review` | Audits system state | Periodic health checks |
+| `/swarm-execute` | Parallel multi-agent execution | 15+ tasks, complex features |
+| `/system-review` | Plan vs. reality analysis, memory suggestions | After complex features, periodic audits |
+
+**Solo Developer Mode**: Focus on `/prime` → `/planning` → `/execute` → `/code-review` → `/commit`. Use `/system-review` optionally for process improvement.
 
 ---
 
@@ -147,6 +144,7 @@ Each level gates the next:
 |-------|---------|
 | `research-codebase` | Parallel codebase exploration, file discovery, pattern extraction |
 | `research-external` | Documentation search, best practices, version compatibility |
+| `research-ai-patterns` | AI/LLM integration patterns — prompts, RAG, agent orchestration |
 
 ### Code Review Agents (run in parallel)
 | Agent | What It Catches |
@@ -155,12 +153,13 @@ Each level gates the next:
 | `code-review-security` | SQL injection, XSS, exposed secrets |
 | `code-review-architecture` | Pattern violations, layer breaches |
 | `code-review-performance` | N+1 queries, memory leaks |
+| `code-review-ai-specific` | AI-specific issues — hardcoded prompts, token overflow, prompt injection |
 
 ### Utility Agents
 | Agent | Purpose |
 |-------|---------|
 | `plan-validator` | Validates plan structure before execution |
-| `test-generator` | Suggests test cases for changed code |
+| `memory-curator` | Suggests what to save to memory.md after features |
 
 ### Swarm Workers (SwarmTools)
 | Agent | Purpose |
@@ -170,13 +169,19 @@ Each level gates the next:
 | `swarm-worker-database` | Schema design, migrations, queries, data modeling |
 | `swarm-worker-testing` | Unit tests, integration tests, fixtures, mocks |
 
-### Specialist Agents
-| Agent | Purpose |
-|-------|---------|
-| `specialist-devops` | CI/CD, Docker, IaC, deployments |
-| `specialist-data` | Database design, migrations, queries |
-| `specialist-copywriter` | UI copy, error messages |
-| `specialist-tech-writer` | API docs, READMEs, changelogs |
+---
+
+## Agent Ecosystem
+
+**Context Window Isolation**: Each agent runs in its own context window — efficient for Ollama/Model Studio.
+
+**When to use research agents standalone:**
+- `@research-codebase` — Quick codebase exploration before planning
+- `@research-external` — Documentation lookup for specific libraries
+- `@research-ai-patterns` — AI feature planning (RAG, agents, prompts)
+- `@memory-curator` — End of session, suggest lessons for memory.md
+
+**Integration**: Research agents auto-called by `/planning` command (Phase 2-3).
 
 ---
 
@@ -252,4 +257,7 @@ opencode-coding-system/
    ```
    > /code-review
    > /commit
+   ```
+
+**Workflow**: `/prime` → `/planning` → `/execute` → `/code-review` → `/system-review` (optional) → `/commit`
    ```
