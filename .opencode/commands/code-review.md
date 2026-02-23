@@ -16,6 +16,29 @@ ls .opencode/agents/code-review-*.md 2>/dev/null | wc -l
 
 ---
 
+## Pre-Review Bug Scan
+
+Run UBS on staged changes before launching review agents:
+
+```bash
+ubs --staged --fail-on-warning
+```
+
+**If UBS exits with code 1 (critical issues)**:
+- Report: "❌ Critical bugs found by UBS scanner"
+- Show top 5 critical findings
+- Recommend: Fix bugs before code review
+- Use `/code-review-fix` after fixing bugs
+
+**If UBS exits with code 0 (clean)**:
+- Proceed to Parallel Review or Standard Review
+
+**If UBS not installed**:
+- Report: "⚠️ UBS not installed. Skipping pre-review scan."
+- Proceed with review.
+
+---
+
 ## PARALLEL REVIEW MODE (Preferred)
 
 Launch four Task agents simultaneously:

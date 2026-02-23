@@ -97,7 +97,30 @@ Launch ALL of the following Task agents **simultaneously**:
     - **Gotchas**: {from Gotchas section, or "None recorded"}
     - **Memory Health**: {if last session date is >7 days ago, warn "Stale — last updated {date}". Otherwise "Fresh"}
 
-### Agent 5: Git State (Haiku)
+### Agent 5: Component Health (Haiku)
+- **subagent_type**: `explore`
+- **description**: "Check component availability"
+- **prompt**: |
+    You are checking which system components are available.
+    
+    Check for:
+    1. SwarmTools: Run `swarm --version 2>/dev/null` via Bash
+    2. UBS: Run `ubs --version 2>/dev/null` via Bash  
+    3. Archon MCP: Check if `mcpServers` exists in `opencode.json`
+    4. Hive: Check if `.hive/` directory exists
+    
+    Return ONLY this formatted section (nothing else):
+    
+    ## Component Status
+    - **SwarmTools**: {version or "Not installed"}
+    - **UBS**: {version or "Not installed"}
+    - **Archon MCP**: {Configured/Not configured}
+    - **Hive**: {Initialized/Not found}
+    
+    ### Available Integrations
+    {List which PIV features are enhanced by installed components}
+
+### Agent 6: Git State (Haiku)
 - **subagent_type**: `explore`
 - **description**: "Get git state"
 - **prompt**: |
@@ -234,6 +257,31 @@ Launch ALL of the following Task agents **simultaneously**:
     - **Status**: {clean/dirty, summary of changes if any}
     - **Recent Work**: {list each of the last 10 commits as "- `hash` message"}
 
+### Agent 7: Component Health (Haiku)
+- **subagent_type**: `explore`
+- **description**: "Check component availability"
+- **prompt**: |
+    You are checking which system components are available.
+    
+    Check for:
+    1. SwarmTools: Run `swarm --version 2>/dev/null` via Bash
+    2. UBS: Run `ubs --version 2>/dev/null` via Bash
+    3. Archon MCP: Check if `mcpServers` exists in `opencode.json`
+    4. Hive: Check if `.hive/` directory exists
+    5. ast-grep: Run `ast-grep --version 2>/dev/null` via Bash (UBS dependency)
+    
+    Return ONLY this formatted section (nothing else):
+    
+    ## Component Status
+    - **SwarmTools**: {version or "Not installed"}
+    - **UBS**: {version or "Not installed"}
+    - **Archon MCP**: {Configured/Not configured}
+    - **Hive**: {Initialized/Not found}
+    - **ast-grep**: {version or "Not installed"}
+    
+    ### Available Integrations
+    {List which PIV features are enhanced by installed components}
+
 ---
 
 ## Step 3: Assemble Report
@@ -242,8 +290,8 @@ After ALL agents return, assemble the Prime Context Report:
 
 1. Start with `# Prime Context Report`
 2. Add each agent's returned section in this order:
-   - **System Mode**: Detection → Project Overview → Current State → Memory Context → Available Resources (Commands + Agents + Skills) → Suggested Next Steps
-   - **Codebase Mode**: Detection → Project Overview (merge Agent 3's overview with Agent 4's README Summary into one section) → Architecture → Tech Stack → Core Principles → Dependencies & Tooling → Current State → Memory Context → Suggested Next Steps
+   - **System Mode**: Detection → Project Overview → Current State → Memory Context → Component Status → Available Resources (Commands + Agents + Skills) → Suggested Next Steps
+   - **Codebase Mode**: Detection → Project Overview (merge Agent 3's overview with Agent 4's README Summary into one section) → Architecture → Tech Stack → Core Principles → Dependencies & Tooling → Current State → Memory Context → Component Status → Suggested Next Steps
 3. Add a `## Suggested Next Steps` section — synthesize from Current State + Memory Context to suggest what to work on next
 4. Present the assembled report to the user
 

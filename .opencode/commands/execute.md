@@ -33,6 +33,28 @@ Read the plan file.
 
 **If agent not available**: Skip — proceed to Archon setup.
 
+### 1.75. Execution Mode Check
+
+Count tasks in the plan's "Step by Step Tasks" section.
+
+**If >= 15 tasks OR plan specifies `Execution Method: /swarm-execute`**:
+```
+This plan has {N} tasks.
+
+🔄 Execution Mode Recommendation:
+
+For {N} tasks, consider using /swarm-execute for parallel execution:
+- 4-10 workers can process tasks concurrently
+- File reservations prevent conflicts
+- Progress checkpoints enable recovery
+
+Proceed with sequential /execute?
+[Y] Continue with /execute
+[n] Switch to /swarm-execute {plan_path}
+```
+
+**If < 15 tasks**: Continue with sequential execution (no prompt needed).
+
 ### 1.5. Archon Setup (if available)
 
 Create project and tasks: `manage_project("create", ...)`, then `manage_task("create", ...)` for each plan task with dependency-based task_order. Skip if Archon unavailable.

@@ -11,6 +11,7 @@ tools:
   grep: true
 mcpServers:
   - swarm
+  - archon
 ---
 
 # Role: Backend Implementation Worker
@@ -51,6 +52,21 @@ swarmmail_inbox({agent_name: "your_agent_name", limit: 5})
 - Implement backend logic: services, APIs, business logic, utilities
 - Follow existing patterns from codebase
 - Add error handling, logging, validation
+
+### 2.5. Quality Check (Before Completing)
+
+Run UBS bug scanner on changed files:
+
+```bash
+ubs . --fail-on-warning
+```
+
+**Requirements:**
+- Fix ALL critical issues (🔥) before calling `swarm_complete()`
+- Review warnings (⚠️) — fix if trivial, document if intentional
+- Scan must pass before task is marked complete
+
+**Why:** Catches bugs before they reach version control. Part of the quality gate.
 
 ### 3. Report Progress (at 25%, 50%, 75%)
 

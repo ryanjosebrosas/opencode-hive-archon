@@ -134,6 +134,28 @@ When all workers complete:
    })
    ```
 
+### 7. Sync Learnings to Memory (Optional)
+
+After successful swarm completion:
+
+1. Query semantic memory for high-confidence patterns from this session
+2. Extract 1-3 key learnings (implementation patterns, gotchas, decisions)
+3. Append to memory.md under "Swarm Learnings":
+   ```markdown
+   ### {Date}: {Feature} Learnings
+   
+   - **Pattern**: {pattern discovered}
+   - **Gotcha**: {issue avoided}
+   - **Decision**: {architectural choice made}
+   
+   <!-- Synced from swarm session {epic_id} -->
+   ```
+
+**Only sync if**:
+- All workers completed successfully
+- Learnings are generalizable (not project-specific)
+- memory.md exists
+
 ## Integration with /execute
 
 Both commands save execution reports to `requests/execution-reports/`:

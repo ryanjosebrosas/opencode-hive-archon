@@ -11,6 +11,7 @@ tools:
   grep: true
 mcpServers:
   - swarm
+  - archon
 ---
 
 # Role: Testing Implementation Worker
@@ -53,6 +54,21 @@ swarmmail_inbox({agent_name: "TestingWorker", limit: 5})
 - Match test framework used (Jest, Vitest, Mocha, etc.)
 - Achieve target coverage (typically 80%+)
 - Include edge cases and error conditions
+
+### 2.5. Quality Check (Before Completing)
+
+Run UBS bug scanner on changed files:
+
+```bash
+ubs . --fail-on-warning
+```
+
+**Requirements:**
+- Fix ALL critical issues (🔥) before calling `swarm_complete()`
+- Review warnings (⚠️) — fix if trivial, document if intentional
+- Scan must pass before task is marked complete
+
+**Why:** Catches bugs before they reach version control. Part of the quality gate.
 
 ### 3. Report Progress (at 25%, 50%, 75%)
 
