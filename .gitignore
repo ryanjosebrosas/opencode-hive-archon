@@ -6,7 +6,6 @@ memory.md
 memory-archive.md
 
 # User-generated plans (project-specific)
-requests/*.md
 !requests/.gitkeep
 
 # Worktrees
