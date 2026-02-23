@@ -12,29 +12,16 @@
       "npm": "@ai-sdk/anthropic",
       "name": "Model Studio Coding Plan",
       "options": {
-        "baseURL": "https://coding-intl.dashscope.aliyuncs.com/apps/anthropic/v1",
-        "apiKey": "$BAIHIAN_API_KEY"
+        "baseURL": "https://coding-intl.dashscope.aliyuncs.com/apps/anthropic/v1"
       },
       "models": {
         "qwen3.5-plus": {
           "name": "Qwen3.5 Plus",
-          "limit": { "context": 262144, "output": 8192 },
-          "options": {
-            "thinking": {
-              "type": "enabled",
-              "budgetTokens": 1024
-            }
-          }
+          "limit": { "context": 262144, "output": 8192 }
         },
         "qwen3-max-2026-01-23": {
           "name": "Qwen3 Max 2026-01-23",
-          "limit": { "context": 262144, "output": 8192 },
-          "options": {
-            "thinking": {
-              "type": "enabled",
-              "budgetTokens": 1024
-            }
-          }
+          "limit": { "context": 262144, "output": 8192 }
         },
         "qwen3-coder-plus": {
           "name": "Qwen3 Coder Plus",
