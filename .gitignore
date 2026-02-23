@@ -1,0 +1,18 @@
+# Local settings and secrets
+.claude/settings.local.json
+
+# Personal memory (users create their own from MEMORY-TEMPLATE.md)
+memory.md
+memory-archive.md
+
+# User-generated plans (project-specific)
+requests/*.md
+!requests/.gitkeep
+
+# Worktrees
+worktrees/
+
+# Environment files
+.env
+.env.local
+requests/execution-reports/

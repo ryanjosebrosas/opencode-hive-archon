@@ -1,0 +1,83 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "sections/01_core_principles.md",
+    "sections/02_piv_loop.md",
+    "sections/03_context_engineering.md",
+    "sections/04_git_save_points.md",
+    "sections/05_decision_framework.md"
+  ],
+  "provider": {
+    "bailian-coding-plan": {
+      "npm": "@ai-sdk/anthropic",
+      "name": "Model Studio Coding Plan",
+      "options": {
+        "baseURL": "https://coding-intl.dashscope.aliyuncs.com/apps/anthropic/v1",
+        "apiKey": "$BAIHIAN_API_KEY"
+      },
+      "models": {
+        "qwen3.5-plus": {
+          "name": "Qwen3.5 Plus",
+          "limit": { "context": 262144, "output": 8192 },
+          "options": {
+            "thinking": {
+              "type": "enabled",
+              "budgetTokens": 1024
+            }
+          }
+        },
+        "qwen3-max-2026-01-23": {
+          "name": "Qwen3 Max 2026-01-23",
+          "limit": { "context": 262144, "output": 8192 },
+          "options": {
+            "thinking": {
+              "type": "enabled",
+              "budgetTokens": 1024
+            }
+          }
+        },
+        "qwen3-coder-plus": {
+          "name": "Qwen3 Coder Plus",
+          "limit": { "context": 262144, "output": 16384 }
+        },
+        "qwen3-coder-next": {
+          "name": "Qwen3 Coder Next",
+          "limit": { "context": 262144, "output": 65536 }
+        },
+        "glm-4.7": {
+          "name": "GLM-4.7",
+          "limit": { "context": 131072, "output": 8192 }
+        },
+        "kimi-k2.5": {
+          "name": "Kimi K2.5",
+          "limit": { "context": 262144, "output": 8192 }
+        }
+      }
+    }
+  },
+  "agent": {
+    "build": {
+      "description": "Default agent with full tools for development work",
+      "mode": "primary"
+    },
+    "plan": {
+      "description": "Restricted agent for planning and analysis",
+      "mode": "primary",
+      "permission": {
+        "edit": "ask",
+        "bash": "ask"
+      }
+    }
+  },
+  "mcpServers": {
+    "swarm": {
+      "type": "stdio",
+      "command": "swarm",
+      "args": ["mcp-server"],
+      "env": {
+        "HIVE_PATH": ".hive/",
+        "OLLAMA_HOST": "http://localhost:11434"
+      }
+    }
+  }
+}

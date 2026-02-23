@@ -1,0 +1,241 @@
+name: CodeRabbit Auto-Fix
+
+on:
+  # Auto-trigger when CodeRabbit posts a review
+  pull_request_review:
+    types: [submitted]
+  # Manual trigger via @claude-fix on PR
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: coderabbit-fix-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+env:
+  MAX_ITERATIONS: 10
+
+jobs:
+  claude-fix-coderabbit:
+    if: |
+      (
+        github.event_name == 'pull_request_review' &&
+        github.event.review.user.login == 'coderabbitai[bot]' &&
+        (github.event.review.state == 'changes_requested' || github.event.review.state == 'commented')
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@claude-fix') &&
+        contains(fromJSON(vars.AUTHORIZED_USERS || '["your-github-username"]'), github.event.comment.user.login)
+      )
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Get PR details
+        id: pr_info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request_review" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          else
+            PR_NUMBER="${{ github.event.issue.number }}"
+          fi
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          BRANCH_NAME=$(gh pr view "$PR_NUMBER" --json headRefName -q '.headRefName')
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr_info.outputs.branch_name }}
+          fetch-depth: 0
+
+      - name: Verify CodeRabbit has suggestions
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr_info.outputs.pr_number }}"
+
+          COMMENTS=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER/comments \
+            --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | length')
+
+          echo "comments=$COMMENTS" >> $GITHUB_OUTPUT
+
+          if [ "$COMMENTS" -eq 0 ]; then
+            echo "has_suggestions=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_suggestions=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check iteration count
+        id: check_iterations
+        if: steps.verify.outputs.has_suggestions == 'true'
+        run: |
+          FIX_COMMITS=$(git log --oneline 2>/dev/null | grep -E -c '^[0-9a-f]+ \[claude-fix\]' || echo "0")
+          echo "iteration_count=$FIX_COMMITS" >> $GITHUB_OUTPUT
+
+          if [ "$FIX_COMMITS" -ge "${{ env.MAX_ITERATIONS }}" ]; then
+            echo "max_reached=true" >> $GITHUB_OUTPUT
+          else
+            echo "max_reached=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: No suggestions comment
+        if: steps.verify.outputs.has_suggestions == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: ${{ steps.pr_info.outputs.pr_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **CodeRabbit review has no actionable suggestions** - skipping auto-fix.'
+            })
+
+      - name: Max iterations comment
+        if: |
+          steps.verify.outputs.has_suggestions == 'true' &&
+          steps.check_iterations.outputs.max_reached == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: ${{ steps.pr_info.outputs.pr_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **Auto-fix stopped** - Reached max iterations (${{ env.MAX_ITERATIONS }}). Manual review needed.'
+            })
+
+      - name: Run Claude Code to fix
+        if: |
+          steps.verify.outputs.has_suggestions == 'true' &&
+          steps.check_iterations.outputs.max_reached == 'false'
+        uses: anthropics/claude-code-action@beta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          direct_prompt: "true"
+          custom_instructions: |
+            # CodeRabbit Fix - PR #${{ steps.pr_info.outputs.pr_number }}
+
+            Fix ALL CodeRabbit suggestions in ONE comprehensive pass.
+
+            ## Step 1: Read ALL CodeRabbit feedback
+            ```bash
+            gh api repos/${{ github.repository }}/pulls/${{ steps.pr_info.outputs.pr_number }}/comments
+            gh pr view ${{ steps.pr_info.outputs.pr_number }} --json reviews
+            ```
+
+            Create a complete list of ALL issues to fix.
+
+            ## Step 2: Understand project context
+            - Read CLAUDE.md if it exists for project conventions
+            - Read files you'll modify to understand current patterns
+            - Identify coding style (imports, formatting, naming)
+
+            ## Step 3: Plan your fixes
+            For EACH CodeRabbit suggestion:
+            - What file(s) need changes
+            - What exactly to change
+            - Why CodeRabbit wants this
+            - How to implement following project patterns
+
+            ## Step 4: Implement systematically
+            For each file with issues:
+            1. Read entire file - understand full context
+            2. Apply ALL fixes for this file:
+               - If CodeRabbit provides ```suggestion block, apply EXACTLY
+               - If comment without code, implement following project patterns
+               - Fix similar issues elsewhere in same file
+            3. Verify changes - re-read, ensure nothing broken
+
+            ## Step 5: Handle edge cases
+            Common suggestions:
+            - Type safety → Add type annotations
+            - Error handling → Add try/catch or validation
+            - Security → Fix SQL injection, XSS, exposed secrets
+            - Performance → Fix N+1 queries, inefficient loops
+            - Best practices → Follow language idioms
+            - Documentation → Add/improve docstrings
+
+            Don't just silence warnings - fix underlying issue.
+
+            ## Step 6: Validate
+            - Check for validation commands (package.json, Makefile)
+            - Run linting if available
+            - Run type checking if available
+            - Verify files compile/parse
+
+            ## Step 7: Commit and push
+            ```bash
+            git add -A
+            git commit -m "[claude-fix] Apply all CodeRabbit review suggestions
+
+            Comprehensive fixes addressing all CodeRabbit feedback.
+
+            Addresses all suggestions on PR #${{ steps.pr_info.outputs.pr_number }}"
+            git push origin ${{ steps.pr_info.outputs.branch_name }}
+            ```
+
+            ## Critical Rules
+            ✅ DO:
+            - Fix ALL issues in one pass
+            - Read files before modifying
+            - Follow existing patterns
+            - Apply suggestion blocks exactly
+            - Test your changes
+
+            ❌ DON'T:
+            - Skip any suggestions
+            - Make unrelated changes
+            - Break existing functionality
+            - Make multiple commits
+
+            Your goal: Fix EVERYTHING so CodeRabbit approves on next review!
+
+      - name: Success comment
+        if: |
+          steps.verify.outputs.has_suggestions == 'true' &&
+          steps.check_iterations.outputs.max_reached == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const iteration = parseInt('${{ steps.check_iterations.outputs.iteration_count }}') + 1;
+            await github.rest.issues.createComment({
+              issue_number: ${{ steps.pr_info.outputs.pr_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Claude applied fixes** (iteration ${iteration}/${{ env.MAX_ITERATIONS }})\n\n✅ Fixed all CodeRabbit suggestions.\n🔄 CodeRabbit will re-review automatically.`
+            })
+
+  unauthorized:
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@claude-fix') &&
+      !contains(fromJSON(vars.AUTHORIZED_USERS || '["your-github-username"]'), github.event.comment.user.login)
+
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `❌ @${context.actor} - Not authorized`
+            });
