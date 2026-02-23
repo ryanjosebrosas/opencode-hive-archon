@@ -1,8 +1,8 @@
 # OpenCode Coding System
 
-**Stop guessing. Start engineering.**
+**Stop guessing. Start engineering. Ship with confidence.**
 
-A complete development methodology that turns AI from an unpredictable autocomplete into a disciplined engineering partner. Built for [OpenCode](https://opencode.ai), powered by the PIV Loop, and battle-tested across real projects.
+A self-learning, self-reviewing development methodology powered by AI agents, parallel coordination, and automated bug detection. Built for [OpenCode](https://opencode.ai), powered by the PIV Loop + SwarmTools, and battle-tested across real projects.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -32,11 +32,12 @@ This is a **development methodology**: a structured collection of slash commands
 
 ### What You Get
 
-- **15 slash commands** that automate every phase of development, from planning to commit
-- **8 templates** for plans, PRDs, and agents, only the ones you will actually use
-- **10 reference guides** loaded on-demand, consolidated and focused
-- **12 pre-built AI subagents** for parallel research, code review, and specialist tasks
+- **17 slash commands** that automate every phase of development, from planning to commit
+- **16 pre-built AI subagents** for parallel research, code review, specialist tasks, and swarm coordination
+- **8 templates** for plans, PRDs, and agents — only the ones you will actually use
+- **16 reference guides** loaded on-demand, consolidated and focused
 - **1 skill** for systematic planning methodology
+- **Optional: Autonomous Swarm** — SwarmTools + UBS integration for self-reviewing, parallel multi-agent execution
 - A token-conscious architecture that keeps <10K tokens of system context, leaving the rest for your actual work
 
 ---
@@ -94,7 +95,7 @@ graph LR
 
 **Why fresh sessions matter.** Planning creates exploration context: options considered, tradeoffs weighed, research gathered. Execution needs clean context, not exploration baggage. The plan distills that into execution instructions. A fresh session with only the plan means the AI focuses on building, not rediscovering. *Vibe planning is good, vibe coding is not.*
 
-**Multiple small loops.** Do not build entire features in one pass. Each PIV loop covers one feature slice, built completely before moving on. Complex features (15+ tasks, 4+ phases) auto-decompose into sub-plans via `/planning`, each getting their own loop.
+**Multiple small loops.** Do not build entire features in one pass. Each PIV loop covers one feature slice, built completely before moving on. Complex features (15+ tasks, 4+ phases) auto-decompose into sub-plans via `/planning`, each getting their own loop. For parallel execution with file reservations and quality gates, use `/swarm-execute` with SwarmTools integration.
 
 **The handoff.** The plan is the bridge between thinking and building: 700-1000 lines capturing architecture decisions, file paths, code patterns, gotchas, and atomic tasks. Each task has 7 fields (ACTION, TARGET, IMPLEMENT, PATTERN, IMPORTS, GOTCHA, VALIDATE) so the execution agent has zero ambiguity.
 
@@ -355,6 +356,7 @@ graph LR
 |-------|-------------------|-----|
 | `/planning` | **Opus** or **Sonnet** | Deep reasoning produces better plans |
 | `/execute` | **Sonnet** (default) | Balanced, follows plans well at lower cost |
+| `/swarm-execute` | **Sonnet** (swarm workers) | Parallel workers with file reservations and UBS quality gates |
 | `/code-review` | **Sonnet** (via subagents) | 4 parallel agents, each covering one review dimension |
 | `/commit`, `/prime` | **Sonnet** (default) | General-purpose tasks |
 
@@ -381,17 +383,20 @@ graph TD
     M["Manual Prompts<br/><i>Start here</i>"] --> CMD["Slash Commands<br/>/prime, /planning, /execute"]
     CMD --> CHAIN["Chained Workflows<br/>/end-to-end-feature"]
     CHAIN --> SUB["Subagents<br/>Parallel research + review"]
+    SUB --> SWARM["Swarm Execution<br/>Parallel workers + UBS self-review"]
 
     style M fill:#85c1e9,color:#000
     style CMD fill:#5dade2,color:#fff
     style CHAIN fill:#3498db,color:#fff
     style SUB fill:#2e86c1,color:#fff
+    style SWARM fill:#27ae60,color:#fff
 ```
 
 - **Manual Prompts:** use OpenCode with good prompts. Understand the base tool before adding structure.
 - **Slash Commands:** structured reusable prompts. Master the core cycle: `/prime` -> `/planning` -> `/execute` -> `/commit`.
 - **Chained Workflows:** `/end-to-end-feature` chains the full PIV Loop autonomously. Only use after individual commands are trusted.
 - **Subagents:** parallel research (5-10 agents) and code review (4 agents). Results flow one-way back to the main agent.
+- **Swarm Execution:** parallel multi-agent execution with SwarmTools + UBS self-review. For complex features (15+ tasks) when you're ready for maximum autonomy.
 
 **When to move up:** Prove the current tier works reliably across 5+ features before advancing. See `reference/system-foundations.md` for the full trust model.
 
@@ -485,6 +490,13 @@ graph LR
    > /commit
    ```
 
+7. **Optional: Enable Autonomous Swarm** (for advanced users):
+   ```bash
+   # Install SwarmTools + UBS for parallel execution and self-reviewing code
+   curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/ultimate_bug_scanner/master/install.sh" | bash -s -- --easy-mode
+   ```
+   See `reference/PRACTICAL-SWARM-UBS-SETUP.md` for the 2-hour setup guide.
+
 ### What Happens Next?
 
 Each feature gets its own PIV loop. Small loops, built completely before moving on. Plan, implement, validate, iterate. Then start the next feature. Lessons from each loop feed into `memory.md` and inform future plans.
@@ -516,9 +528,9 @@ Then run `/init-c` to customize `CLAUDE.md` for your project's tech stack.
 
 ---
 
-## All 15 Slash Commands
+## All 17 Slash Commands
 
-15 slash commands automate every phase. The core 6 cover 90% of daily development; expand below for advanced workflows and utilities.
+17 slash commands automate every phase. The core 6 cover 90% of daily development; expand below for advanced workflows and utilities.
 
 ### Core Workflow
 
@@ -532,11 +544,12 @@ Then run `/init-c` to customize `CLAUDE.md` for your project's tech stack.
 | `/code-review-fix` | Applies fixes from code review findings | After code review surfaces issues |
 
 <details>
-<summary>Advanced Workflows (1 command)</summary>
+<summary>Advanced Workflows (2 commands)</summary>
 
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
 | `/end-to-end-feature` | Full autonomous pipeline: plan, implement, review, commit | Trusted, well-defined features |
+| `/swarm-execute` | Executes with SwarmTools coordination for parallel multi-agent execution with file reservations and checkpoints | Complex features requiring parallel workers (15+ tasks) |
 
 </details>
 
@@ -558,14 +571,14 @@ Then run `/init-c` to customize `CLAUDE.md` for your project's tech stack.
 
 ---
 
-## 12 Subagents
+## 16 Subagents
 
-12 subagents run in isolation with their own context windows. Research agents explore in parallel. Code review agents check 4 dimensions simultaneously. Specialist agents bring domain expertise.
+16 subagents run in isolation with their own context windows. Research agents explore in parallel. Code review agents check 4 dimensions simultaneously. Specialist agents bring domain expertise. Swarm workers handle parallel execution with file reservations and quality gates.
 
-Each agent is a markdown file with a system prompt in `.claude/agents/`. The main agent delegates via the Task tool, and agents return structured results without polluting your implementation context.
+Each agent is a markdown file with a system prompt in `.opencode/agents/`. The main agent delegates via the Task tool, and agents return structured results without polluting your implementation context.
 
 <details>
-<summary>All 12 agents — Research, Code Review, Utility, Specialist</summary>
+<summary>All 16 agents — Research, Code Review, Utility, Specialist, Swarm Workers</summary>
 
 ### Research Agents
 
@@ -600,6 +613,17 @@ These four run in parallel during `/code-review`, each checking a different dime
 | `specialist-data` | Sonnet | Database design, migrations, queries, data pipelines |
 | `specialist-copywriter` | Sonnet | UI copy, microcopy, error messages, UX writing |
 | `specialist-tech-writer` | Sonnet | API docs, READMEs, changelogs, architecture documentation |
+
+### Swarm Workers
+
+These four agents execute tasks in parallel using SwarmTools coordination with file reservations, progress checkpoints, and UBS quality gates:
+
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `swarm-worker-backend` | Sonnet | Backend services, APIs, business logic with file reservations |
+| `swarm-worker-frontend` | Sonnet | React components, UI, styling, state management |
+| `swarm-worker-database` | Sonnet | Schema design, migrations, queries, data modeling |
+| `swarm-worker-testing` | Sonnet | Unit tests, integration tests, fixtures, mocks, test coverage |
 
 </details>
 
@@ -640,7 +664,7 @@ See `reference/subagents-deep-dive.md` for creating your own agents.
 </details>
 
 <details>
-<summary>10 Reference Guides</summary>
+<summary>16 Reference Guides</summary>
 
 ### Core Methodology
 | Guide | What It Covers |
@@ -664,19 +688,74 @@ See `reference/subagents-deep-dive.md` for creating your own agents.
 | `command-design-framework.md` | INPUT-PROCESS-OUTPUT command framework |
 | `archon-workflow.md` | Archon task management and RAG search |
 
+### Swarm Ecosystem
+| Guide | What It Covers |
+|-------|---------------|
+| `AUTONOMOUS-SWARM-ECOSYSTEM.md` | Full SwarmTools + UBS + CASS integration architecture |
+| `PRACTICAL-SWARM-UBS-SETUP.md` | 2-hour no-BS setup guide for bug-catching automation |
+| `SWARMTOOLS-INSTALLATION.md` | Step-by-step SwarmTools installation |
+| `SWARMTOOLS-QUICKSTART.md` | First swarm execution walkthrough |
+| `swarmtools-integration.md` | Integration patterns and workflows |
+
 </details>
 
 ---
 
-## Optional: Archon MCP
+## Optional: Autonomous Swarm Ecosystem
 
-[Archon MCP](https://github.com/coleam00/archon) provides task management and RAG search across sessions. **Completely optional.** All commands work without it. When available, it adds:
+For advanced users seeking maximum autonomy, the system integrates with **SwarmTools** and **UBS** to create a self-learning, self-reviewing development engine:
 
+### What You Get
+
+| Component | What It Does | Why It Matters |
+|-----------|--------------|----------------|
+| **SwarmTools** | Parallel multi-agent coordination with file reservations, progress checkpoints, and automatic learning from outcomes | Prevents edit conflicts, survives context compaction, enables complex feature execution |
+| **UBS Bug Scanner** | Catches 1000+ bug patterns across 8 languages before commits | Blocks critical issues via git hooks, AI fixes bugs automatically before marking tasks complete |
+| **CASS Session Search** *(optional)* | Queries 11+ AI agents' past conversations before starting work | Learns from historical patterns, recommends proven approaches |
+
+### How It Integrates
+
+```
+PIV Loop → SwarmTools → UBS Scan → AI Self-Fix → Complete
+   │           │            │
+   │           │            └─ Blocks critical bugs before task marked done
+   │           └─ Parallel workers with file reservations
+   └─ Plans complex features (15+ tasks) into parallel subtasks
+```
+
+### When to Use
+
+- **`/execute`** — Standard single-agent execution (default, works for most features)
+- **`/swarm-execute`** — Parallel multi-agent execution with SwarmTools (complex features, 15+ tasks, multiple systems)
+
+### Setup
+
+See `reference/PRACTICAL-SWARM-UBS-SETUP.md` for a 2-hour no-BS setup guide, or `reference/AUTONOMOUS-SWARM-ECOSYSTEM.md` for full documentation.
+
+---
+
+## Optional: Archon MCP + SwarmTools
+
+External integrations for enhanced capabilities. **Completely optional.** All core commands work without them.
+
+### Archon MCP
+
+[Archon MCP](https://github.com/coleam00/archon) provides:
 - Persistent task tracking across planning and execution sessions
 - RAG search over curated documentation sources
 - Project and version management
 
 See `reference/archon-workflow.md` for setup instructions.
+
+### SwarmTools + UBS
+
+[SwarmTools](https://swarmtools.ai) + [UBS](https://github.com/Dicklesworthstone/ultimate_bug_scanner) provide:
+- Parallel multi-agent execution with file reservations
+- Self-reviewing code via automated bug scanning
+- Git hooks that block commits with critical issues
+- Automatic learning from completed swarm outcomes
+
+See `reference/PRACTICAL-SWARM-UBS-SETUP.md` for quick setup.
 
 ---
 
@@ -698,10 +777,12 @@ My-Coding-System/
 │   ├── 05_decision_framework.md       #   Autonomy vs. ask
 │   └── 06_archon_workflow.md          #   Task management integration
 │
-├── reference/                         # Deep guides (10 files, on-demand)
+├── reference/                         # Deep guides (16 files, on-demand)
 │   ├── system-foundations.md
 │   ├── piv-loop-practice.md
-│   ├── ...8 more guides...
+│   ├── AUTONOMOUS-SWARM-ECOSYSTEM.md  # Full Swarm + UBS architecture
+│   ├── PRACTICAL-SWARM-UBS-SETUP.md   # 2-hour setup guide
+│   └── ...12 more guides...
 │
 ├── templates/                         # Reusable templates (8 files)
 │   ├── STRUCTURED-PLAN-TEMPLATE.md
@@ -712,18 +793,23 @@ My-Coding-System/
 ├── requests/                          # Feature plans (gitignored)
 │   └── execution-reports/             # Auto-saved /execute output reports
 │
+├── .hive/                             # SwarmTools work tracking (gitignored when local)
+│   └── issues.jsonl                   # Event-sourced work items for swarm coordination
+│
 ├── .claude/
-│   ├── commands/                      # Slash commands (15 commands)
+│   ├── commands/                      # Slash commands (17 commands)
 │   │   ├── prime.md
 │   │   ├── planning.md
 │   │   ├── execute.md
 │   │   ├── commit.md
-│   │   └── ...11 more commands...
-│   ├── agents/                        # Custom subagents (12 agents)
+│   │   ├── swarm-execute.md
+│   │   └── ...12 more commands...
+│   ├── agents/                        # Custom subagents (16 agents)
 │   │   ├── research-codebase.md
 │   │   ├── code-review-security.md
 │   │   ├── specialist-devops.md
-│   │   └── ...9 more agents...
+│   │   ├── swarm-worker-backend.md
+│   │   └── ...12 more agents...
 │   └── skills/                        # Cloud skills (1 skill)
 │       └── planning-methodology/
 ```
@@ -735,12 +821,12 @@ My-Coding-System/
 | Component | Count |
 |-----------|-------|
 | Core methodology sections | 6 |
-| Reference guides | 10 |
+| Reference guides | 16 |
 | Reusable templates | 8 |
-| Slash commands | 15 |
-| Subagents | 12 |
+| Slash commands | 17 |
+| Subagents | 16 |
 | Cloud skills | 1 |
-| **Total system files** | **~52** |
+| **Total system files** | **~64** |
 | Auto-loaded context cost | ~2K tokens |
 | Typical session context | <10K tokens |
 | `/prime` parallel agents (system mode) | 5 |
