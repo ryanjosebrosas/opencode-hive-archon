@@ -438,3 +438,32 @@ class TestProviderRouteConsistency:
         
         assert response.routing_metadata["selected_provider"] == "mem0"
         assert response.routing_metadata["rerank_type"] == "provider-native"
+    
+    def test_provider_fallback_remains_contract_valid(self):
+        """
+        When real provider falls back due to unavailability,
+        recall response remains contract-valid with proper metadata.
+        """
+        memory_service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": True, "mem0_api_key": "invalid"},
+        )
+        rerank_service = VoyageRerankService(enabled=False)
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags={"mem0_enabled": True},
+        )
+        
+        request = RetrievalRequest(
+            query="provider fallback test",
+            mode="conversation",
+        )
+        
+        response = orchestrator.run(request)
+        
+        assert response.context_packet is not None
+        assert response.next_action is not None
+        assert response.context_packet.summary.branch is not None
+        assert isinstance(response.context_packet.candidates, list)

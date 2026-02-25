@@ -185,3 +185,80 @@ class TestMockDataProviderPreservation:
         assert metadata["provider"] == "supabase"
         if candidates:
             assert candidates[0].source == "supabase"
+
+
+class TestProviderPath:
+    """Test real provider adapter path with safe fallback."""
+    
+    def test_provider_path_disabled_uses_fallback(self):
+        """When mem0_use_real_provider=False, use fallback path."""
+        service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": False},
+        )
+        
+        candidates, metadata = service.search_memories(
+            query="test query",
+            top_k=5,
+            threshold=0.6,
+        )
+        
+        assert len(candidates) >= 1
+        assert metadata.get("fallback_reason") == "real_provider_disabled"
+        assert metadata.get("real_provider") is None
+    
+    def test_provider_sdk_unavailable_uses_fallback(self):
+        """When Mem0 SDK not installed, fall back gracefully."""
+        service = MemoryService(
+            provider="mem0",
+            config={
+                "mem0_use_real_provider": True,
+                "mem0_api_key": "test-key",
+            },
+        )
+        
+        candidates, metadata = service.search_memories(
+            query="test query",
+            top_k=5,
+            threshold=0.6,
+        )
+        
+        assert len(candidates) >= 1
+        assert metadata.get("fallback_reason") in ["client_unavailable", "provider_error"]
+    
+    def test_provider_exception_uses_fallback(self):
+        """When provider throws exception, use fallback path."""
+        service = MemoryService(
+            provider="mem0",
+            config={
+                "mem0_use_real_provider": True,
+                "mem0_api_key": "invalid-key",
+            },
+        )
+        
+        candidates, metadata = service.search_memories(
+            query="test query",
+            top_k=5,
+            threshold=0.6,
+        )
+        
+        assert len(candidates) >= 1
+        assert metadata.get("fallback_reason") in ["provider_error", "client_unavailable"]
+        if metadata.get("fallback_reason") == "provider_error":
+            assert "error_type" in metadata
+    
+    def test_non_mem0_provider_ignores_real_provider_config(self):
+        """Non-Mem0 providers ignore mem0_use_real_provider config."""
+        service = MemoryService(
+            provider="supabase",
+            config={"mem0_use_real_provider": True},
+        )
+        
+        candidates, metadata = service.search_memories(
+            query="test query",
+            top_k=5,
+            threshold=0.6,
+        )
+        
+        assert len(candidates) >= 1
+        assert metadata.get("fallback_reason") == "real_provider_disabled"

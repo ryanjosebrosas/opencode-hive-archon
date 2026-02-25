@@ -49,4 +49,7 @@ def get_default_config() -> dict[str, Any]:
         "default_threshold": 0.6,
         "mem0_rerank_native": True,
         "mem0_skip_external_rerank": True,
+        "mem0_use_real_provider": False,
+        "mem0_user_id": None,
+        "mem0_api_key": None,
     }

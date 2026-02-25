@@ -21,6 +21,11 @@ class MemoryService:
         self.provider = provider
         self.config = config or {}
         self._mock_data: list[MemorySearchResult] | None = None
+        
+        self._mem0_client: Any | None = None
+        self._mem0_enabled = self.config.get("mem0_use_real_provider", False)
+        self._mem0_user_id = self.config.get("mem0_user_id")
+        self._mem0_api_key = self.config.get("mem0_api_key")
     
     def search_memories(
         self,
@@ -46,12 +51,19 @@ class MemoryService:
         if not query or not query.strip():
             return [], {"provider": self.provider, "query_empty": True}
         
-        # Use mock data for deterministic testing when set
+        results: list[MemorySearchResult] = []
+        metadata: dict[str, Any] = {}
+        
         if self._mock_data is not None:
             results = self._search_mock(query, top_k, threshold)
+            metadata = {"provider": self.provider, "mock_mode": True}
+        elif self._should_use_real_provider():
+            real_results, real_metadata = self._search_with_provider(query, top_k, threshold)
+            results = real_results
+            metadata = real_metadata
         else:
-            # Fallback: deterministic mock results based on query hash
             results = self._search_fallback(query, top_k, threshold)
+            metadata = {"provider": self.provider, "fallback_reason": "real_provider_disabled"}
         
         candidates = [
             ContextCandidate(
@@ -64,13 +76,116 @@ class MemoryService:
             for r in results
         ]
         
-        metadata = {
-            "provider": self.provider,
-            "rerank_applied": rerank if self.provider == "mem0" else False,
-            "raw_count": len(results),
-        }
+        metadata["raw_count"] = len(results)
+        if self.provider == "mem0" and not metadata.get("mock_mode"):
+            metadata["rerank_applied"] = rerank
         
         return candidates, metadata
+    
+    def _should_use_real_provider(self) -> bool:
+        """Check if real provider should be used."""
+        if not self._mem0_enabled:
+            return False
+        if self.provider != "mem0":
+            return False
+        # Check if we have credentials to attempt provider call
+        return self._mem0_api_key is not None or self._has_env_api_key()
+    
+    def _has_env_api_key(self) -> bool:
+        """Check if API key is available from environment."""
+        import os
+        return os.getenv("MEM0_API_KEY") is not None
+    
+    def _load_mem0_client(self) -> Any | None:
+        """Load Mem0 client lazily with optional import."""
+        if self._mem0_client is not None:
+            return self._mem0_client
+        
+        try:
+            from mem0 import Memory
+            api_key = self._mem0_api_key
+            if not api_key:
+                import os
+                api_key = os.getenv("MEM0_API_KEY")
+            
+            if api_key:
+                self._mem0_client = Memory(api_key=api_key)
+                return self._mem0_client
+        except ImportError:
+            pass
+        except Exception:
+            pass
+        
+        return None
+    
+    def _search_with_provider(
+        self,
+        query: str,
+        top_k: int,
+        threshold: float,
+    ) -> tuple[list[MemorySearchResult], dict[str, Any]]:
+        """Search using real Mem0 provider with fallback on failure."""
+        try:
+            client = self._load_mem0_client()
+            if client is None:
+                return self._search_fallback(query, top_k, threshold), {"fallback_reason": "client_unavailable"}
+            
+            search_kwargs: dict[str, Any] = {"limit": top_k}
+            if self._mem0_user_id:
+                search_kwargs["user_id"] = self._mem0_user_id
+            
+            mem0_results = client.search(query=query, **search_kwargs)
+            results = self._normalize_mem0_results(mem0_results, top_k, threshold)
+            
+            return results, {"provider": self.provider, "real_provider": True}
+        except Exception as e:
+            fallback_results = self._search_fallback(query, top_k, threshold)
+            return fallback_results, {
+                "provider": self.provider,
+                "fallback_reason": "provider_error",
+                "error_type": type(e).__name__,
+            }
+    
+    def _normalize_mem0_results(
+        self,
+        mem0_results: Any,
+        top_k: int,
+        threshold: float,
+    ) -> list[MemorySearchResult]:
+        """Normalize Mem0 results to MemorySearchResult."""
+        results: list[MemorySearchResult] = []
+        
+        if not mem0_results:
+            return results
+        
+        for i, item in enumerate(mem0_results):
+            if isinstance(item, dict):
+                item_id = str(item.get("id", f"mem0-{i}"))
+                content = str(item.get("memory", item.get("content", "")))
+                score = item.get("score", item.get("confidence", 0.0))
+                try:
+                    confidence = max(0.0, min(1.0, float(score) if score is not None else 0.0))
+                except (TypeError, ValueError):
+                    confidence = 0.0
+                raw_metadata = item.get("metadata", {})
+                
+                metadata = {
+                    "real_provider": True,
+                    **(raw_metadata if isinstance(raw_metadata, dict) else {}),
+                }
+                
+                results.append(MemorySearchResult(
+                    id=item_id,
+                    content=content,
+                    source=self.provider,
+                    confidence=confidence,
+                    metadata=metadata,
+                ))
+            
+            if len(results) >= top_k:
+                break
+        
+        return results
     
     def _search_mock(
         self,
