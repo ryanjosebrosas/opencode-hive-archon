@@ -1,0 +1,236 @@
+# Manual Branch Validation Runbook
+
+**Purpose**: Repeatable operator validation for all retrieval branches  
+**Version**: 1.0.0  
+**Last Updated**: 2026-02-25
+
+---
+
+## Prerequisites Checklist
+
+- [ ] Working tree clean (no uncommitted changes)
+- [ ] Python 3.11+ installed
+- [ ] Dependencies installed: `pip install pydantic pytest`
+- [ ] Test environment ready (isolated from production)
+
+---
+
+## Environment Setup
+
+```bash
+# Set PYTHONPATH for imports
+export PYTHONPATH=backend/src  # Unix/macOS
+$env:PYTHONPATH = "backend/src"  # Windows PowerShell
+
+# Verify installation
+python -c "from second_brain.agents.recall import run_recall; print('OK')"
+```
+
+---
+
+## Quick Start: Run All Validation Scenarios
+
+```bash
+# Run smoke scenarios (minimum required)
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestSmokeScenarios -v
+
+# Run policy scenarios
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestPolicyScenarios -v
+
+# Run edge scenarios
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestEdgeScenarios -v
+
+# Run degraded scenarios
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestDegradedScenarios -v
+```
+
+---
+
+## Branch Scenario Execution Commands
+
+### S001: Conversation Mem0 High Confidence
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestSmokeScenarios::test_smoke_scenario_branch[S001] -v
+```
+
+**Expected**:
+- Branch: `RERANK_BYPASSED`
+- Action: `proceed`
+- Rerank Type: `provider-native`
+
+---
+
+### S002: Conversation Mem0 No Candidates
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestSmokeScenarios::test_smoke_scenario_branch[S002] -v
+```
+
+**Expected**:
+- Branch: `EMPTY_SET`
+- Action: `fallback`
+- Rerank Type: `none`
+
+---
+
+### S003: Conversation Mem0 Low Confidence
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestSmokeScenarios::test_smoke_scenario_branch[S003] -v
+```
+
+**Expected**:
+- Branch: `LOW_CONFIDENCE`
+- Action: `clarify`
+- Rerank Type: `provider-native`
+
+---
+
+### S004: Conversation Supabase High Confidence
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestSmokeScenarios::test_smoke_scenario_branch[S004] -v
+```
+
+**Expected**:
+- Branch: `SUCCESS`
+- Action: `proceed`
+- Rerank Type: `external`
+
+---
+
+### S013: All Providers Disabled
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestEdgeScenarios::test_all_providers_disabled_returns_empty_set -v
+```
+
+**Expected**:
+- Branch: `EMPTY_SET`
+- Action: `fallback`
+
+---
+
+### S015: Mem0 Degraded Fallback
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py::TestDegradedScenarios::test_degraded_mem0_falls_back_to_supabase -v
+```
+
+**Expected**:
+- Branch: `SUCCESS` or `RERANK_BYPASSED`
+- Action: `proceed`
+
+---
+
+### S027: Channel Mismatch (Validation Mode)
+
+```bash
+PYTHONPATH=backend/src pytest tests/test_recall_flow_integration.py::TestValidationModeForcedBranches::test_force_channel_mismatch -v
+```
+
+**Expected**:
+- Branch: `CHANNEL_MISMATCH`
+- Action: `escalate`
+
+---
+
+## Evidence Capture Template
+
+Use this table to record validation results:
+
+| Scenario ID | Description | Expected Branch | Actual Branch | Expected Action | Actual Action | Rerank Type | Pass/Fail | Notes |
+|-------------|-------------|-----------------|---------------|-----------------|---------------|-------------|-----------|-------|
+| S001 | Conversation Mem0 high confidence | RERANK_BYPASSED | | proceed | | provider-native | | |
+| S002 | Conversation Mem0 no candidates | EMPTY_SET | | fallback | | none | | |
+| S003 | Conversation Mem0 low confidence | LOW_CONFIDENCE | | clarify | | provider-native | | |
+| S004 | Conversation Supabase high confidence | SUCCESS | | proceed | | external | | |
+| S013 | All providers disabled | EMPTY_SET | | fallback | | none | | |
+| S014 | All providers unavailable | EMPTY_SET | | fallback | | none | | |
+| S015 | Mem0 degraded fallback | SUCCESS | | proceed | | external | | |
+| S027 | Channel mismatch validation | CHANNEL_MISMATCH | | escalate | | none | | |
+
+---
+
+## Pass/Fail Criteria
+
+### Pass
+- All smoke scenarios (S001-S004) produce expected branch + action
+- All policy scenarios have correct rerank metadata
+- Deterministic replay tests show identical results across runs
+
+### Fail
+- Any smoke scenario produces unexpected branch or action
+- Mem0 path applies external rerank (policy violation)
+- Non-deterministic behavior detected
+
+---
+
+## Triage Guide: Branch Mismatches
+
+| Symptom | Likely Root Cause | File to Check |
+|---------|------------------|---------------|
+| Wrong provider selected | Router logic drift | `orchestration/retrieval_router.py` |
+| Missing rerank metadata | Service wrapper gap | `services/voyage.py` |
+| Branch code mismatch | Fallback emitter logic | `orchestration/fallbacks.py` |
+| Non-deterministic results | Unordered collections | `agents/recall.py` (line ~40) |
+| EMPTY_SET when should succeed | Provider status check | `deps.py` |
+
+---
+
+## Rollback Criteria
+
+Roll back to previous commit if:
+1. ≥2 smoke scenarios fail with same root cause
+2. Mem0 duplicate-rerank regression detected
+3. Deterministic behavior breaks
+
+**Rollback Steps**:
+```bash
+git stash
+git checkout <previous-commit>
+PYTHONPATH=backend/src pytest tests/test_manual_branch_validation_harness.py -v
+```
+
+---
+
+## Operator Signoff
+
+| Field | Value |
+|-------|-------|
+| Operator | |
+| Date | |
+| Scenarios Run | |
+| Pass Count | |
+| Fail Count | |
+| Regression Detected | Yes / No |
+| Signoff | |
+
+---
+
+## Appendix A: Full Scenario Catalog
+
+See `backend/src/second_brain/validation/manual_branch_scenarios.py` for complete scenario definitions.
+
+## Appendix B: Related Documentation
+
+- `docs/architecture/conversational-retrieval-contract.md` — Branch semantics
+- `docs/architecture/retrieval-overlap-policy.md` — Rerank policy
+- `docs/architecture/retrieval-planning-separation.md` — Module boundaries
+
+## Appendix C: Validation Commands
+
+```bash
+# Level 1: Lint
+ruff check backend/src tests
+
+# Level 2: Type check
+mypy backend/src/second_brain --ignore-missing-imports
+
+# Level 3: Unit tests
+PYTHONPATH=backend/src pytest tests/test_context_packet_contract.py tests/test_retrieval_router_policy.py -q
+
+# Level 4: Integration tests
+PYTHONPATH=backend/src pytest tests/test_recall_flow_integration.py tests/test_manual_branch_validation_harness.py -q
+```

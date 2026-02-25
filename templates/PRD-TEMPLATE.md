@@ -34,6 +34,34 @@
 
 ---
 
+## Project Requirements Baseline (Mandatory)
+
+> Big idea alone is not enough. Lock the operational spec before implementation.
+
+### Spec Lock
+
+- **Implementation Mode**: {docs-only | code-only | both}
+- **Target Repository/Path**: {exact path/repo for execution}
+- **Stack/Framework**: {selected stack or "follow existing" with evidence}
+- **Maturity Target**: {alpha scaffold | MVP | production}
+- **Primary Artifact(s)**: {PRD | structured plan | technical spec | ADRs}
+
+### Technical Boundaries
+
+- **Architecture style**: {monolith | modular monolith | microservices | event-driven}
+- **Data/storage layer**: {database/vector store/cache/object store}
+- **Interfaces**: {API/CLI/events; protocol and format}
+- **Security baseline**: {authn/authz, secret handling, data classification}
+- **Non-functional requirements**: {latency, reliability, scale, observability}
+
+### Delivery Constraints
+
+- **Team constraints**: {solo, reviewers, ownership}
+- **Risk tolerance**: {low/medium/high; what can ship in alpha}
+- **Must-have vs nice-to-have**: {explicit prioritization}
+
+---
+
 ## Target Users
 
 **{User persona}** who want to:
@@ -126,6 +154,22 @@ project-root/
 ### Optional Dependencies
 - **{Technology}** — {purpose}
 
+### Alternatives Considered (Mandatory when stack is not locked)
+
+| Option | Pros | Cons | Fit for this MVP | Decision |
+|--------|------|------|------------------|----------|
+| {Option A} | {pros} | {cons} | {high/med/low + why} | {selected/rejected} |
+| {Option B} | {pros} | {cons} | {high/med/low + why} | {selected/rejected} |
+| {Option C / current baseline} | {pros} | {cons} | {high/med/low + why} | {selected/rejected} |
+
+### Capability Overlap Check (Mandatory)
+
+- **Provider-native capabilities in use**: {e.g., Mem0 reranking, keyword expansion, filtering}
+- **External add-ons**: {e.g., Voyage reranker, custom fusion layer}
+- **Default-on components**: {list}
+- **Default-off components**: {list}
+- **Redundant layers removed**: {what was removed and why}
+
 ---
 
 ## Security & Configuration
@@ -197,7 +241,7 @@ VARIABLE_NAME=value  # Description
 
 ## Implementation Phases
 
-### Phase 1: {Phase Name} (Week {X})
+### Phase 1: {Phase Name}
 **Goal:** {One sentence goal}
 
 **Deliverables:**
@@ -208,7 +252,7 @@ VARIABLE_NAME=value  # Description
 
 ---
 
-### Phase 2: {Phase Name} (Week {X})
+### Phase 2: {Phase Name}
 **Goal:** {One sentence goal}
 
 **Deliverables:**
@@ -219,7 +263,7 @@ VARIABLE_NAME=value  # Description
 
 ---
 
-### Phase 3: {Phase Name} (Week {X})
+### Phase 3: {Phase Name}
 **Goal:** {One sentence goal}
 
 **Deliverables:**

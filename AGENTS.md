@@ -201,21 +201,63 @@ opencode-coding-system/
 ├── AGENTS.md                    # Primary rules file (this file)
 ├── CLAUDE.md                    # Claude Code compatibility (references AGENTS.md)
 ├── memory.md                    # Cross-session memory (gitignored)
+├── mvp.md                       # Product vision and scope (Ultima Second Brain)
 │
 ├── sections/                    # Core methodology (loaded via opencode.json instructions)
+│   ├── 01_core_principles.md    # YAGNI, KISS, DRY, Limit AI Assumptions, ABP
+│   ├── 02_piv_loop.md           # Plan → Implement → Validate methodology
+│   ├── 03_context_engineering.md# 4 Pillars: Memory, RAG, Prompts, Tasks
+│   ├── 04_git_save_points.md    # Commit plans before implementing
+│   └── 05_decision_framework.md # When to proceed vs ask
 │
 ├── reference/                   # Deep guides (on-demand)
 │   ├── system-foundations.md
 │   ├── piv-loop-practice.md
-│   └── ...8 more guides
+│   ├── validation-discipline.md
+│   ├── file-structure.md
+│   ├── archon-workflow.md
+│   ├── command-design-framework.md
+│   ├── subagents-deep-dive.md
+│   ├── implementation-discipline.md
+│   ├── global-rules-optimization.md
+│   ├── layer1-guide.md
+│   └── sustainable-agent-architecture.md
 │
 ├── templates/                   # Reusable templates (8 files)
 │   ├── STRUCTURED-PLAN-TEMPLATE.md
 │   ├── PRD-TEMPLATE.md
-│   └── ...6 more templates
+│   ├── SUB-PLAN-TEMPLATE.md
+│   ├── VIBE-PLANNING-GUIDE.md
+│   ├── PLAN-OVERVIEW-TEMPLATE.md
+│   ├── MEMORY-TEMPLATE.md
+│   ├── COMMAND-TEMPLATE.md
+│   └── AGENT-TEMPLATE.md
 │
 ├── requests/                    # Feature plans (gitignored)
-│   └── execution-reports/
+│   ├── {feature}-plan.md        # Layer 2: Feature plans
+│   └── execution-reports/       # Implementation reports
+│
+├── backend/                     # Backend application (Second Brain implementation)
+│   ├── pyproject.toml           # Python project config
+│   └── src/second_brain/        # Application code
+│       ├── contracts/           # Typed contracts (ContextPacket, NextAction)
+│       ├── orchestration/       # Retrieval router, fallback emitters
+│       ├── agents/              # Recall agent and other agents
+│       ├── services/            # Memory, Voyage rerank services
+│       ├── schemas.py           # Pydantic schemas
+│       ├── deps.py              # Dependency injection
+│       └── mcp_server.py        # MCP tool exposure
+│
+├── docs/                        # Architecture documentation
+│   └── architecture/            # System design docs
+│       ├── conversational-retrieval-contract.md
+│       ├── retrieval-planning-separation.md
+│       └── retrieval-overlap-policy.md
+│
+├── tests/                       # Test files
+│   ├── test_context_packet_contract.py
+│   ├── test_retrieval_router_policy.py
+│   └── ...
 │
 ├── .opencode/                   # OpenCode configuration
 │   ├── commands/                # Slash commands
@@ -226,6 +268,32 @@ opencode-coding-system/
 ```
 
 ---
+
+## Current Implementation Status
+
+### Active Feature Work
+
+**Hybrid Retrieval Conversational Orchestrator** (Foundation Complete)
+
+- **Goal**: Conversation-first retrieval with separated retrieval/planning responsibilities
+- **Status**: Foundation implemented, integration pending
+- **Completed**:
+  - Contract architecture docs (3 files)
+  - Typed context packet models (ContextPacket, NextAction)
+  - Deterministic retrieval router with Mem0 rerank policy
+  - Fallback emitters (EMPTY_SET, LOW_CONFIDENCE, CHANNEL_MISMATCH, RERANK_BYPASSED, SUCCESS)
+  - Comprehensive tests (41 passing)
+- **Pending**:
+  - Integration with existing recall flow
+  - Manual branch validation
+
+### Workflow Pattern
+
+1. **Plan** (`/planning`) → Creates `requests/{feature}-plan.md`
+2. **Execute** (`/execute`) → Implements from plan, creates backend structure
+3. **Validate** → Lint, typecheck, test (5-level pyramid)
+4. **Report** → Saves execution report to `requests/execution-reports/`
+5. **Commit** (`/commit`) → Conventional commit with lessons to memory.md
 
 ## Optional: Archon MCP
 

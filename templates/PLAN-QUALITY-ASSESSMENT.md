@@ -92,6 +92,15 @@
 
 ---
 
+### Spec Lock and Approval Gate
+- [ ] Spec Lock present (implementation mode, target repo, stack/framework, maturity, artifact type)
+- [ ] User approval captured before final plan file write
+- [ ] Assumptions explicitly labeled and justified
+
+**Status:** Complete / Partial / Missing
+
+---
+
 ## Scoring
 
 | Section | Status | Points |
@@ -105,16 +114,17 @@
 | Testing Strategy | | /10 |
 | Validation Commands | | /10 |
 | Acceptance Criteria | | /5 |
-| **Total** | | **/100** |
+| Spec Lock + Approval | | /10 |
+| **Total** | | **/110** |
 
 ---
 
 ## Quality Score Interpretation
 
-- **90-100**: Excellent plan — ready for execution
-- **70-89**: Good plan — minor gaps acceptable
-- **50-69**: Incomplete — send back for revision
-- **<50**: Reject — missing critical sections
+- **98-110**: Excellent plan — ready for execution
+- **78-97**: Good plan — minor gaps acceptable
+- **56-77**: Incomplete — send back for revision
+- **<56**: Reject — missing critical sections
 
 ---
 

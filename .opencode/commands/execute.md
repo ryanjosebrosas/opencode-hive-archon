@@ -11,6 +11,15 @@ Read plan file: `$ARGUMENTS`
 
 ## Execution Instructions
 
+Lean mode (default):
+- Do not create extra documentation files during execution unless explicitly required by the plan.
+- Required artifact from execution is the report at `requests/execution-reports/{feature}-report.md`.
+- Archon notes/documents are allowed for handoff but should not duplicate large markdown outputs.
+
+Slice gate (required):
+- Execute only the current approved slice plan.
+- Do not begin implementation for a new slice while unresolved Critical/Major code-review findings remain for the current slice.
+
 ### 0.5. Detect Plan Type
 
 Read the plan file.
@@ -29,7 +38,21 @@ Read the plan file.
 
 ### 1.5. Archon Setup (if available)
 
-Create project and tasks: `manage_project("create", ...)`, then `manage_task("create", ...)` for each plan task with dependency-based task_order. Skip if Archon unavailable.
+Use Archon as the execution bridge so another LLM/agent can continue from structured state.
+
+Required workflow:
+1. Resolve project:
+   - Find existing project via `archon_find_projects(query=...)`
+   - If none, create project via `archon_manage_project(action="create", ...)`
+2. Register execution tasks from plan:
+   - Create one Archon task per Step-by-Step task via `archon_manage_task(action="create", ...)`
+   - Set `task_order` to preserve dependency order
+   - Keep only one task in `doing` at a time
+3. Store execution context document:
+   - Save or update an execution note/spec via `archon_manage_document(action="create"|"update", document_type="note", ...)`
+   - Include plan path, spec lock summary, and routing/fallback policy highlights
+
+Skip Archon steps only if Archon is unavailable.
 
 ### 2. Execute Tasks in Order
 
@@ -37,13 +60,13 @@ For EACH task in "Step by Step Tasks":
 
 **a.** Read the task and any existing files being modified.
 
-**b.** **Archon** (if available): `manage_task("update", task_id="...", status="doing")` — only ONE task in "doing" at a time.
+**b.** **Archon** (if available): `archon_manage_task(action="update", task_id="...", status="doing")` — only ONE task in "doing" at a time.
 
 **c.** Implement the task following specifications exactly. Maintain consistency with existing patterns.
 
 **d.** Verify: check syntax, imports, types after each change.
 
-**e.** **Archon** (if available): `manage_task("update", task_id="...", status="review")`
+**e.** **Archon** (if available): `archon_manage_task(action="update", task_id="...", status="review")`
 
 ### 2.5. Series Mode Execution (if plan series detected)
 
@@ -72,7 +95,10 @@ Execute ALL validation commands from the plan in order. Fix failures before cont
 - All validations pass
 - Code follows project conventions
 
-**Archon** (if available): `manage_task("update", task_id="...", status="done")` for all tasks. `manage_project("update", ..., description="Implementation complete, ready for commit")`
+**Archon** (if available):
+- Mark completed tasks: `archon_manage_task(action="update", task_id="...", status="done")`
+- Update project status/context: `archon_manage_project(action="update", project_id="...", description="Implementation complete, ready for commit")`
+- Save execution report summary as project document: `archon_manage_document(action="create"|"update", document_type="note", ...)`
 
 ### 6. Update Plan Checkboxes
 
@@ -132,3 +158,10 @@ If no divergences: "None — implementation matched plan exactly."
 - All changes complete: {yes/no}
 - All validations pass: {yes/no}
 - Ready for `/commit`: {yes/no — if no, explain what's blocking}
+
+### Archon Handoff
+
+- Project ID: {id or "not used"}
+- Tasks synced: {count}
+- Execution document updated: {yes/no}
+- Next assignee suggestion: {User / Coding Agent / specific agent name}

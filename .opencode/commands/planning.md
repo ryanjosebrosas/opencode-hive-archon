@@ -12,6 +12,16 @@ Core principle: We do not write code in this phase.
 
 Key philosophy: Context is king. The plan must contain all information needed for one-pass implementation success.
 
+Slice discipline rule (required):
+- Plan one slice at a time.
+- Do not start planning the next slice until the current slice is execution-complete and code-review clean (or explicitly accepted by user with minor skips).
+
+Lean mode (default):
+- Required artifacts per feature are only:
+  1) `requests/{descriptive-name} #<n>.md` (plan)
+  2) `requests/execution-reports/{feature}-report.md` (execution report, produced by `/execute`)
+- Additional docs are optional and created only when they change implementation behavior.
+
 Important execution rule for this command:
 - No subagents.
 - No delegated research.
@@ -26,6 +36,10 @@ Two-part execution model:
 1. MVP discovery and confirmation
 2. PRD-style implementation planning aligned to MVP foundation bricks
 
+Important scope rule:
+- MVP is necessary but not sufficient. Planning must also lock the technical specification baseline needed to execute.
+- Never assume the big idea alone is enough for implementation planning.
+
 Interaction protocol (required):
 - Keep planning conversational and interactive.
 - Confirm each major insight with the user before locking it in.
@@ -33,6 +47,22 @@ Interaction protocol (required):
 - If the user says "I already provided the answer," stop re-asking and synthesize from their provided inputs.
 - When information is sufficient, proceed decisively to synthesis instead of extending discovery.
 - Use concise confirmation prompts such as: "Got it - does this capture your intent?"
+
+Mandatory spec handshake (non-skippable):
+- Before producing any final plan file, ask and confirm these 5 items explicitly:
+  1. Implementation mode: docs/spec only, runnable code, or both
+  2. Target repo/path for implementation (not just planning workspace)
+  3. Preferred stack/framework constraints (or "follow existing stack")
+  4. Acceptance depth: alpha scaffold, production-ready MVP, or full production
+  5. Output artifact type: PRD, structured execution plan, or both
+- If the user already provided these, restate them in one compact "spec lock" block and ask for explicit confirmation.
+- Never finalize a plan file if these 5 items are not locked.
+
+Mandatory approval gate before file write:
+- Produce a 1-page planning preview first (problem, scope, architecture direction, task phases, assumptions).
+- Ask for explicit approval: "Approve this direction to write the final plan file?"
+- Only write the final plan file after approval.
+- If approval is denied, revise preview and repeat.
 
 ## Planning Process
 
@@ -92,6 +122,32 @@ If `mvp.md` does not exist:
 7. Proceed to PRD planning (Phase 1) only after MVP confirmation.
 8. If user indicates prior answers already cover MVP details, synthesize immediately and request final MVP confirmation.
 
+### Phase 0.5: Technology and OSS Options Exploration (Mandatory)
+
+Before Phase 1, run an options scan so planning is not locked to one assumed stack.
+
+Requirements:
+1. Gather user-provided references first (GitHub repos, docs, preferred tools).
+2. Research at least 2 viable options when the architecture/stack is not fully locked.
+3. Build a decision matrix with:
+   - Option name
+   - Integration effort
+   - Maintenance burden
+   - Performance/latency fit
+   - Cost/licensing fit
+   - Lock-in risk
+   - Capability overlap/redundancy risk
+   - Why it fits/does not fit this MVP
+4. Include current/default approach as one option for fair comparison.
+5. Ask user for selection or hybrid path before moving to Phase 1.
+
+Redundancy rule (mandatory):
+- Do not stack duplicate retrieval components without explicit benefit.
+- Example: if provider-native reranking is enabled (e.g., Mem0 rerank), external reranker must be optional/disabled by default unless A/B evidence shows quality gain.
+
+Checkpoint question (required):
+- "Which option should we lock for this plan: A, B, C, or hybrid?"
+
 ### Phase 1: PRD Planning - Feature Understanding
 
 - Extract core problem, user value, and expected impact.
@@ -110,6 +166,10 @@ Before moving to Phase 2, confirm the phase output with the user:
 - "Does this feature framing match what you want to build?"
 - If user says they already answered, synthesize and proceed.
 
+Also confirm implementation specificity before proceeding:
+- "Should this feature be spec-only or implemented in code in this loop?"
+- "Which stack/framework should this plan target?"
+
 ### Phase 2: Codebase Intelligence Gathering
 
 Use direct analysis with local project tools (Glob, Grep, Read, Bash as needed).
@@ -123,6 +183,7 @@ If Archon MCP is available:
    - Detect language(s), framework(s), runtime versions.
    - Map architecture and integration boundaries.
    - Locate manifests and build/test tooling.
+   - Record concrete evidence for stack choice (file paths + line refs where possible).
 
 2. Pattern recognition:
    - Find similar implementations.
@@ -172,6 +233,14 @@ Output a comprehensive "Relevant Documentation" list with:
 - Decide between alternatives with rationale.
 - Define testing approach and acceptance criteria.
 - Ensure maintainability and scalability match project constraints.
+- Include an "Alternatives considered" summary and why final choice won.
+
+Lean-mode doc gate (required):
+- Before adding any extra documentation file, verify at least one is true:
+  - It defines a new shared contract/interface required by multiple modules/agents.
+  - It is required for safe handoff across sessions/LLMs.
+  - It is required for validation/audit of non-obvious behavior.
+- If none are true, do not create extra docs.
 
 If `.agents/PRD.md` exists, verify plan alignment with its architecture and interface constraints.
 
@@ -182,6 +251,8 @@ Before generating final output, confirm PRD direction with user:
 ### Phase 5: Plan Structure Generation
 
 Create the final PRD-style implementation plan using this exact structure:
+
+Do not write the final file until the user approves the preview and the 5-item spec handshake is locked.
 
 ```markdown
 # Feature: <feature-name>
@@ -406,12 +477,19 @@ npm run format:check
 
 ## Output Format
 
-Filename: `.agents/plans/{kebab-case-descriptive-name}.md`
+Filename (required): `requests/{descriptive-name} #<n>.md`
 
-- Replace `{kebab-case-descriptive-name}` with short descriptive feature name.
-- Examples: `add-user-authentication.md`, `implement-search-api.md`, `refactor-database-layer.md`
+- Use `requests/` as the output directory.
+- Keep the file body unchanged from the template structure; only apply numbering in the filename.
+- Preserve existing numbering style used by prior plans (example: `ultima-second-brain-hybrid-retrieval-plan #1.md`).
+- If same `descriptive-name` already exists, increment `<n>` to the next available number.
+- If no prior file exists for that name, start with `#1`.
 
-Directory: Create `.agents/plans/` if it does not exist.
+Examples:
+- `requests/implement-search-api #1.md`
+- `requests/implement-search-api #2.md`
+
+Directory: Create `requests/` if it does not exist.
 
 ## Quality Criteria
 
@@ -443,6 +521,11 @@ Directory: Create `.agents/plans/` if it does not exist.
 - URLs include section anchors where possible
 - Task descriptions use codebase keywords
 - Validation commands are non-interactive and executable
+
+### Anti-Bloat Check (required)
+
+- No documentation file is added unless it directly supports implementation, validation, or handoff.
+- Avoid duplicating the same decisions across multiple markdown files.
 
 ## Success Metrics
 

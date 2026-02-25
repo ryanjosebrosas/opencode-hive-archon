@@ -5,13 +5,15 @@ AGENTS.md                              # Agent guidance for AI assistants
 LICENSE                                # MIT License
 .gitignore                             # Protects secrets, personal config, plans
 memory.md                              # Cross-session memory (optional, from MEMORY-TEMPLATE.md)
+mvp.md                                 # Product vision and scope (Ultima Second Brain)
+
 sections/                              # Auto-loaded rule sections (every session)
   01_core_principles.md                #   YAGNI, KISS, DRY, Limit AI Assumptions, ABP
   02_piv_loop.md                       #   Plan, Implement, Validate methodology (slim)
   03_context_engineering.md            #   4 Pillars: Memory, RAG, Prompts, Tasks
   04_git_save_points.md                #   Commit plans before implementing
   05_decision_framework.md             #   When to proceed vs ask
-  06_archon_workflow.md                #   Archon integration pointer (not @referenced — kept for reference only)
+
 reference/                             # On-demand guides (loaded when needed)
   archon-workflow.md                   #   Archon task management & RAG workflow
   layer1-guide.md                      #   How to build CLAUDE.md for real projects
@@ -23,10 +25,9 @@ reference/                             # On-demand guides (loaded when needed)
   implementation-discipline.md         #   Execute command, meta-reasoning, save states
   validation-discipline.md             #   5-level pyramid, code review, system review
   subagents-deep-dive.md               #   Subagents, context handoff, agent design framework
-  github-workflows/                    #   GitHub Actions workflow templates
-    claude-fix.yml                     #     Auto-fix workflow for Claude Code
-    claude-fix-coderabbit.yml          #     Auto-fix workflow with CodeRabbit integration
-    README.md                          #     Workflow setup instructions
+  sustainable-agent-architecture.md    #   Strict gates G1-G5, Python-first portability
+  python-first-portability-guide.md    #   Framework-agnostic contract patterns
+
 templates/
   PRD-TEMPLATE.md                      # Template for Layer 1 PRD (what to build)
   STRUCTURED-PLAN-TEMPLATE.md          # Template for Layer 2 plans (per feature)
@@ -36,50 +37,117 @@ templates/
   MEMORY-TEMPLATE.md                   # Template for project memory (cross-session context)
   COMMAND-TEMPLATE.md                  # How to design new slash commands
   AGENT-TEMPLATE.md                    # How to design new subagents
+
 requests/
   .gitkeep                             # Preserves directory in git (plans are gitignored)
   {feature}-plan.md                    # Layer 2: Feature plans go here
-  system-reviews/                      # System review output directory
-.claude/settings.json                  # Hooks configuration (auto-compact memory recovery)
-.claude/commands/                      # Slash commands (reusable prompts)
-  agents.md                            #   /agents — generate subagent definition files
-  init-c.md                            # /init-c — generate CLAUDE.md for a new project
-  prime.md                             # /prime — load codebase context
-  planning.md                          # /planning — create implementation plan
-  execute.md                           # /execute — implement from plan
-  commit.md                            # /commit — conventional git commit
-  rca.md                               # /rca — root cause analysis (GitHub issues)
-  implement-fix.md                     # /implement-fix — fix from RCA document
-  end-to-end-feature.md                # /end-to-end-feature — autonomous workflow
-  create-prd.md                        # /create-prd — generate PRD from conversation
-  code-review.md                       # /code-review — technical code review
-  code-review-fix.md                   # /code-review-fix — fix issues from code review
-  execution-report.md                  # /execution-report — implementation report
-  system-review.md                     # /system-review — divergence analysis
-  create-pr.md                         # /create-pr — create GitHub PR
-.claude/skills/                        # Cloud Skills (progressive loading)
-  planning-methodology/                #   6-phase planning methodology
-    SKILL.md                           #   Entry point + frontmatter (Tier 1+2)
-    references/                        #   Detailed docs (Tier 3, on-demand)
-      6-phase-process.md               #     Phase-by-phase methodology
-      template-guide.md                #     Template section-filling guide
-  {skill-name}/                        #   Additional skills follow same structure
-    SKILL.md                           #   Entry point + frontmatter (required)
-    references/                        #   Detailed docs (loaded on-demand)
-    examples/                          #   Example outputs
-    scripts/                           #   Executable scripts
-.claude/agents/                        # Custom subagents (active, automatically loaded)
-  research-codebase.md                 #   Sonnet codebase exploration agent
-  research-external.md                 #   Sonnet documentation research agent
-  code-review-type-safety.md           #   Type safety reviewer (parallel review)
-  code-review-security.md              #   Security vulnerability reviewer
-  code-review-architecture.md          #   Architecture & patterns reviewer
-  code-review-performance.md           #   Performance & optimization reviewer
-  plan-validator.md                    #   Plan structure validation agent
-  test-generator.md                    #   Test case suggestion agent
-  specialist-devops.md                 #   DevOps & infrastructure specialist
-  specialist-data.md                   #   Database & data pipeline specialist
-  specialist-copywriter.md             #   UI copy & UX writing specialist
-  specialist-tech-writer.md            #   Technical documentation specialist
-  README.md                            #   Agent overview and usage guide
+  execution-reports/                   # Implementation reports (saved after /execute)
+    {feature}-report.md                #   Execution report with validation results
+
+backend/                               # Backend application (Second Brain implementation)
+  pyproject.toml                       # Python project config (dependencies, pytest, ruff, mypy)
+  src/second_brain/
+    __init__.py                        #   Package init
+    contracts/                         #   Typed contract models
+      __init__.py                      #     Package init
+      context_packet.py                #     ContextCandidate, ConfidenceSummary, ContextPacket, NextAction
+    orchestration/                     #   Retrieval routing and fallback logic
+      __init__.py                      #     Package init
+      retrieval_router.py              #     Deterministic provider selection, Mem0 rerank policy
+      fallbacks.py                     #     Branch emitters (EMPTY_SET, LOW_CONFIDENCE, etc.)
+    agents/                            #   Agent implementations
+      __init__.py                      #     Package init
+      recall.py                        #     Recall agent for retrieval orchestration
+    services/                          #   Service layer implementations
+      __init__.py                      #     Package init
+      memory.py                        #     Memory service (Mem0 provider)
+      voyage.py                        #     Voyage AI reranking service
+      graphiti_memory.py               #     Graph memory adapter (optional)
+      storage.py                       #     Hybrid retrieval and data access
+    schemas.py                         # Pydantic schemas (shared)
+    deps.py                            # Dependency injection helpers
+    mcp_server.py                      # MCP tool exposure
+
+docs/                                  # Architecture documentation
+  architecture/
+    conversational-retrieval-contract.md      # Runtime contract, branch semantics, output guarantees
+    retrieval-planning-separation.md          # Responsibility boundaries, data flow
+    retrieval-overlap-policy.md               # Rerank policy, Mem0 duplicate prevention
+
+tests/                                 # Test files
+  test_context_packet_contract.py      # Contract model and fallback emitter tests
+  test_retrieval_router_policy.py      # Router determinism and Mem0 policy tests
+  test_recall.py                       # Recall agent integration tests (TODO)
+  test_memory.py                       # Memory service tests (TODO)
+  test_mcp.py                          # MCP tool compatibility tests (TODO)
+
+.opencode/                             # OpenCode configuration
+  commands/                            # Slash commands
+    prime.md                           #   /prime — load codebase context
+    planning.md                        #   /planning — create implementation plan
+    execute.md                         #   /execute — implement from plan
+    commit.md                          #   /commit — conventional git commit
+    code-review.md                     #   /code-review — technical review
+    code-loop.md                       #   /code-loop — automated review → fix → commit
+    system-review.md                   #   /system-review — divergence analysis
+  agents/                              # Custom subagents
+    research-codebase.md               #   Codebase exploration
+    research-external.md               #   Documentation research
+    research-ai-patterns.md            #   AI/LLM integration patterns
+    code-review.md                     #   Generalist code review
+    plan-validator.md                  #   Plan validation
+    memory-curator.md                  #   Memory suggestions
+  skills/                              # Agent skills
+    planning-methodology/              #   6-phase systematic planning
+      SKILL.md                         #     Entry point
+
+.claude/                               # Claude Code compatibility (symlinks to .opencode)
+  commands/                            #   Symlinked to .opencode/commands/
+  agents/                              #   Symlinked to .opencode/agents/
+  settings.json                        #   Hooks configuration
 ```
+
+## Directory Purposes
+
+### Core Directories
+
+| Directory | Purpose | Git Tracked |
+|-----------|---------|-------------|
+| `sections/` | Auto-loaded methodology rules | Yes |
+| `reference/` | On-demand deep guides | Yes |
+| `templates/` | Reusable plan/doc templates | Yes |
+| `requests/` | Feature plans (per-session) | No (gitignored) |
+| `backend/` | Second Brain application | Yes |
+| `docs/` | Architecture documentation | Yes |
+| `tests/` | Test files | Yes |
+| `.opencode/` | OpenCode config (commands, agents) | Yes |
+| `.claude/` | Claude Code compatibility | Yes |
+
+### Backend Structure
+
+| Module | Purpose | Key Files |
+|--------|---------|-----------|
+| `contracts/` | Typed output contracts | `context_packet.py` |
+| `orchestration/` | Routing and fallbacks | `retrieval_router.py`, `fallbacks.py` |
+| `agents/` | Agent implementations | `recall.py` |
+| `services/` | Provider adapters | `memory.py`, `voyage.py`, `graphiti_memory.py` |
+
+### Test Structure
+
+| Test File | Coverage | Status |
+|-----------|----------|--------|
+| `test_context_packet_contract.py` | Contract models, fallback emitters | 28 tests, passing |
+| `test_retrieval_router_policy.py` | Router determinism, Mem0 policy | 13 tests, passing |
+| `test_recall.py` | Recall agent integration | TODO |
+| `test_memory.py` | Memory service | TODO |
+| `test_mcp.py` | MCP tool compatibility | TODO |
+
+## File Naming Conventions
+
+- **Plans**: `requests/{feature-name}-plan.md` (e.g., `hybrid-retrieval-conversational-orchestrator-plan.md`)
+- **Reports**: `requests/execution-reports/{feature-name}-report.md`
+- **Architecture docs**: `docs/architecture/{topic}.md`
+- **Test files**: `tests/test_{module_name}.py`
+- **Python modules**: snake_case (e.g., `retrieval_router.py`)
+- **OpenCode commands**: kebab-case (e.g., `code-review.md`)
+- **Subagents**: kebab-case (e.g., `research-codebase.md`)

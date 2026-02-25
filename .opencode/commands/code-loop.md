@@ -14,6 +14,10 @@ Automates the fix loop workflow:
 
 Runs until all issues are fixed or unfixable error detected.
 
+Slice completion rule:
+- A slice is considered complete only when code review returns no Critical/Major issues (or user explicitly accepts remaining minor issues).
+- Start the next slice only after this completion condition.
+
 ## Usage
 
 ```
@@ -57,7 +61,7 @@ At the start of EACH iteration, save progress checkpoint:
 ### Iteration 1-N
 
 1. **Run `/code-review`**
-   - Save to: `requests/code-reviews/{feature}-review-{N}.md`
+   - Save to: `requests/code-reviews/{feature}-review #{N}.md`
 
 2. **Check findings:**
    - **If 0 issues:** → Exit loop, go to commit
@@ -65,7 +69,7 @@ At the start of EACH iteration, save progress checkpoint:
    - **If Critical/Major issues:** → Continue to fix step
 
 3. **Run `/execute` (fix mode)**
-   - Input: `requests/code-reviews/{feature}-review-{N}.md`
+   - Input: `requests/code-reviews/{feature}-review #{N}.md`
    - Fixes issues in priority order
 
 4. **Run validation:**
@@ -97,7 +101,7 @@ At the start of EACH iteration, save progress checkpoint:
 ### User Interruption Handling
 
 **If user presses Ctrl+C during iteration:**
-1. Save current checkpoint to `requests/code-loops/{feature}-interrupted.md`
+1. Save current checkpoint to `requests/code-loops/{feature}-interrupted #<n>.md`
 2. Report:
    ```
    ⚠️  Loop interrupted at iteration {N}
@@ -105,7 +109,7 @@ At the start of EACH iteration, save progress checkpoint:
    Progress:
    - Issues fixed: X (Critical: Y, Major: Z)
    - Issues remaining: A (Critical: B, Major: C)
-   - Last checkpoint: requests/code-loops/{feature}-checkpoint-{N}.md
+   - Last checkpoint: requests/code-loops/{feature}-checkpoint #{N}.md
 
    Resume: Run `/code-loop {feature}` again — will continue from checkpoint
    ```
@@ -136,7 +140,11 @@ At the start of EACH iteration, save progress checkpoint:
 
 ## Output Report
 
-Save to: `requests/code-loops/{feature}-loop-report.md`
+Save to: `requests/code-loops/{feature}-loop-report #<n>.md`
+
+Numbering rule:
+- Use hash numbering for loop outputs to match request artifact convention.
+- Final report filename: `requests/code-loops/{feature}-loop-report #1.md` (or next available number).
 
 ### Loop Summary
 
@@ -155,10 +163,10 @@ Save to: `requests/code-loops/{feature}-loop-report.md`
 
 ### Checkpoints Saved
 
-- `requests/code-loops/{feature}-checkpoint-1.md` — Iteration 1 progress
-- `requests/code-loops/{feature}-checkpoint-2.md` — Iteration 2 progress
+- `requests/code-loops/{feature}-checkpoint #1.md` — Iteration 1 progress
+- `requests/code-loops/{feature}-checkpoint #2.md` — Iteration 2 progress
 - ...
-- **If interrupted:** `requests/code-loops/{feature}-interrupted.md` — Resume point
+- **If interrupted:** `requests/code-loops/{feature}-interrupted #<n>.md` — Resume point
 
 ### Validation Results
 

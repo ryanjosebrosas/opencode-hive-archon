@@ -17,6 +17,13 @@ This skill provides the methodology for transforming feature requests into compr
 
 ## The 6 Phases (Overview)
 
+Pre-Phase: Options Exploration (Mandatory when stack is not locked)
+**Goal**: Avoid premature stack commitment.
+- Compare at least 2 options plus current/default approach
+- Use user-provided repos/docs as primary evidence
+- Evaluate integration effort, maintenance, performance, cost/licensing, and lock-in
+- Get explicit user lock on selected option (or hybrid)
+
 ### Phase 1: Feature Understanding & Scoping
 **Goal**: Define WHAT we're building and WHY.
 - Parse requirements, create user story, define problem/solution
@@ -87,6 +94,9 @@ This skill provides the methodology for transforming feature requests into compr
 6. **Research validation**: Validate vibe planning research before building the structured plan on it.
 7. **Archon RAG first**: If available, search Archon curated knowledge before generic web search. Keep queries SHORT (2-5 keywords).
 8. **Recommended model**: Use a smart model (claude-sonnet or opus) for deeper reasoning.
+9. **Spec Lock is mandatory**: Before finalizing a plan, explicitly lock implementation mode, target repo, stack/framework, maturity target, and artifact type.
+10. **Approval gate is mandatory**: Provide a preview and get explicit approval before writing the final plan file.
+11. **Alternatives are mandatory when needed**: If stack/architecture is not locked, include options matrix and explicit decision checkpoint.
 
 ## Output
 
