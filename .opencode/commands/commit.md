@@ -28,6 +28,10 @@ Determine type (feat/fix/refactor/docs/test/chore/perf/style/plan), scope, and d
 
 ### 3. Stage and Commit
 
+Before staging, run artifact completion sweep (required):
+- For completed request artifacts in `requests/`, `requests/code-reviews/`, and `requests/code-loops/`, rename `.md` -> `.done.md`.
+- Keep filenames as the source of completion status; do not rely on title edits.
+
 ```bash
 git add $ARGUMENTS  # or git add . if no files specified
 git commit -m "type(scope): description"

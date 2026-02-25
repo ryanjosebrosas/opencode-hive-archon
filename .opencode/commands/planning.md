@@ -10,6 +10,11 @@ Transform a feature request into a comprehensive implementation plan through sys
 
 Core principle: We do not write code in this phase.
 
+Plan-before-execute rule (non-skippable):
+- `/execute` may only run from a `/planning`-generated artifact in `requests/`.
+- No direct implementation from chat intent, notes, or review files without a fix plan.
+- If execution work is requested and no plan exists, create/refresh the plan first.
+
 Key philosophy: Context is king. The plan must contain all information needed for one-pass implementation success.
 
 Slice discipline rule (required):

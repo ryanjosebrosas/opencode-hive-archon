@@ -5,6 +5,19 @@ agent: build
 
 # Execute: Implement from Plan
 
+## Hard Entry Gate (Non-Skippable)
+
+`/execute` is plan-bound only.
+
+Before any implementation or validation work:
+
+1. Verify `$ARGUMENTS` is provided and points to an existing markdown file under `requests/`.
+2. Verify the input is a planning artifact (feature plan / sub-plan / plan overview), not an ad-hoc prompt.
+3. If either check fails, stop immediately and report:
+   - `Blocked: /execute requires a /planning-generated plan file in requests/. Run /planning first.`
+
+Never execute code changes directly from chat intent without a plan artifact.
+
 ## Plan to Execute
 
 Read plan file: `$ARGUMENTS`
@@ -158,6 +171,10 @@ After successful execution, mark done status in filenames only:
 - Save the execution report using a `.done.md` filename.
   - Example: `requests/execution-reports/{feature}-report.done.md`
 - Do not modify markdown H1/title text just to mark done status.
+
+Completion sweep (required):
+- Before finishing `/execute`, rename any same-feature artifacts in `requests/code-reviews/` and `requests/code-loops/` from `.md` to `.done.md` when they are no longer active.
+- Never leave a completed same-feature review/loop artifact as plain `.md`.
 
 ## Output Report
 

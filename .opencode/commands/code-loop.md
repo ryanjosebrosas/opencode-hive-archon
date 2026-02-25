@@ -9,7 +9,7 @@ agent: build
 
 Automates the fix loop workflow:
 ```
-/code-review → /execute (fix) → /code-review → /commit
+/code-review → /planning (fix-slice) → /execute (fix plan) → /code-review → /commit
 ```
 
 Runs until all issues are fixed or unfixable error detected.
@@ -72,13 +72,18 @@ At the start of EACH iteration, save progress checkpoint:
    - **If only Minor issues:** → Ask user: "Fix minor issues or skip to commit?"
    - **If Critical/Major issues:** → Continue to fix step
 
-3. **Run `/execute` (fix mode)**
-   - Input: `requests/code-reviews/{feature}-review #{N}.md`
-   - Fixes issues in priority order
-   - After this fix pass succeeds, mark the input review file as done by renaming it to append `.done` before `.md`
+3. **Create fix plan via `/planning` (required)**
+   - Input: latest review artifact `requests/code-reviews/{feature}-review #{N}.md`
+   - Output: `requests/{feature}-review-fixes #<n>.md`
+   - The fix plan must define a single bounded fix slice (Critical/Major first)
+
+4. **Run `/execute` with the fix plan (required)**
+   - Input: `requests/{feature}-review-fixes #<n>.md`
+   - Never run `/execute` directly on raw review findings
+   - After this fix pass succeeds, mark the source review file `.done.md`
      - Example: `requests/code-reviews/{feature}-review #{N}.md` -> `requests/code-reviews/{feature}-review #{N}.done.md`
 
-4. **Run full validation for this slice:**
+5. **Run full validation for this slice:**
    - Run lint/style checks
    - Run type safety checks
    - Run unit tests
@@ -86,7 +91,7 @@ At the start of EACH iteration, save progress checkpoint:
    - Run manual verification steps from the active plan
    - Use project-specific commands from the current plan/repo (not JS-only defaults)
 
-5. **Check for unfixable errors:**
+6. **Check for unfixable errors:**
    - Command not found → Stop, report missing tool
    - Dependency errors → Stop, report "run npm install"
    - Syntax errors blocking analysis → Stop, report file:line
@@ -142,15 +147,22 @@ At the start of EACH iteration, save progress checkpoint:
 
 ## Output Report
 
-Save to: `requests/code-loops/{feature}-loop-report #<n>.done.md`
+Working filename: `requests/code-loops/{feature}-loop-report #<n>.md`
+
+Write the loop report to the working filename as the loop progresses. Do NOT use `.done.md` until the completion sweep.
 
 Done marker rule:
 - Mark done status in filenames only by appending `.done` before `.md`.
 - Do not modify markdown H1/title text just to indicate completion.
+- On clean exit (0 issues or user accepts), perform a **completion sweep** as the final step before commit:
+  1. Rename the loop report: `{feature}-loop-report #<n>.md` → `{feature}-loop-report #<n>.done.md`
+  2. Rename the last review file: `{feature}-review #<n>.md` → `{feature}-review #<n>.done.md`
+  3. Rename any fix plan artifacts that were fully applied: `.md` → `.done.md`
+- On interrupted/stopped exit, leave filenames as `.md` (not done).
 
 Numbering rule:
 - Use hash numbering for loop outputs to match request artifact convention.
-- Final report filename: `requests/code-loops/{feature}-loop-report #1.done.md` (or next available number).
+- Final report filename after sweep: `requests/code-loops/{feature}-loop-report #1.done.md` (or next available number).
 
 ### Loop Summary
 

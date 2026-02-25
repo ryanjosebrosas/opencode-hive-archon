@@ -16,7 +16,7 @@
       },
       "models": {
         "qwen3.5-plus": {
-          "name": "Qwen3.5 Plus",
+          "name": "Qwen3.5 Plus (Image Understanding)",
           "options": {
             "thinking": {
               "type": "enabled",
@@ -43,7 +43,7 @@
               "budgetTokens": 1024
             }
           },
-          "limit": { "context": 262144, "output": 16384 }
+          "limit": { "context": 262144, "output": 12288 }
         },
         "qwen3-coder-next": {
           "name": "Qwen3 Coder Next",
@@ -53,7 +53,7 @@
               "budgetTokens": 1024
             }
           },
-          "limit": { "context": 262144, "output": 65536 }
+          "limit": { "context": 262144, "output": 16384 }
         },
         "glm-4.7": {
           "name": "GLM-4.7",
@@ -63,16 +63,24 @@
               "budgetTokens": 1024
             }
           },
-          "limit": { "context": 131072, "output": 8192 }
+          "limit": { "context": 131072, "output": 4096 }
         },
         "kimi-k2.5": {
-          "name": "Kimi K2.5",
+          "name": "Kimi K2.5 (Image Understanding)",
           "options": {
             "thinking": {
               "type": "enabled",
               "budgetTokens": 1024
             }
           },
+          "limit": { "context": 262144, "output": 8192 }
+        },
+        "glm-5": {
+          "name": "GLM-5",
+          "limit": { "context": 262144, "output": 8192 }
+        },
+        "minimax-m2.5": {
+          "name": "MiniMax M2.5",
           "limit": { "context": 262144, "output": 8192 }
         }
       }

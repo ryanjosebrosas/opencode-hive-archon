@@ -24,6 +24,7 @@ Complex features (15+ tasks, 4+ phases): `/planning` auto-decomposes into sub-pl
 ### Implementation
 - Fresh conversation → `/execute requests/{feature}-plan.md`
 - Trust but verify
+- Never execute implementation work without a `/planning` artifact in `requests/`
 
 ### Validation
 - AI: tests + linting. Human: code review + manual testing.

@@ -15,3 +15,6 @@ worktrees/
 .env
 .env.local
 requests/execution-reports/
+
+# UBS scan artifacts
+py-bug-scan-report.txt
