@@ -25,15 +25,22 @@ This skill provides the methodology for transforming feature requests into compr
 
 ### Phase 2: Codebase Intelligence (Direct Exploration)
 **Goal**: Understand the existing codebase patterns.
-- Use Glob and Grep tools directly to explore the codebase
+- **Local exploration**: Use Glob and Grep tools directly to explore the codebase
+- **Archon MCP** (if available):
+  - `rag_search_code_examples` - find similar code patterns with 2-5 keyword queries
+  - Use RAG results to supplement direct file exploration
 - Find similar implementations, map integration points, extract project patterns
 - Fill: Relevant Codebase Files (with line numbers), New Files to Create, Patterns to Follow
 
 ### Phase 3: External Research (Direct Lookup)
 **Goal**: Gather external documentation and best practices.
-- Use WebSearch and WebFetch to find documentation directly
-- Find library docs, best practices, version compatibility, gotchas
-- If Archon RAG available: search curated knowledge base FIRST (2-5 keyword queries)
+- **Archon MCP FIRST** (if available):
+  - `rag_get_available_sources` - see what curated sources exist
+  - `rag_search_knowledge_base` - search with 2-5 keyword queries
+  - `rag_search_code_examples` - find relevant code patterns
+  - `rag_read_full_page` - retrieve full documentation pages
+- **WebFetch** - fetch specific documentation URLs (library docs, API references)
+- **Web search** - find official docs, best practices, version compatibility
 - Fill: Relevant Documentation, Related Memories
 
 ### Phase 3b: Research Validation

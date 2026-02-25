@@ -15,8 +15,12 @@ Key philosophy: Context is king. The plan must contain all information needed fo
 Important execution rule for this command:
 - No subagents.
 - No delegated research.
-- No external web research.
 - Do all discovery and planning directly in the main conversation.
+
+External research is ALLOWED and ENCOURAGED:
+- Use Archon MCP RAG search for curated knowledge base lookup (if available)
+- Use WebFetch for specific documentation URLs
+- Use web search for finding library docs and best practices
 
 Two-part execution model:
 1. MVP discovery and confirmation
@@ -108,7 +112,12 @@ Before moving to Phase 2, confirm the phase output with the user:
 
 ### Phase 2: Codebase Intelligence Gathering
 
-Use direct analysis with local project tools only (Glob, Grep, Read, Bash as needed).
+Use direct analysis with local project tools (Glob, Grep, Read, Bash as needed).
+
+If Archon MCP is available:
+- Search codebase patterns using `rag_search_code_examples` with 2-5 keyword queries
+- Search knowledge base using `rag_search_knowledge_base` for relevant docs
+- Use `rag_get_available_sources` to see what curated sources exist
 
 1. Project structure analysis:
    - Detect language(s), framework(s), runtime versions.
@@ -137,15 +146,24 @@ Use direct analysis with local project tools only (Glob, Grep, Read, Bash as nee
 
 If requirements are still ambiguous, ask targeted clarification before continuing.
 
-### Phase 3: Local Documentation and Project Constraints
+### Phase 3: Documentation Research (Local + External)
 
-Use only project-local sources:
-
-- Read local docs and references (`README.md`, `docs/`, `reference/`, `.agents/`, `AGENTS.md`, `memory.md`).
+**Local sources:**
+- Read local docs (`README.md`, `docs/`, `reference/`, `.agents/`, `AGENTS.md`, `memory.md`).
 - Extract project-specific constraints, conventions, and gotchas.
-- Do not fetch external docs in this planning command.
 
-Output a focused "Relevant Documentation" list using local repo paths and reasons.
+**External research (when needed):**
+- Use WebFetch to retrieve specific documentation URLs (e.g., library docs, API references)
+- Search for official documentation when library versions or integration details are unclear
+- Use web search to find best practices, common patterns, and version compatibility notes
+
+**Archon MCP integration (if available):**
+- Prioritize RAG search over generic web search for curated sources
+- Use `rag_read_full_page` to get complete documentation after RAG search
+
+Output a comprehensive "Relevant Documentation" list with:
+- Local repo paths with reasons
+- External documentation URLs with specific sections and why they matter
 
 ### Phase 4: Strategic Design and Synthesis
 
