@@ -28,9 +28,13 @@ Important execution rule for this command:
 - Do all discovery and planning directly in the main conversation.
 
 External research is ALLOWED and ENCOURAGED:
-- Use Archon MCP RAG search for curated knowledge base lookup (if available)
+- Use Archon MCP RAG search for curated knowledge base lookup (required)
 - Use WebFetch for specific documentation URLs
 - Use web search for finding library docs and best practices
+
+Archon requirement (non-skippable):
+- `/planning` must use Archon preflight + RAG retrieval before finalizing the plan.
+- If Archon is unavailable/unhealthy, stop and report: "Blocked: Archon MCP unavailable. `/planning` requires Archon."
 
 Two-part execution model:
 1. MVP discovery and confirmation
@@ -174,10 +178,19 @@ Also confirm implementation specificity before proceeding:
 
 Use direct analysis with local project tools (Glob, Grep, Read, Bash as needed).
 
-If Archon MCP is available:
-- Search codebase patterns using `rag_search_code_examples` with 2-5 keyword queries
-- Search knowledge base using `rag_search_knowledge_base` for relevant docs
-- Use `rag_get_available_sources` to see what curated sources exist
+Required Archon preflight and retrieval:
+- Verify connectivity with `archon_health_check` before discovery work.
+- List sources with `archon_rag_get_available_sources`.
+- Search codebase patterns using `archon_rag_search_code_examples` with 2-5 keyword queries.
+- Search curated docs using `archon_rag_search_knowledge_base(query=..., return_mode="pages")`.
+- Read top results using `archon_rag_read_full_page(page_id=...)`.
+- If no relevant hits are found, continue with local repo evidence and record "No relevant Archon RAG hits" in the plan notes.
+
+Code sample requirement (non-skippable):
+- Collect concrete implementation samples before writing tasks:
+  - At least 3 local code samples (file path + line reference + why it matches).
+  - At least 2 Archon code samples via `archon_rag_search_code_examples` when relevant results exist.
+- If Archon code samples are not relevant/available, document the miss explicitly and rely on local samples.
 
 1. Project structure analysis:
    - Detect language(s), framework(s), runtime versions.
@@ -207,7 +220,7 @@ If Archon MCP is available:
 
 If requirements are still ambiguous, ask targeted clarification before continuing.
 
-### Phase 3: Documentation Research (Local + External)
+### Phase 3: Documentation Research (Local + External + Archon)
 
 **Local sources:**
 - Read local docs (`README.md`, `docs/`, `reference/`, `.agents/`, `AGENTS.md`, `memory.md`).
@@ -218,9 +231,10 @@ If requirements are still ambiguous, ask targeted clarification before continuin
 - Search for official documentation when library versions or integration details are unclear
 - Use web search to find best practices, common patterns, and version compatibility notes
 
-**Archon MCP integration (if available):**
+**Archon MCP integration (required):**
 - Prioritize RAG search over generic web search for curated sources
-- Use `rag_read_full_page` to get complete documentation after RAG search
+- Use `archon_rag_read_full_page` to get complete documentation after RAG search
+- Include at least one Archon-sourced code example or page reference in the final plan when relevant matches exist
 
 Output a comprehensive "Relevant Documentation" list with:
 - Local repo paths with reasons
@@ -314,6 +328,13 @@ So that <benefit or value>
 ### Patterns to Follow
 
 <Project-specific patterns with real code references>
+
+### Code Samples to Mirror (required)
+
+- `path/to/sample_1.py:line` - Why this sample should be mirrored
+- `path/to/sample_2.py:line` - Why this sample should be mirrored
+- `path/to/sample_3.py:line` - Why this sample should be mirrored
+- Archon sample: `{source/page_id or URL}` - Why this external sample matters
 
 **Naming Conventions:**
 
@@ -497,6 +518,8 @@ Directory: Create `requests/` if it does not exist.
 
 - All required patterns identified and documented
 - External library usage documented with links
+- Archon RAG retrieval evidence documented (queries + references)
+- Concrete code samples are included (local + Archon where relevant)
 - Integration points clearly mapped
 - Gotchas and anti-patterns captured
 - Every task has an executable validation command
@@ -541,4 +564,5 @@ After creating the plan, provide:
 - Full path to created plan file
 - Complexity assessment
 - Key implementation risks or considerations
+- Archon retrieval summary (sources searched and key references)
 - Estimated confidence score for one-pass success

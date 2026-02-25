@@ -12,7 +12,7 @@ class MCPServer:
     def __init__(self):
         self.debug_mode = False
     
-    async def recall_search(
+    def recall_search(
         self,
         query: str,
         mode: str = "conversation",
@@ -63,7 +63,7 @@ class MCPServer:
         
         return compatibility.model_dump()
     
-    async def validate_branch(
+    def validate_branch(
         self,
         scenario_id: str,
     ) -> dict[str, Any]:
@@ -160,7 +160,7 @@ def get_mcp_server() -> MCPServer:
     return _mcp_server
 
 
-async def recall_search_tool(
+def recall_search_tool(
     query: str,
     mode: str = "conversation",
     top_k: int = 5,
@@ -168,7 +168,7 @@ async def recall_search_tool(
 ) -> dict[str, Any]:
     """MCP tool: Search memory."""
     server = get_mcp_server()
-    return await server.recall_search(
+    return server.recall_search(
         query=query,
         mode=mode,
         top_k=top_k,
@@ -176,7 +176,7 @@ async def recall_search_tool(
     )
 
 
-async def validate_branch_tool(scenario_id: str) -> dict[str, Any]:
+def validate_branch_tool(scenario_id: str) -> dict[str, Any]:
     """MCP tool: Validate branch scenario."""
     server = get_mcp_server()
-    return await server.validate_branch(scenario_id)
+    return server.validate_branch(scenario_id)
