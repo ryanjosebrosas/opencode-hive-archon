@@ -1,9 +1,9 @@
 ---
-description: Create comprehensive feature plan with deep codebase analysis and research
+description: Create feature plan with codebase analysis and research
 agent: build
 ---
 
-# Planning: Comprehensive Feature Plan
+# Planning: Feature Plan
 
 ## Feature Request
 
@@ -13,12 +13,12 @@ $ARGUMENTS
 
 Transform this feature request into a **comprehensive implementation plan** through systematic codebase analysis, external research, and strategic planning.
 
-**Core Principle**: The template is the control mechanism. All research fills specific template sections. Nothing is missed because the template specifies what's needed.
+**Core Principle**: The template is the control mechanism. No code in this phase — create a context-rich plan for one-pass implementation.
 
 **Key Rules**:
-- We do NOT write code in this phase. Create a context-rich plan that enables one-pass implementation.
-- The completed plan should be **fit-for-purpose** — comprehensive enough for one-pass implementation, no artificial constraints.
-- Every section must contain feature-specific content — not generic placeholders.
+- Every section must contain feature-specific content — not generic placeholders
+- Plan must pass "No Prior Knowledge Test" — another agent can implement with zero additional context
+- Tasks ordered by dependency — execute top-to-bottom without backtracking
 
 ## Determine Feature Name
 
@@ -29,30 +29,96 @@ Create a concise kebab-case feature name (e.g., "user-authentication", "payment-
 
 ---
 
-## THE TEMPLATE (CONTROL MECHANISM)
-
-Read `templates/STRUCTURED-PLAN-TEMPLATE.md` now — it defines the exact structure. All 6 phases below fill those template sections.
-
----
-
 ## MVP.md Check
 
 **Check for `mvp.md` at repo root:**
 
 **If EXISTS:**
-1. Read `mvp.md`
-2. Reference the big idea: "This feature serves: {big idea from mvp.md}"
-3. Quick confirmation: "Does this still match your vision?"
+1. Read `mvp.md` — this is the BIG IDEA, the north star
+2. **Every feature serves the MVP** — backend, frontend, all of it
+3. Quick confirmation: "This feature builds toward: {big idea from mvp.md}"
 4. If YES → Skip Phase 0, proceed to Phase 1
 5. If NO → "What changed?" → Update mvp.md (only if user confirms vision changed)
 
 **If NOT EXISTS:**
-1. Proceed to Phase 0 (Vibe Planning)
-2. After Phase 0, CREATE `mvp.md` with the big idea (one paragraph)
+1. **Do NOT skip Phase 0** — proceed to dig deep
+2. **Assess user's clarity level:**
+   - **Clear vision** → Challenge thinking, validate assumptions, suggest improvements
+   - **Vague idea** → Ask probing questions, challenge assumptions, provide options
+   - **No idea / New** → **Provide expert guidance** (see below)
+
+3. **For ALL users — Collaborative Discovery:**
+   - **Challenge their thinking** (even experienced users):
+     - "Why that approach? Have you considered X?"
+     - "What about scalability when Y happens?"
+   - **Back up suggestions with reasoning:**
+     - "I recommend FastAPI because: async, auto-docs, Pydantic integration"
+     - "PostgreSQL over MongoDB here because: you need transactions"
+   - **SEARCH for best practices — reference real projects:**
+     - Web search: "AI agent architecture patterns", "best practices 2025"
+     - GitHub: Find reference repos, see how they structure it
+     - Docs: LangChain, LlamaIndex, Pydantic AI — what do they recommend?
+     - Present: "I found X approach — here's the reference..."
+   - **Provide options with trade-offs:**
+     - "Option A: faster to build, harder to scale"
+     - "Option B: more upfront work, better long-term"
+
+4. **For users without clear vision:**
+   - Ask exploratory questions:
+     - "What problem are you solving?"
+     - "Who is this for?"
+     - "What's the simplest version that works?"
+   - **Suggest tech stack based on big idea:**
+     - Backend: FastAPI, Express, Pydantic AI, etc.
+     - Frontend: React, Vue, Svelte, etc.
+     - Database: PostgreSQL, SQLite, MongoDB, etc.
+     - AI/ML: LangChain, LlamaIndex, Pydantic AI, etc.
+   - **Research if needed:** Check GitHub, documentation, best practices
+   - "Based on similar projects, here's what works..."
+
+5. **Focus on ONE thing:**
+   - **Don't try to build everything** — no "Pokemon gotta catch them all"
+   - **Start with the ESSENTIAL foundation** for AI agents:
+     - **Memory structure / data models** — how does the agent remember?
+     - **Agent skeleton / core logic** — how does it think and act?
+     - **Tool interfaces** — how does it interact with the world?
+   - **Build ONE component to stand alone:**
+     - Make it flexible, modular, self-contained
+     - "This component should work even if nothing else exists yet"
+   - **THEN connect the next component:**
+     - Ingestion is LAST — it feeds data INTO the structure
+     - "First build the container, then pour the water"
+   - **Dependency order:**
+     1. **Structure** (memory, models, schemas) ← START HERE
+     2. **Core logic** (agent, reasoning, tools)
+     3. **Interfaces** (API, UI, integrations)
+     4. **Ingestion** (data pipelines, loaders) ← BUILD LAST
+   - **Validate each component before moving on:**
+     - "Does this work standalone?"
+     - "Is it flexible enough to connect later?"
+     - "Would I be proud to build everything else on this foundation?"
+
+6. **Plan output → `requests/[feature-name]-plan.md`**
+   - This is the blueprint for NEXT loop's `/execute`
+   - Next loop builds the **fundamentals** of this ONE thing:
+     - **If memory/structure**: Schema design, storage abstraction, CRUD operations
+       - "What storage? Supabase, PostgreSQL, local, GDrive?"
+       - Design for flexibility — swap storage without breaking logic
+     - **If agent core**: Reasoning loop, tool calling, state management
+     - **If ingestion** (should be later): Data loaders, parsers, validators
+       - Only after structure exists to receive the data
+   - **Dependency order matters:**
+     - Structure → before → ingestion
+     - Agent core → before → tool integrations
+     - API contracts → before → frontend
+
+7. Synthesize into one paragraph — the BIG IDEA
+8. Write to `mvp.md` at repo root
+9. Confirm: "This is our vision — strong foundation first, connect pieces after"
 
 ---
 
-## PHASE 0: Vibe Planning (Create mvp.md if First Feature)
+## PHASE 0: Vibe Planning (Required if No mvp.md)
 
 **Goal:** Discover the BIG IDEA through conversation. Adapt to user's energy.
 

@@ -103,8 +103,8 @@
       }
     },
     "archon": {
-      "type": "sse",
-      "url": "http://159.195.45.47:8051/sse",
+      "type": "remote",
+      "url": "http://159.195.45.47:8051/mcp",
       "enabled": true
     }
   }
