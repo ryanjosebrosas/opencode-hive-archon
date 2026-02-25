@@ -10,7 +10,7 @@
  */
 
 const { execSync } = require('child_process');
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
 
 // Parse arguments
@@ -21,9 +21,6 @@ if (!planFile) {
   console.error('Usage: node analyze-plan-diff.js <plan-file> [feature-name]');
   process.exit(1);
 }
-
-// Read plan file
-const planContent = fs.readFileSync(planFile, 'utf-8');
 
 // Extract planned files from plan
 function extractPlannedFiles(plan) {
@@ -198,16 +195,26 @@ function generateReport(metrics, planned) {
   }
 }
 
-// Main execution
-const planned = extractPlannedFiles(planContent);
-const actual = getActualChanges();
-const metrics = calculateMetrics(planned, actual);
+async function main() {
+  let planContent;
+  try {
+    planContent = await fs.readFile(planFile, 'utf-8');
+  } catch (error) {
+    console.error(`Error: Could not read plan file '${planFile}':`, error.message);
+    process.exit(1);
+  }
 
-generateReport(metrics, planned);
+  const planned = extractPlannedFiles(planContent);
+  const actual = getActualChanges();
+  const metrics = calculateMetrics(planned, actual);
 
-// Output JSON for further processing
-if (process.argv.includes('--json')) {
-  console.log('\n\n## JSON Output\n```json');
-  console.log(JSON.stringify(metrics, null, 2));
-  console.log('```');
+  generateReport(metrics, planned);
+
+  if (process.argv.includes('--json')) {
+    console.log('\n\n## JSON Output\n```json');
+    console.log(JSON.stringify(metrics, null, 2));
+    console.log('```');
+  }
 }
+
+main();

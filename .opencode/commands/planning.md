@@ -1,330 +1,443 @@
 ---
-description: Create feature plan with codebase analysis and research
-agent: build
+description: Create comprehensive feature plan with MVP discovery and PRD planning
 ---
 
-# Planning: Feature Plan
+# Plan a new task
 
-## Feature Request
+## Feature: $ARGUMENTS
 
-$ARGUMENTS
+Transform a feature request into a comprehensive implementation plan through systematic codebase analysis and strategic planning.
 
-## Mission
+Core principle: We do not write code in this phase.
 
-Transform this feature request into a **comprehensive implementation plan** through systematic codebase analysis, external research, and strategic planning.
+Key philosophy: Context is king. The plan must contain all information needed for one-pass implementation success.
 
-**Core Principle**: The template is the control mechanism. No code in this phase — create a context-rich plan for one-pass implementation.
+Important execution rule for this command:
+- No subagents.
+- No delegated research.
+- No external web research.
+- Do all discovery and planning directly in the main conversation.
 
-**Key Rules**:
-- Every section must contain feature-specific content — not generic placeholders
-- Plan must pass "No Prior Knowledge Test" — another agent can implement with zero additional context
-- Tasks ordered by dependency — execute top-to-bottom without backtracking
+Two-part execution model:
+1. MVP discovery and confirmation
+2. PRD-style implementation planning aligned to MVP foundation bricks
 
-## Determine Feature Name
+Interaction protocol (required):
+- Keep planning conversational and interactive.
+- Confirm each major insight with the user before locking it in.
+- Ask short checkpoint confirmations after: problem framing, user story, MVP draft, and PRD direction.
+- If the user says "I already provided the answer," stop re-asking and synthesize from their provided inputs.
+- When information is sufficient, proceed decisively to synthesis instead of extending discovery.
+- Use concise confirmation prompts such as: "Got it - does this capture your intent?"
 
-Create a concise kebab-case feature name (e.g., "user-authentication", "payment-processing").
+## Planning Process
 
-**Feature Name**: [create-feature-name]
-**Plan File**: `requests/[feature-name]-plan.md`
+### Phase 0: MVP Discovery and Alignment
 
----
+Check for `mvp.md` at repository root.
 
-## MVP.md Check
+If `mvp.md` exists:
+1. Read `mvp.md` fully and summarize the current big idea.
+2. Proactively ask the user if they are satisfied with the MVP as written.
+3. Align the requested feature as a foundation brick for that MVP.
+4. If misaligned, ask what changed and update `mvp.md` only with explicit user confirmation.
+5. If user is satisfied, skip discovery and continue to PRD planning (Phase 1).
+6. If user is not satisfied, revise `mvp.md` collaboratively before any PRD planning.
+7. After revision, ask for explicit confirmation: "MVP looks right now - proceed to PRD planning?"
 
-**Check for `mvp.md` at repo root:**
+If `mvp.md` does not exist:
+1. Run conversational discovery to establish the big idea.
+2. Ask focused probing questions based on user clarity level:
+   - Clear vision: challenge assumptions and define first implementation slice.
+   - Vague vision: ask who/what/why and suggest options with tradeoffs.
+3. Ask the user what text they already have for the big idea and incorporate it.
+4. Synthesize a structured MVP draft and write `mvp.md` using:
 
-**If EXISTS:**
-1. Read `mvp.md` — this is the BIG IDEA, the north star
-2. **Every feature serves the MVP** — backend, frontend, all of it
-3. Quick confirmation: "This feature builds toward: {big idea from mvp.md}"
-4. If YES → Skip Phase 0, proceed to Phase 1
-5. If NO → "What changed?" → Update mvp.md (only if user confirms vision changed)
-
-**If NOT EXISTS:**
-1. **Do NOT skip Phase 0** — proceed to dig deep
-2. **Assess user's clarity level:**
-   - **Clear vision** → Challenge thinking, validate assumptions, suggest improvements
-   - **Vague idea** → Ask probing questions, challenge assumptions, provide options
-   - **No idea / New** → **Provide expert guidance** (see below)
-
-3. **For ALL users — Collaborative Discovery:**
-   - **Challenge their thinking** (even experienced users):
-     - "Why that approach? Have you considered X?"
-     - "What about scalability when Y happens?"
-   - **Back up suggestions with reasoning:**
-     - "I recommend FastAPI because: async, auto-docs, Pydantic integration"
-     - "PostgreSQL over MongoDB here because: you need transactions"
-   - **SEARCH for best practices — reference real projects:**
-     - Web search: "AI agent architecture patterns", "best practices 2025"
-     - GitHub: Find reference repos, see how they structure it
-     - Docs: LangChain, LlamaIndex, Pydantic AI — what do they recommend?
-     - Present: "I found X approach — here's the reference..."
-   - **Provide options with trade-offs:**
-     - "Option A: faster to build, harder to scale"
-     - "Option B: more upfront work, better long-term"
-
-4. **For users without clear vision:**
-   - Ask exploratory questions:
-     - "What problem are you solving?"
-     - "Who is this for?"
-     - "What's the simplest version that works?"
-   - **Suggest tech stack based on big idea:**
-     - Backend: FastAPI, Express, Pydantic AI, etc.
-     - Frontend: React, Vue, Svelte, etc.
-     - Database: PostgreSQL, SQLite, MongoDB, etc.
-     - AI/ML: LangChain, LlamaIndex, Pydantic AI, etc.
-   - **Research if needed:** Check GitHub, documentation, best practices
-   - "Based on similar projects, here's what works..."
-
-5. **Focus on ONE thing:**
-   - **Don't try to build everything** — no "Pokemon gotta catch them all"
-   - **Start with the ESSENTIAL foundation** for AI agents:
-     - **Memory structure / data models** — how does the agent remember?
-     - **Agent skeleton / core logic** — how does it think and act?
-     - **Tool interfaces** — how does it interact with the world?
-   - **Build ONE component to stand alone:**
-     - Make it flexible, modular, self-contained
-     - "This component should work even if nothing else exists yet"
-   - **THEN connect the next component:**
-     - Ingestion is LAST — it feeds data INTO the structure
-     - "First build the container, then pour the water"
-   - **Dependency order:**
-     1. **Structure** (memory, models, schemas) ← START HERE
-     2. **Core logic** (agent, reasoning, tools)
-     3. **Interfaces** (API, UI, integrations)
-     4. **Ingestion** (data pipelines, loaders) ← BUILD LAST
-   - **Validate each component before moving on:**
-     - "Does this work standalone?"
-     - "Is it flexible enough to connect later?"
-     - "Would I be proud to build everything else on this foundation?"
-
-6. **Plan output → `requests/[feature-name]-plan.md`**
-   - This is the blueprint for NEXT loop's `/execute`
-   - Next loop builds the **fundamentals** of this ONE thing:
-     - **If memory/structure**: Schema design, storage abstraction, CRUD operations
-       - "What storage? Supabase, PostgreSQL, local, GDrive?"
-       - Design for flexibility — swap storage without breaking logic
-     - **If agent core**: Reasoning loop, tool calling, state management
-     - **If ingestion** (should be later): Data loaders, parsers, validators
-       - Only after structure exists to receive the data
-   - **Dependency order matters:**
-     - Structure → before → ingestion
-     - Agent core → before → tool integrations
-     - API contracts → before → frontend
-
-7. Synthesize into one paragraph — the BIG IDEA
-8. Write to `mvp.md` at repo root
-9. Confirm: "This is our vision — strong foundation first, connect pieces after"
-
----
-
-## PHASE 0: Vibe Planning (Required if No mvp.md)
-
-**Goal:** Discover the BIG IDEA through conversation. Adapt to user's energy.
-
-**If user wants to explore:**
-- Go deep — ask about inspiration, reference projects, trade-offs
-- Explore options: "What if we tried X?" "Have you seen Y done well?"
-- Synthesize: "So the vision is..."
-- Time: 30-60 mins
-
-**If user has clear vision:**
-- Go fast — confirm understanding, identify first brick
-- "What's the simplest version that solves this?"
-- Time: 10-15 mins
-
-**End of Phase 0:**
-- Ask: "What's the BIG IDEA in one paragraph?"
-- User responds → Write to `mvp.md` at repo root
-- Confirm: "This is our vision — we'll reference it for every feature"
-
-**mvp.md Format:**
-```
+```markdown
 # {Product Name}
 
-{One paragraph — what you're building and why. 5-10 lines.}
+## Big Idea
+
+{2-4 paragraphs describing what is being built, why it matters, and the product direction.}
+
+## Users and Problems
+
+- {Primary user type}
+- {Top problem 1}
+- {Top problem 2}
+
+## Core Capabilities (Foundation Bricks)
+
+- {Capability 1}
+- {Capability 2}
+- {Capability 3}
+
+## Out of Scope for Now
+
+- {Deferred item 1}
+- {Deferred item 2}
+
+## Success Signals
+
+- {Signal 1}
+- {Signal 2}
 ```
 
-**Rules:**
-- This is a CONVERSATION, not a checklist
-- Adapt to user's energy and communication style
-- If user has reference projects, study them together
-- End with clarity: one paragraph that captures the vision
+5. Proactively ask the user if they are satisfied with the MVP draft.
+6. If not satisfied, refine iteratively before proceeding.
+7. Proceed to PRD planning (Phase 1) only after MVP confirmation.
+8. If user indicates prior answers already cover MVP details, synthesize immediately and request final MVP confirmation.
+
+### Phase 1: PRD Planning - Feature Understanding
+
+- Extract core problem, user value, and expected impact.
+- Classify feature type: New Capability, Enhancement, Refactor, or Bug Fix.
+- Assess complexity: Low, Medium, High.
+- Map systems and components likely affected.
+- Create or refine user story:
+
+```text
+As a <type of user>
+I want to <action or goal>
+So that <benefit or value>
+```
+
+Before moving to Phase 2, confirm the phase output with the user:
+- "Does this feature framing match what you want to build?"
+- If user says they already answered, synthesize and proceed.
+
+### Phase 2: Codebase Intelligence Gathering
+
+Use direct analysis with local project tools only (Glob, Grep, Read, Bash as needed).
+
+1. Project structure analysis:
+   - Detect language(s), framework(s), runtime versions.
+   - Map architecture and integration boundaries.
+   - Locate manifests and build/test tooling.
+
+2. Pattern recognition:
+   - Find similar implementations.
+   - Extract naming, error handling, logging, module, typing, and testing patterns.
+   - Capture anti-patterns to avoid.
+   - Read `AGENTS.md` and `memory.md` for project rules and prior decisions.
+
+3. Dependency analysis:
+   - Catalog libraries relevant to this feature.
+   - Note versions, integration style, and compatibility constraints.
+   - Read local docs if present (`docs/`, `reference/`, `.agents/reference/`, `ai_docs/`, `ai-wiki/`).
+
+4. Testing pattern analysis:
+   - Identify test framework, folder conventions, fixtures, and assertion style.
+   - Find closest comparable tests to mirror.
+
+5. Integration points:
+   - List files to update.
+   - List new files to create.
+   - Identify registration points (router, command maps, config, schemas, migrations).
+
+If requirements are still ambiguous, ask targeted clarification before continuing.
+
+### Phase 3: Local Documentation and Project Constraints
+
+Use only project-local sources:
+
+- Read local docs and references (`README.md`, `docs/`, `reference/`, `.agents/`, `AGENTS.md`, `memory.md`).
+- Extract project-specific constraints, conventions, and gotchas.
+- Do not fetch external docs in this planning command.
+
+Output a focused "Relevant Documentation" list using local repo paths and reasons.
+
+### Phase 4: Strategic Design and Synthesis
+
+- Design implementation order with explicit dependencies.
+- Evaluate risks: edge cases, error paths, race conditions, data integrity, backward compatibility.
+- Decide between alternatives with rationale.
+- Define testing approach and acceptance criteria.
+- Ensure maintainability and scalability match project constraints.
+
+If `.agents/PRD.md` exists, verify plan alignment with its architecture and interface constraints.
+
+Before generating final output, confirm PRD direction with user:
+- "This is the implementation bridge from MVP to delivery. Confirm and I will finalize the plan."
+- If user says they already provided direction, finalize without extra questioning.
+
+### Phase 5: Plan Structure Generation
+
+Create the final PRD-style implementation plan using this exact structure:
+
+```markdown
+# Feature: <feature-name>
+
+The following plan should be complete, but validate documentation, codebase patterns, and task sanity before implementation.
+
+Pay close attention to naming of existing utils, types, and models. Import from the correct files.
+
+## Feature Description
+
+<Detailed description of feature, purpose, and value>
+
+## User Story
+
+As a <type of user>
+I want to <action or goal>
+So that <benefit or value>
+
+## Problem Statement
+
+<Specific problem or opportunity this feature addresses>
+
+## Solution Statement
+
+<Proposed solution and why it solves the problem>
+
+## Feature Metadata
+
+**Feature Type**: [New Capability/Enhancement/Refactor/Bug Fix]
+**Estimated Complexity**: [Low/Medium/High]
+**Primary Systems Affected**: [Main components or services]
+**Dependencies**: [External libraries or services required]
 
 ---
 
-### Quick Alignment (mvp.md Exists — Subsequent Features)
+## CONTEXT REFERENCES
 
-**When mvp.md already exists:**
+### Relevant Codebase Files IMPORTANT: YOU MUST READ THESE FILES BEFORE IMPLEMENTING!
 
-1. **Read mvp.md** — understand the big idea
-2. **Align this feature:** "Based on mvp.md, {feature} is part of {capability}"
-3. **Quick confirm:** "Does this still match your vision?"
-    - If YES → Proceed to Phase 1 (skip Phase 0)
-    - If NO → "What changed?" → Discuss → Update mvp.md if vision changed
-4. **Proceed to Phase 1**
+- `path/to/file.py` (lines 15-45) - Why: Contains pattern for X to mirror
+- `path/to/model.py` (lines 100-120) - Why: Database model structure
+- `path/to/test.py` - Why: Testing pattern example
 
-**Why skip Phase 0?**
-- Vision is already documented
-- No need to re-discover what's already clear
-- Save time for building, not re-planning
+### New Files to Create
 
-**When to ask Phase 0 questions anyway:**
-- Feature seems misaligned with mvp.md
-- User indicates vision might have evolved
-- Feature is complex and needs deeper exploration
+- `path/to/new_service.py` - Service implementation for X
+- `path/to/new_model.py` - Data model for Y
+- `tests/path/to/test_new_service.py` - Unit tests for new service
 
----
+### Relevant Documentation YOU SHOULD READ THESE BEFORE IMPLEMENTING!
 
-## PHASE 1: Feature Understanding & Scoping
+- [Documentation Link 1](https://example.com/doc1#section)
+  - Specific section: Authentication setup
+  - Why: Required for secure endpoint implementation
+- [Documentation Link 2](https://example.com/doc2#integration)
+  - Specific section: Database integration
+  - Why: Async database pattern reference
 
-**Goal**: Fill → Feature Description, User Story, Problem Statement, Solution Statement, Feature Metadata
+### Patterns to Follow
 
-1. Check memory.md for past decisions about this feature area
-2. Parse the feature request. If unclear, ask user to clarify BEFORE continuing.
-3. Create User Story: `As a [user], I want [goal], so that [benefit]`
-4. State Problem and Solution approach
-5. Document Feature Metadata: Type (New/Enhancement/Refactor/Fix), Complexity (Low/Medium/High), Systems Affected, Dependencies
+<Project-specific patterns with real code references>
 
----
+**Naming Conventions:**
 
-## PHASE 2: Codebase Intelligence (Parallel Agents)
+**Error Handling:**
 
-**Goal**: Fill → Relevant Codebase Files, New Files to Create, Patterns to Follow
+**Logging Pattern:**
 
-After Phase 1 scopes the feature, delegate to **2 parallel pre-defined research agents**. Craft focused queries using the feature description, systems affected, and keywords from Phase 1.
-
-**Launch simultaneously with Phase 3 agents** — all research agents run in parallel.
-
-### Agent A: @research-codebase — Similar Implementations & Integration Points
-- **Delegation query must include**:
-  - The feature description and systems affected from Phase 1
-  - Specific file patterns to search (e.g., "find route handlers in src/routes/", "find similar service patterns")
-  - Instruction: "Document all relevant file paths WITH line numbers"
-  - Instruction: "Identify which existing files need changes and what new files to create"
-
-### Agent B: @research-codebase — Project Patterns & Conventions
-- **Delegation query must include**:
-  - Instruction to focus on 2-3 representative files in the feature area
-  - Request to extract: naming conventions, error handling, logging, type patterns, testing approach
-  - Instruction: "Include actual code snippets with file:line references"
-
-**Fallback**: If the feature is trivially simple (1-2 file changes, obvious pattern), skip agents and explore directly with Glob/Grep.
+**Other Relevant Patterns:**
 
 ---
 
-## PHASE 3: External Research (Parallel Agent)
+## IMPLEMENTATION PLAN
 
-**Goal**: Fill → Relevant Documentation
+### Phase 1: Foundation
 
-Delegate to **1 pre-defined research agent** simultaneously with Phase 2 agents. Skip if no external dependencies are involved (internal-only changes).
+<Foundational work required before main implementation>
 
-### Agent C: @research-external — Documentation & Best Practices
-- **Delegation query must include**:
-  - The specific libraries, frameworks, or APIs involved from Phase 1
-  - Request for official documentation with specific section links
-  - Instruction to check version compatibility and note breaking changes
-  - Request to identify known gotchas and recommended patterns
-  - If Archon MCP available: "Search Archon RAG with SHORT queries (2-5 keywords)"
+**Tasks:**
 
-**Fallback**: If purely internal changes with no external dependencies, skip this agent and note "No external research needed."
+- Set up base schemas, types, and interfaces
+- Configure dependencies and foundational helpers
 
-### Phase 2c: Memory Search (if memory.md exists)
+### Phase 2: Core Implementation
 
-Read memory.md for past decisions, gotchas, and patterns relevant to this feature.
+<Main feature logic>
 
----
+**Tasks:**
 
-## PHASE 3c: Research Validation
+- Implement core business logic
+- Create service layer components
+- Add API endpoints or interfaces
+- Implement data models
 
-After all agents return, validate their findings in the main conversation:
+### Phase 3: Integration
 
-1. **Verify file references** — spot-check that cited file:line locations exist and contain what agents described
-2. **Cross-check agents** — do Agent A and B findings align? Any contradictions about patterns or conventions?
-3. **Validate external research** — are Agent C's library versions current? Are doc links valid?
-4. **Fill gaps** — if critical research is missing, do targeted follow-up directly with Glob/Grep/WebSearch
+<Connect with existing system>
 
----
+**Tasks:**
 
-## PHASE 4: Strategic Design & Synthesis
+- Connect routers/handlers
+- Register components
+- Update configuration
+- Add middleware/interceptors if needed
 
-**Goal**: Fill → Implementation Plan (phases), Testing Strategy, Acceptance Criteria
+### Phase 4: Testing and Validation
 
-1. **Synthesize agent findings** from Phases 2, 3, & 2c:
-   - Extract file paths from Agent A/B "File Map" and "Findings" sections → populate **Relevant Codebase Files**
-   - Extract code snippets from Agent A/B "Patterns Identified" → populate **Patterns to Follow**
-   - Extract URLs and excerpts from Agent C "Findings" and "Best Practices" → populate **Relevant Documentation**
-   - Extract "Suggested files to create/modify" from Agent summaries → populate **New Files to Create**
+<Feature-specific test strategy>
 
-2. **Design implementation approach**: fit with existing architecture, dependency ordering, phases (Foundation → Core → Integration → Testing)
+**Tasks:**
 
-3. **Plan testing strategy**: unit tests, integration tests, edge cases
-
-4. **Define acceptance criteria**: specific, measurable, includes functional requirements + test coverage + pattern compliance
+- Unit tests for each component
+- Integration tests for main flows
+- Edge case and failure-path tests
 
 ---
 
-## PHASE 4.5: Plan Decomposition Decision
+## STEP-BY-STEP TASKS
 
-**Decompose if**: High complexity, 4+ phases, 15+ tasks, 3+ systems, or user requests it.
+IMPORTANT: Execute every task in order, top to bottom. Each task must be atomic and independently testable.
 
-**If decomposing**: Create sub-plans manually (1 phase = 1 plan file, max 8 tasks each). Each sub-plan must be self-contained with full context.
+### Task Format Guidelines
 
-**If NOT decomposing** (default): Proceed to Phase 5 normally (single plan, 700-1000 lines).
+- **CREATE**: New files or components
+- **UPDATE**: Modify existing files
+- **ADD**: Insert new functionality into existing code
+- **REMOVE**: Delete deprecated code
+- **REFACTOR**: Restructure without behavior changes
+- **MIRROR**: Reuse an existing codebase pattern
 
----
+### {ACTION} {target_file}
 
-## PHASE 5: Step-by-Step Task Generation
-
-**Goal**: Fill → STEP-BY-STEP TASKS section
-
-**Critical Rule**: Each task MUST include ALL of these fields:
-
-- **ACTION**: CREATE / UPDATE / ADD / REMOVE / REFACTOR / MIRROR
-- **TARGET**: Specific file path
-- **IMPLEMENT**: What to implement (code-level detail)
-- **PATTERN**: Reference to codebase pattern (file:line)
-- **IMPORTS**: Exact imports needed (copy-paste ready)
-- **GOTCHA**: Known pitfalls and how to avoid them
-- **VALIDATE**: Executable command to verify task completion
-
-Break Phase 4's implementation phases into atomic tasks. Order by dependency. Ensure top-to-bottom execution without backtracking.
-
-**If decomposed mode**: Each sub-plan gets 5-8 tasks max using same 7-field format. Include HANDOFF NOTES at end of each sub-plan. Each sub-plan must be self-contained.
+- **IMPLEMENT**: {Specific implementation detail}
+- **PATTERN**: {Reference to existing pattern - file:line}
+- **IMPORTS**: {Required imports and dependencies}
+- **GOTCHA**: {Known issues or constraints to avoid}
+- **VALIDATE**: `{executable validation command}`
 
 ---
 
-## PHASE 6: Quality Validation & Confidence Score
+## TESTING STRATEGY
 
-**Goal**: Fill → Validation Commands, Completion Checklist, Notes (including Confidence Score)
+### Unit Tests
 
-1. **Compile validation commands** (5 levels): Syntax/Style, Unit Tests, Integration Tests, Manual Validation, Additional
-2. **Create completion checklist**: all tasks done, validations pass, tests pass, acceptance criteria met
-3. **Assess confidence**: Score X/10, strengths, uncertainties, mitigations, key design decisions
+<Scope and requirements matching project standards>
+
+### Integration Tests
+
+<Scope and requirements matching project standards>
+
+### Edge Cases
+
+<List edge cases that must be tested>
 
 ---
 
-## OUTPUT
+## VALIDATION COMMANDS
 
-### Standard Mode (default)
+Execute every command to ensure zero regressions and feature correctness.
 
-Save to: `requests/[feature-name]-plan.md`
+### Level 1: Syntax and Style
 
-Use `templates/STRUCTURED-PLAN-TEMPLATE.md`. Every section must be filled — specific, not generic.
+```bash
+# TypeScript type checking
+npm run type-check
 
-### Decomposed Mode (from Phase 4.5)
+# ESLint
+npm run lint
 
-<!-- PLAN-SERIES -->
+# Prettier formatting check
+npm run format:check
+```
 
-Save to multiple files:
-- `requests/{feature}-plan-01-{phase}.md` through `-NN-` (use `templates/STRUCTURED-PLAN-TEMPLATE.md`)
+### Level 2: Unit Tests
 
-Include EXECUTION ROUTING at top of first sub-plan: Recommended model, shared context summary, task dependencies.
+<Project-specific unit test commands>
 
-### For Both Modes
+### Level 3: Integration Tests
 
-**CRITICAL**: This plan is for ANOTHER AGENT in a fresh conversation. It must contain ALL information needed — patterns, file paths with line numbers, exact commands, documentation links.
+<Project-specific integration test commands>
 
-## Confirmation
+### Level 4: Manual Validation
 
-Report: feature name, plan file path, complexity, key risks, confidence score, next step (`/execute`).
+<Feature-specific manual validation steps>
+
+### Level 5: Additional Validation (Optional)
+
+<Additional CLI or MCP validations>
+
+---
+
+## ACCEPTANCE CRITERIA
+
+- [ ] Feature implements all specified functionality
+- [ ] All validation commands pass with zero errors
+- [ ] Unit test coverage meets project requirements
+- [ ] Integration tests verify key workflows
+- [ ] Code follows project conventions and patterns
+- [ ] No regressions in existing functionality
+- [ ] Documentation updated if applicable
+- [ ] Performance and security considerations addressed if applicable
+
+---
+
+## COMPLETION CHECKLIST
+
+- [ ] All tasks completed in order
+- [ ] Each task validation passed immediately
+- [ ] Full validation command set executed successfully
+- [ ] Full test suite passes
+- [ ] No linting, formatting, or type-check errors
+- [ ] Build succeeds
+- [ ] All acceptance criteria met
+- [ ] Code reviewed for maintainability
+
+---
+
+## NOTES
+
+<Additional context, design decisions, and tradeoffs>
+```
+
+## Output Format
+
+Filename: `.agents/plans/{kebab-case-descriptive-name}.md`
+
+- Replace `{kebab-case-descriptive-name}` with short descriptive feature name.
+- Examples: `add-user-authentication.md`, `implement-search-api.md`, `refactor-database-layer.md`
+
+Directory: Create `.agents/plans/` if it does not exist.
+
+## Quality Criteria
+
+### Context Completeness
+
+- All required patterns identified and documented
+- External library usage documented with links
+- Integration points clearly mapped
+- Gotchas and anti-patterns captured
+- Every task has an executable validation command
+
+### Implementation Ready
+
+- Another developer can execute without additional context
+- Tasks are ordered by dependency and executable top-to-bottom
+- Each task is atomic and independently testable
+- Pattern references include concrete file:line locations
+
+### Pattern Consistency
+
+- Tasks follow existing conventions
+- New patterns are justified
+- Existing patterns and utilities are reused where appropriate
+- Testing approach matches project standards
+
+### Information Density
+
+- No generic references; all details are specific and actionable
+- URLs include section anchors where possible
+- Task descriptions use codebase keywords
+- Validation commands are non-interactive and executable
+
+## Success Metrics
+
+- One-pass implementation: execution can proceed without additional research
+- Validation complete: every task includes at least one working validation command
+- Context rich: plan passes the no-prior-knowledge test
+- Confidence score: X/10 confidence for first-pass execution success
+
+## Report
+
+After creating the plan, provide:
+- Summary of feature and approach
+- Full path to created plan file
+- Complexity assessment
+- Key implementation risks or considerations
+- Estimated confidence score for one-pass success
