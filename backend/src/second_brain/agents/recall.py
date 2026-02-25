@@ -109,6 +109,7 @@ class RecallOrchestrator:
                 route_options=route_options,
                 route_options_skip_rerank=skip_external_rerank,
                 rerank_metadata=rerank_metadata,
+                mode=request.mode,
             )
             routing_metadata["validation_mode"] = True
             routing_metadata["forced_branch"] = force_branch
@@ -135,6 +136,7 @@ class RecallOrchestrator:
                 route_options=route_options,
                 route_options_skip_rerank=skip_external_rerank,
                 rerank_metadata=rerank_metadata,
+                mode=request.mode,
             )
         
         return RetrievalResponse(
@@ -149,11 +151,12 @@ class RecallOrchestrator:
         route_options: dict,
         route_options_skip_rerank: bool,
         rerank_metadata: dict,
+        mode: str = "conversation",
     ) -> dict[str, Any]:
         """Build rich routing metadata for response."""
         return {
             "selected_provider": provider,
-            "mode": "conversation",  # Could be from request
+            "mode": mode,
             "skip_external_rerank": route_options_skip_rerank,
             "rerank_type": rerank_metadata.get("rerank_type", "none"),
             "rerank_bypass_reason": rerank_metadata.get("rerank_bypass_reason"),

@@ -24,7 +24,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="conversation",
             available_providers=["mem0", "supabase"],
-            feature_flags={},
             provider_status={
                 "mem0": ProviderStatus.AVAILABLE,
                 "supabase": ProviderStatus.AVAILABLE,
@@ -37,7 +36,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="conversation",
             available_providers=["supabase"],
-            feature_flags={},
             provider_status={
                 "mem0": ProviderStatus.UNAVAILABLE,
                 "supabase": ProviderStatus.AVAILABLE,
@@ -50,7 +48,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="fast",
             available_providers=["supabase", "mem0"],
-            feature_flags={},
             provider_status={
                 "mem0": ProviderStatus.AVAILABLE,
                 "supabase": ProviderStatus.AVAILABLE,
@@ -63,7 +60,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="accurate",
             available_providers=["mem0", "supabase", "graphiti"],
-            feature_flags={"graphiti_enabled": True},
             provider_status={
                 "mem0": ProviderStatus.AVAILABLE,
                 "supabase": ProviderStatus.AVAILABLE,
@@ -77,7 +73,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="conversation",
             available_providers=[],
-            feature_flags={},
             provider_status={}
         )
         assert provider == "none"
@@ -87,7 +82,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="conversation",
             available_providers=["mem0"],
-            feature_flags={},
             provider_status={
                 "mem0": ProviderStatus.UNAVAILABLE,
             }
@@ -98,7 +92,6 @@ class TestRouteDecisionSelectRoute:
         provider, options = RouteDecision.select_route(
             mode="fast",
             available_providers=["supabase"],
-            feature_flags={},
             provider_status={
                 "supabase": ProviderStatus.DEGRADED,
             }
@@ -206,7 +199,6 @@ class TestMem0DuplicateRerankPrevention:
         provider, options = RouteDecision.select_route(
             mode="conversation",
             available_providers=["mem0"],
-            feature_flags={},
             provider_status={"mem0": ProviderStatus.AVAILABLE}
         )
         assert provider == "mem0"
@@ -217,7 +209,6 @@ class TestMem0DuplicateRerankPrevention:
         provider, options = RouteDecision.select_route(
             mode="conversation",
             available_providers=["supabase"],
-            feature_flags={},
             provider_status={"supabase": ProviderStatus.AVAILABLE}
         )
         assert provider == "supabase"
@@ -230,7 +221,6 @@ class TestMem0DuplicateRerankPrevention:
             provider, options = RouteDecision.select_route(
                 mode="conversation",
                 available_providers=["mem0", "supabase"],
-                feature_flags={},
                 provider_status={
                     "mem0": ProviderStatus.AVAILABLE,
                     "supabase": ProviderStatus.AVAILABLE,
@@ -261,7 +251,6 @@ class TestDeterministicRouting:
                 provider, options = RouteDecision.select_route(
                     mode=mode,
                     available_providers=providers,
-                    feature_flags={"graphiti_enabled": True},
                     provider_status={p: ProviderStatus.AVAILABLE for p in providers}
                 )
                 results.append((provider, options["skip_external_rerank"]))
