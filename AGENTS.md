@@ -273,19 +273,20 @@ opencode-coding-system/
 
 ### Active Feature Work
 
-**Hybrid Retrieval Conversational Orchestrator** (Foundation Complete)
+**Hybrid Retrieval Conversational Orchestrator** (Validated)
 
 - **Goal**: Conversation-first retrieval with separated retrieval/planning responsibilities
-- **Status**: Foundation implemented, integration pending
+- **Status**: Foundation complete, validated with evidence
 - **Completed**:
   - Contract architecture docs (3 files)
   - Typed context packet models (ContextPacket, NextAction)
   - Deterministic retrieval router with Mem0 rerank policy
   - Fallback emitters (EMPTY_SET, LOW_CONFIDENCE, CHANNEL_MISMATCH, RERANK_BYPASSED, SUCCESS)
-  - Comprehensive tests (41 passing)
-- **Pending**:
-  - Integration with existing recall flow
-  - Manual branch validation
+  - Mem0 real provider adapter with fallback hardening
+  - Comprehensive tests (133 passing: 83 unit + 20 integration + 30 validation)
+  - Manual branch validation evidence (13/13 scenarios PASS)
+- **Evidence**: `requests/execution-reports/hybrid-retrieval-manual-validation-evidence #1.md`
+- **Pending**: Runtime rollout to production environment
 
 ### Workflow Pattern
 
