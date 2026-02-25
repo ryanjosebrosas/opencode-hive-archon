@@ -1,6 +1,8 @@
 """MCP server for tool exposure."""
-from typing import Any, Optional
-from second_brain.agents.recall import run_recall
+from typing import Any, Optional, Literal, cast
+from second_brain.agents.recall import RecallOrchestrator
+from second_brain.services.memory import MemoryService
+from second_brain.services.voyage import VoyageRerankService
 from second_brain.schemas import MCPCompatibilityResponse
 
 
@@ -31,13 +33,28 @@ class MCPServer:
         Returns:
             Compatibility response with contract envelope + legacy fields
         """
-        response = run_recall(
+        from second_brain.contracts.context_packet import RetrievalRequest
+        from second_brain.deps import get_feature_flags, get_provider_status
+        
+        request = RetrievalRequest(
             query=query,
-            mode=mode,
+            mode=cast(Literal["fast", "accurate", "conversation"], mode),
             top_k=top_k,
             threshold=threshold,
             provider_override=provider_override,
         )
+        
+        memory_service = MemoryService(provider="mem0")
+        rerank_service = VoyageRerankService(enabled=True)
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags=get_feature_flags(),
+            provider_status=get_provider_status(),
+        )
+        
+        response = orchestrator.run(request)
         
         compatibility = MCPCompatibilityResponse.from_retrieval_response(
             response=response,
@@ -70,13 +87,40 @@ class MCPServer:
                 "error": f"Scenario {scenario_id} not found",
             }
         
-        response = run_recall(
-            query=scenario.request.query,
-            mode=scenario.request.mode,
-            top_k=scenario.request.top_k,
-            threshold=scenario.request.threshold,
-            validation_mode=True,
-            force_branch=scenario.expected_branch if "validation" in scenario.tags else None,
+        is_validation_tagged = "validation" in scenario.tags
+        
+        if is_validation_tagged and not self.debug_mode:
+            return {
+                "success": False,
+                "gated": True,
+                "error": (
+                    f"Scenario {scenario_id} is validation-only. "
+                    "Enable debug mode to execute validation-tagged scenarios."
+                ),
+                "scenario_id": scenario_id,
+                "description": scenario.description,
+            }
+        
+        # Placeholder service - orchestrator resolves provider-consistent instance via
+        # _resolve_memory_service_for_provider based on scenario's feature_flags/provider_status
+        memory_service = MemoryService(provider="mem0")
+        rerank_service = VoyageRerankService(enabled=True)
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags=scenario.feature_flags,
+            provider_status=scenario.provider_status,
+        )
+        
+        force_branch = None
+        if is_validation_tagged and self.debug_mode:
+            force_branch = scenario.expected_branch
+        
+        response = orchestrator.run(
+            request=scenario.request,
+            validation_mode=self.debug_mode,
+            force_branch=force_branch,
         )
         
         return {
@@ -91,6 +135,8 @@ class MCPServer:
             "provider": response.routing_metadata.get("selected_provider"),
             "branch_match": response.context_packet.summary.branch == scenario.expected_branch,
             "action_match": response.next_action.action == scenario.expected_action,
+            "forced_branch": force_branch,
+            "gated": False,
         }
     
     def enable_debug_mode(self) -> None:

@@ -14,6 +14,7 @@ from second_brain.deps import (
     get_feature_flags,
     get_provider_status,
     get_default_config,
+    create_memory_service,
 )
 
 
@@ -75,9 +76,10 @@ class RecallOrchestrator:
                 },
             )
         
-        # Step 2: Retrieve candidates from memory service
+        # Step 2: Retrieve candidates from provider-consistent memory service
         skip_external_rerank = route_options.get("skip_external_rerank", False)
-        candidates, provider_metadata = self.memory_service.search_memories(
+        memory_service = self._resolve_memory_service_for_provider(provider)
+        candidates, _provider_metadata = memory_service.search_memories(
             query=request.query,
             top_k=request.top_k,
             threshold=request.threshold,
@@ -86,9 +88,9 @@ class RecallOrchestrator:
         
         # Step 3: Apply external rerank if needed (non-Mem0 paths)
         external_rerank_enabled = self.feature_flags.get("external_rerank_enabled", True)
-        rerank_metadata = {"rerank_type": "none"}  # type: ignore
+        rerank_metadata: dict[str, Any] = {"rerank_type": "none"}
         if not skip_external_rerank and candidates and external_rerank_enabled:
-            reranked, rerank_metadata = self.rerank_service.rerank(  # type: ignore
+            reranked, rerank_metadata = self.rerank_service.rerank(
                 query=request.query,
                 candidates=candidates,
                 top_k=request.top_k,
@@ -144,6 +146,26 @@ class RecallOrchestrator:
             next_action=next_action,
             routing_metadata=routing_metadata,
         )
+    
+    def _resolve_memory_service_for_provider(
+        self,
+        provider: str,
+    ) -> MemoryService:
+        """
+        Resolve provider-consistent memory service for retrieval.
+        
+        If injected service already matches selected provider, reuse it.
+        Otherwise, create provider-specific service instance.
+        
+        Args:
+            provider: Selected provider from routing decision
+        
+        Returns:
+            MemoryService instance aligned with selected provider
+        """
+        if self.memory_service.provider == provider:
+            return self.memory_service
+        return create_memory_service(provider=provider, config=self.config)
     
     def _build_routing_metadata(
         self,

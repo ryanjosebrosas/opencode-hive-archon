@@ -145,5 +145,10 @@ class MemoryService:
         self._mock_data = data
     
     def clear_mock_data(self) -> None:
-        """Clear mock data."""
-        self._mock_data = []
+        """
+        Clear mock data and disable mock mode.
+        
+        Sets _mock_data to None, restoring fallback search path.
+        Use set_mock_data([]) for explicit empty mock scenarios.
+        """
+        self._mock_data = None

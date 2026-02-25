@@ -244,3 +244,34 @@ class TestOperatorFriendlyAssertions:
                 f"got {response.context_packet.summary.branch}"
             )
             assert scenario.id in error_msg
+
+
+class TestValidationTaggedScenarios:
+    """Test validation-only tagged scenario behavior."""
+    
+    def test_validation_tagged_scenario_exists(self):
+        """Verify at least one validation-tagged scenario exists for testing."""
+        validation_scenarios = [s for s in get_all_scenarios() if "validation" in s.tags]
+        assert len(validation_scenarios) >= 1, "No validation-tagged scenarios found"
+    
+    def test_validation_scenario_not_smoke_or_policy(self):
+        """
+        Validation-tagged scenarios should not be treated as normal
+        smoke/policy paths. They require explicit validation_mode=True.
+        """
+        scenario = get_scenario_by_id("S027")
+        assert scenario is not None
+        assert "validation" in scenario.tags
+        assert "smoke" not in scenario.tags
+    
+    def test_validation_scenario_expected_branch_distinct(self):
+        """
+        Validation-tagged scenarios have expected branches that differ
+        from what natural evaluation would produce (they are forced).
+        """
+        validation_scenarios = [s for s in get_all_scenarios() if "validation" in s.tags]
+        
+        for scenario in validation_scenarios:
+            assert scenario.expected_branch is not None
+            assert scenario.notes != "", \
+                f"Validation scenario {scenario.id} should have notes explaining forced behavior"

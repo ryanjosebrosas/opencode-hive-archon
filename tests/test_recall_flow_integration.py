@@ -276,3 +276,92 @@ class TestConvenienceFunction:
         assert response.context_packet is not None
         assert response.next_action is not None
         assert isinstance(response.routing_metadata, dict)
+
+
+class TestProviderRouteConsistency:
+    """Test that retrieval backend aligns with selected provider route."""
+    
+    def test_injected_mem0_route_to_supabase_uses_supabase_backend(self):
+        """
+        When injected memory service is mem0 but route selects supabase,
+        recall must resolve provider-consistent backend before search.
+        """
+        memory_service = MemoryService(provider="mem0")
+        rerank_service = VoyageRerankService(enabled=True)
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags={"mem0_enabled": False, "supabase_enabled": True},
+            provider_status={"mem0": "unavailable", "supabase": "available"},
+        )
+        
+        request = RetrievalRequest(
+            query="supabase route test",
+            mode="conversation",
+            top_k=5,
+            threshold=0.6,
+        )
+        
+        response = orchestrator.run(request)
+        
+        assert response.routing_metadata["selected_provider"] == "supabase"
+        if response.context_packet.candidates:
+            for candidate in response.context_packet.candidates:
+                assert candidate.source == "supabase", \
+                    f"Candidate source {candidate.source} != selected provider supabase"
+    
+    def test_route_selection_matches_candidate_source(self):
+        """
+        Verify that when route selects a provider, all returned candidates
+        have source matching the selected provider.
+        """
+        memory_service = MemoryService(provider="supabase")
+        rerank_service = VoyageRerankService(enabled=True)
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True},
+            provider_status={"mem0": "available", "supabase": "available"},
+        )
+        
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+            top_k=5,
+            threshold=0.6,
+        )
+        
+        response = orchestrator.run(request)
+        
+        selected = response.routing_metadata["selected_provider"]
+        if response.context_packet.candidates:
+            for candidate in response.context_packet.candidates:
+                assert candidate.source == selected, \
+                    f"Candidate source {candidate.source} != selected provider {selected}"
+    
+    def test_mem0_injected_matches_route_consistent(self):
+        """
+        When injected memory service provider matches route selection,
+        existing behavior is preserved (reuse injected service).
+        """
+        memory_service = MemoryService(provider="mem0")
+        rerank_service = VoyageRerankService(enabled=False)
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags={"mem0_enabled": True, "supabase_enabled": False},
+            provider_status={"mem0": "available"},
+        )
+        
+        request = RetrievalRequest(
+            query="mem0 consistency test",
+            mode="conversation",
+        )
+        
+        response = orchestrator.run(request)
+        
+        assert response.routing_metadata["selected_provider"] == "mem0"
+        assert response.routing_metadata["rerank_type"] == "provider-native"

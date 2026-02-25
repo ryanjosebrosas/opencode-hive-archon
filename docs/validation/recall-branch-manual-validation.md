@@ -134,6 +134,41 @@ PYTHONPATH=backend/src pytest tests/test_recall_flow_integration.py::TestValidat
 - Branch: `CHANNEL_MISMATCH`
 - Action: `escalate`
 
+> **Note**: S027 is a validation-tagged scenario. When using the MCP `validate_branch` tool,
+> validation-tagged scenarios require debug mode to be enabled for forced branch execution.
+> Without debug mode, the tool returns a gated response with `success: false` and `gated: true`.
+
+---
+
+## Validation Scenario Gating
+
+The MCP `validate_branch` tool enforces strict gating for validation-only scenarios:
+
+| Scenario Type | Debug Mode Off | Debug Mode On |
+|---------------|----------------|---------------|
+| Non-validation (smoke, policy, edge) | Natural evaluation | Natural evaluation |
+| Validation-tagged | **Gated** (error response) | Forced branch execution |
+
+### Debug Mode Usage
+
+```python
+from second_brain.mcp_server import MCPServer
+
+server = MCPServer()
+server.enable_debug_mode()  # Allow validation-tagged scenarios
+result = await server.validate_branch("S027")
+# result["forced_branch"] == "CHANNEL_MISMATCH"
+# result["gated"] == False
+```
+
+### Scenario Context
+
+The `validate_branch` tool now honors scenario-defined context:
+- `feature_flags` from scenario are used for routing decisions
+- `provider_status` from scenario are used for provider selection
+
+This ensures validation outcomes reflect the scenario's intended environment, not global defaults.
+
 ---
 
 ## Evidence Capture Template
