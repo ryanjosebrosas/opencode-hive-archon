@@ -1,7 +1,12 @@
 """Memory service with Mem0 provider."""
+import logging
+import os
 from dataclasses import dataclass
 from typing import Any, Optional
 from second_brain.contracts.context_packet import ContextCandidate
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -48,21 +53,37 @@ class MemoryService:
         Returns:
             Tuple of (list of ContextCandidate, provider metadata)
         """
-        if not query or not query.strip():
+        normalized_query = query.strip()
+        if not normalized_query:
             return [], {"provider": self.provider, "query_empty": True}
+
+        try:
+            normalized_top_k = max(1, int(top_k))
+        except (TypeError, ValueError):
+            normalized_top_k = 1
+
+        try:
+            normalized_threshold = float(threshold)
+        except (TypeError, ValueError):
+            normalized_threshold = 0.6
+        normalized_threshold = max(0.0, min(1.0, normalized_threshold))
         
         results: list[MemorySearchResult] = []
         metadata: dict[str, Any] = {}
         
         if self._mock_data is not None:
-            results = self._search_mock(query, top_k, threshold)
+            results = self._search_mock(normalized_query, normalized_top_k, normalized_threshold)
             metadata = {"provider": self.provider, "mock_mode": True}
         elif self._should_use_real_provider():
-            real_results, real_metadata = self._search_with_provider(query, top_k, threshold)
+            real_results, real_metadata = self._search_with_provider(
+                normalized_query,
+                normalized_top_k,
+                normalized_threshold,
+            )
             results = real_results
             metadata = real_metadata
         else:
-            results = self._search_fallback(query, top_k, threshold)
+            results = self._search_fallback(normalized_query, normalized_top_k, normalized_threshold)
             metadata = {"provider": self.provider, "fallback_reason": "real_provider_disabled"}
         
         candidates = [
@@ -93,7 +114,6 @@ class MemoryService:
     
     def _has_env_api_key(self) -> bool:
         """Check if API key is available from environment."""
-        import os
         return os.getenv("MEM0_API_KEY") is not None
     
     def _load_mem0_client(self) -> Any | None:
@@ -102,19 +122,18 @@ class MemoryService:
             return self._mem0_client
         
         try:
-            from mem0 import Memory
+            from mem0 import Memory  # type: ignore[import-untyped]
             api_key = self._mem0_api_key
             if not api_key:
-                import os
                 api_key = os.getenv("MEM0_API_KEY")
             
             if api_key:
-                self._mem0_client = Memory(api_key=api_key)
+                self._mem0_client = Memory()
                 return self._mem0_client
         except ImportError:
-            pass
-        except Exception:
-            pass
+            logger.debug("Mem0 SDK not installed; falling back to deterministic path")
+        except Exception as error:
+            logger.warning("Mem0 client initialization failed: %s", type(error).__name__)
         
         return None
     
@@ -128,7 +147,10 @@ class MemoryService:
         try:
             client = self._load_mem0_client()
             if client is None:
-                return self._search_fallback(query, top_k, threshold), {"fallback_reason": "client_unavailable"}
+                return self._search_fallback(query, top_k, threshold), {
+                    "provider": self.provider,
+                    "fallback_reason": "client_unavailable",
+                }
             
             search_kwargs: dict[str, Any] = {"limit": top_k}
             if self._mem0_user_id:
@@ -136,15 +158,26 @@ class MemoryService:
             
             mem0_results = client.search(query=query, **search_kwargs)
             results = self._normalize_mem0_results(mem0_results, top_k, threshold)
-            
+
             return results, {"provider": self.provider, "real_provider": True}
         except Exception as e:
+            logger.warning("Mem0 provider search failed: %s", type(e).__name__)
             fallback_results = self._search_fallback(query, top_k, threshold)
             return fallback_results, {
                 "provider": self.provider,
                 "fallback_reason": "provider_error",
                 "error_type": type(e).__name__,
+                "error_message": self._sanitize_error_message(e),
             }
+
+    def _sanitize_error_message(self, error: Exception) -> str:
+        """Return bounded and redacted error text safe for metadata."""
+        message = str(error)
+        sensitive_values = [self._mem0_api_key, os.getenv("MEM0_API_KEY")]
+        for value in sensitive_values:
+            if value:
+                message = message.replace(value, "[REDACTED]")
+        return message[:200]
     
     def _normalize_mem0_results(
         self,

@@ -1,5 +1,7 @@
 """Unit tests for MemoryService mock data lifecycle."""
 
+import logging
+
 from second_brain.services.memory import MemoryService, MemorySearchResult
 
 
@@ -262,3 +264,75 @@ class TestProviderPath:
         
         assert len(candidates) >= 1
         assert metadata.get("fallback_reason") == "real_provider_disabled"
+
+
+class TestMajorFindingsFollowup:
+    """Regression tests for deferred major code-review findings."""
+
+    def test_input_validation_clamps_top_k_and_threshold(self, monkeypatch):
+        """search_memories clamps invalid numeric parameters before provider path."""
+        service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": True, "mem0_api_key": "test-key"},
+        )
+
+        captured: dict[str, float | int | str] = {}
+
+        def fake_provider_search(query: str, top_k: int, threshold: float):
+            captured["query"] = query
+            captured["top_k"] = top_k
+            captured["threshold"] = threshold
+            return [], {"provider": "mem0", "real_provider": True}
+
+        monkeypatch.setattr(service, "_search_with_provider", fake_provider_search)
+
+        service.search_memories(query="  normalized query  ", top_k=0, threshold=1.9)
+
+        assert captured["query"] == "normalized query"
+        assert captured["top_k"] == 1
+        assert captured["threshold"] == 1.0
+
+    def test_input_validation_uses_defaults_for_unparseable_values(self, monkeypatch):
+        """search_memories falls back to safe defaults when inputs are unparseable."""
+        service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": True, "mem0_api_key": "test-key"},
+        )
+
+        captured: dict[str, float | int] = {}
+
+        def fake_provider_search(query: str, top_k: int, threshold: float):
+            captured["top_k"] = top_k
+            captured["threshold"] = threshold
+            return [], {"provider": "mem0", "real_provider": True}
+
+        monkeypatch.setattr(service, "_search_with_provider", fake_provider_search)
+
+        service.search_memories(query="x", top_k="bad", threshold="bad")  # type: ignore[arg-type]
+
+        assert captured["top_k"] == 1
+        assert captured["threshold"] == 0.6
+
+    def test_provider_error_metadata_includes_sanitized_message(self, monkeypatch, caplog):
+        """Provider errors include redacted message context and warning logs."""
+        secret = "secret-key-123"
+        service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": True, "mem0_api_key": secret},
+        )
+
+        class FailingClient:
+            def search(self, query: str, limit: int):
+                raise RuntimeError(f"auth failed using {secret}")
+
+        monkeypatch.setattr(service, "_load_mem0_client", lambda: FailingClient())
+
+        with caplog.at_level(logging.WARNING):
+            _, metadata = service.search_memories(query="normal query", top_k=3, threshold=0.6)
+
+        assert metadata["fallback_reason"] == "provider_error"
+        assert metadata["error_type"] == "RuntimeError"
+        assert "error_message" in metadata
+        assert secret not in metadata["error_message"]
+        assert len(metadata["error_message"]) <= 200
+        assert any("Mem0 provider search failed" in message for message in caplog.messages)
