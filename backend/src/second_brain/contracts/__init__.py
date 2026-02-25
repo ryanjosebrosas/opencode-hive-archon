@@ -1,4 +1,5 @@
 """Contracts package - export key models."""
+
 from second_brain.contracts.context_packet import (
     ContextCandidate,
     ConfidenceSummary,
@@ -7,6 +8,7 @@ from second_brain.contracts.context_packet import (
     RetrievalRequest,
     RetrievalResponse,
 )
+from second_brain.contracts.trace import RetrievalTrace
 
 __all__ = [
     "ContextCandidate",
@@ -15,4 +17,5 @@ __all__ = [
     "NextAction",
     "RetrievalRequest",
     "RetrievalResponse",
+    "RetrievalTrace",
 ]

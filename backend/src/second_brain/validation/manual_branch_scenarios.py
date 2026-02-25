@@ -1,4 +1,5 @@
 """Manual branch validation scenarios for testing and operator validation."""
+
 from dataclasses import dataclass, field
 from typing import Optional
 from second_brain.contracts.context_packet import RetrievalRequest
@@ -8,6 +9,7 @@ from second_brain.orchestration.fallbacks import BranchCodes
 @dataclass
 class BranchScenario:
     """Deterministic branch scenario definition."""
+
     id: str
     description: str
     request: RetrievalRequest
@@ -34,7 +36,11 @@ def get_all_scenarios() -> list[BranchScenario]:
                 threshold=0.6,
             ),
             provider_status={"mem0": "available", "supabase": "available"},
-            feature_flags={"mem0_enabled": True, "supabase_enabled": True, "graphiti_enabled": False},
+            feature_flags={
+                "mem0_enabled": True,
+                "supabase_enabled": True,
+                "graphiti_enabled": False,
+            },
             expected_branch=BranchCodes.RERANK_BYPASSED,
             expected_action="proceed",
             expected_rerank_type="provider-native",
@@ -88,7 +94,6 @@ def get_all_scenarios() -> list[BranchScenario]:
             expected_rerank_type="external",
             tags=["smoke"],
         ),
-        
         # Policy scenarios
         BranchScenario(
             id="S022",
@@ -144,7 +149,6 @@ def get_all_scenarios() -> list[BranchScenario]:
             expected_rerank_type="provider-native",
             tags=["policy"],
         ),
-        
         # Degraded scenarios
         BranchScenario(
             id="S015",
@@ -177,7 +181,6 @@ def get_all_scenarios() -> list[BranchScenario]:
             expected_rerank_type="provider-native",
             tags=["degraded"],
         ),
-        
         # Edge scenarios
         BranchScenario(
             id="S013",
@@ -209,7 +212,6 @@ def get_all_scenarios() -> list[BranchScenario]:
             expected_rerank_type="none",
             tags=["edge"],
         ),
-        
         # Channel mismatch (validation mode only)
         BranchScenario(
             id="S027",
@@ -227,7 +229,6 @@ def get_all_scenarios() -> list[BranchScenario]:
             tags=["edge", "validation"],
             notes="Requires validation_mode=True and force_branch",
         ),
-        
         # Deterministic replay
         BranchScenario(
             id="S048",

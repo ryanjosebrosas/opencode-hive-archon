@@ -1,4 +1,5 @@
 """Orchestration package - export routing and fallbacks."""
+
 from second_brain.orchestration.retrieval_router import (
     route_retrieval,
     RouteDecision,

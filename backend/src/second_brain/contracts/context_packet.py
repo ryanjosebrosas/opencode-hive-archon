@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 class ContextCandidate(BaseModel):
     """Represents a single retrieval candidate."""
+
     id: str
     content: str
     source: str
@@ -14,6 +15,7 @@ class ContextCandidate(BaseModel):
 
 class ConfidenceSummary(BaseModel):
     """Aggregated confidence assessment."""
+
     top_confidence: float = Field(ge=0.0, le=1.0)
     candidate_count: int = Field(ge=0)
     threshold_met: bool
@@ -22,6 +24,7 @@ class ConfidenceSummary(BaseModel):
 
 class ContextPacket(BaseModel):
     """Complete retrieval result envelope."""
+
     candidates: list[ContextCandidate]
     summary: ConfidenceSummary
     provider: str
@@ -31,6 +34,7 @@ class ContextPacket(BaseModel):
 
 class NextAction(BaseModel):
     """Explicit actionability indicator."""
+
     action: Literal["proceed", "clarify", "fallback", "escalate"]
     reason: str
     branch_code: str
@@ -39,6 +43,7 @@ class NextAction(BaseModel):
 
 class RetrievalRequest(BaseModel):
     """Request to retrieval module."""
+
     query: str
     mode: Literal["fast", "accurate", "conversation"] = "conversation"
     top_k: int = Field(default=5, ge=1)
@@ -48,6 +53,7 @@ class RetrievalRequest(BaseModel):
 
 class RetrievalResponse(BaseModel):
     """Response from retrieval module."""
+
     context_packet: ContextPacket
     next_action: NextAction
     routing_metadata: dict[str, Any] = Field(default_factory=dict)

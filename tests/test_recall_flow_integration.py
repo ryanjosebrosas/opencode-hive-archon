@@ -9,143 +9,147 @@ from second_brain.services.voyage import VoyageRerankService
 
 class TestRecallFlowIntegration:
     """Integration tests for full recall runtime path."""
-    
+
     def test_success_branch_mem0(self):
         """Test SUCCESS branch with Mem0 provider."""
         memory_service = MemoryService(provider="mem0")
         rerank_service = VoyageRerankService(enabled=False)  # Mem0 skips external
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": True, "supabase_enabled": False},
         )
-        
+
         request = RetrievalRequest(
             query="test high confidence query",
             mode="conversation",
             top_k=5,
             threshold=0.6,
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.context_packet.summary.branch == BranchCodes.RERANK_BYPASSED
         assert response.next_action.action == "proceed"
         assert response.routing_metadata["selected_provider"] == "mem0"
         assert response.routing_metadata["rerank_type"] == "provider-native"
-    
+
     def test_empty_set_branch(self):
         """Test EMPTY_SET branch with no candidates."""
         memory_service = MemoryService(provider="mem0")
         memory_service.set_mock_data([])
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="empty set query",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.context_packet.summary.branch == BranchCodes.EMPTY_SET
         assert response.next_action.action == "fallback"
         assert response.context_packet.candidates == []
-    
+
     def test_low_confidence_branch(self):
         """Test LOW_CONFIDENCE branch."""
         memory_service = MemoryService(provider="mem0")
-        memory_service.set_mock_data([
-            MemorySearchResult(
-                id="low-1",
-                content="Low confidence result",
-                source="mem0",
-                confidence=0.45,
-                metadata={},
-            ),
-        ])
-        
+        memory_service.set_mock_data(
+            [
+                MemorySearchResult(
+                    id="low-1",
+                    content="Low confidence result",
+                    source="mem0",
+                    confidence=0.45,
+                    metadata={},
+                ),
+            ]
+        )
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="low confidence query",
             mode="conversation",
             threshold=0.6,
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.context_packet.summary.branch == BranchCodes.LOW_CONFIDENCE
         assert response.next_action.action == "clarify"
         assert response.next_action.suggestion is not None
-    
+
     def test_mem0_policy_skip_external_rerank(self):
         """Test Mem0 path skips external rerank by default."""
         memory_service = MemoryService(provider="mem0")
         rerank_service = VoyageRerankService(enabled=True)
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": True},
         )
-        
+
         request = RetrievalRequest(
             query="mem0 policy test",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["skip_external_rerank"] is True
         assert response.routing_metadata["rerank_type"] == "provider-native"
-        assert response.routing_metadata["rerank_bypass_reason"] == "mem0-default-policy"
-    
+        assert (
+            response.routing_metadata["rerank_bypass_reason"] == "mem0-default-policy"
+        )
+
     def test_non_mem0_allows_external_rerank(self):
         """Test non-Mem0 path allows external rerank."""
         memory_service = MemoryService(provider="supabase")
         rerank_service = VoyageRerankService(enabled=True)
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": False, "supabase_enabled": True},
             provider_status={"mem0": "unavailable", "supabase": "available"},
         )
-        
+
         request = RetrievalRequest(
             query="supabase rerank test",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["skip_external_rerank"] is False
         assert response.routing_metadata["rerank_type"] == "external"
-    
+
     def test_routing_metadata_complete(self):
         """Test all required routing metadata fields present."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="metadata test",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         required_fields = [
             "selected_provider",
             "mode",
@@ -153,117 +157,119 @@ class TestRecallFlowIntegration:
             "rerank_type",
             "feature_flags_snapshot",
         ]
-        
+
         for field in required_fields:
             assert field in response.routing_metadata, f"Missing field: {field}"
-    
+
     def test_deterministic_repeated_runs(self):
         """Test same inputs produce identical outputs across runs."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="deterministic test",
             mode="conversation",
         )
-        
+
         results = []
         for _ in range(5):
             response = orchestrator.run(request)
-            results.append({
-                "branch": response.context_packet.summary.branch,
-                "action": response.next_action.action,
-                "provider": response.routing_metadata["selected_provider"],
-                "rerank_type": response.routing_metadata["rerank_type"],
-            })
-        
+            results.append(
+                {
+                    "branch": response.context_packet.summary.branch,
+                    "action": response.next_action.action,
+                    "provider": response.routing_metadata["selected_provider"],
+                    "rerank_type": response.routing_metadata["rerank_type"],
+                }
+            )
+
         # All results must be identical
         assert all(r == results[0] for r in results)
 
 
 class TestValidationModeForcedBranches:
     """Test validation mode with forced branches."""
-    
+
     def test_force_empty_set(self):
         """Force EMPTY_SET branch in validation mode."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(query="test", mode="conversation")
         response = orchestrator.run(
             request,
             validation_mode=True,
             force_branch=BranchCodes.EMPTY_SET,
         )
-        
+
         assert response.context_packet.summary.branch == BranchCodes.EMPTY_SET
         assert response.next_action.action == "fallback"
         assert response.routing_metadata.get("validation_mode") is True
-    
+
     def test_force_low_confidence(self):
         """Force LOW_CONFIDENCE branch in validation mode."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(query="test", mode="conversation")
         response = orchestrator.run(
             request,
             validation_mode=True,
             force_branch=BranchCodes.LOW_CONFIDENCE,
         )
-        
+
         assert response.context_packet.summary.branch == BranchCodes.LOW_CONFIDENCE
         assert response.next_action.action == "clarify"
-    
+
     def test_force_channel_mismatch(self):
         """Force CHANNEL_MISMATCH branch in validation mode."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(query="test", mode="conversation")
         response = orchestrator.run(
             request,
             validation_mode=True,
             force_branch=BranchCodes.CHANNEL_MISMATCH,
         )
-        
+
         assert response.context_packet.summary.branch == BranchCodes.CHANNEL_MISMATCH
         assert response.next_action.action == "escalate"
-    
+
     def test_validation_mode_disabled_by_default(self):
         """Test validation mode is disabled by default."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(query="test", mode="conversation")
         response = orchestrator.run(request)  # No validation_mode
-        
+
         assert response.routing_metadata.get("validation_mode") is None
 
 
 class TestConvenienceFunction:
     """Test run_recall convenience function."""
-    
+
     def test_run_recall_basic(self):
         """Test run_recall convenience function."""
         response = run_recall(
@@ -272,7 +278,7 @@ class TestConvenienceFunction:
             top_k=5,
             threshold=0.6,
         )
-        
+
         assert response.context_packet is not None
         assert response.next_action is not None
         assert isinstance(response.routing_metadata, dict)
@@ -280,80 +286,81 @@ class TestConvenienceFunction:
 
 class TestModePropagation:
     """Test routing metadata mode reflects actual request mode."""
-    
+
     def test_mode_propagation_conversation(self):
         """Test mode=conversation propagates to routing_metadata."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="conversation mode test",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["mode"] == "conversation"
-    
+
     def test_mode_propagation_fast(self):
         """Test mode=fast propagates to routing_metadata."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="fast mode test",
             mode="fast",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["mode"] == "fast"
-    
+
     def test_mode_propagation_accurate(self):
         """Test mode=accurate propagates to routing_metadata."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         request = RetrievalRequest(
             query="accurate mode test",
             mode="accurate",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["mode"] == "accurate"
-    
+
     def test_mode_not_hardcoded_to_conversation(self):
         """Verify mode is not hardcoded to conversation."""
         memory_service = MemoryService(provider="mem0")
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=VoyageRerankService(),
         )
-        
+
         for mode in ["fast", "accurate", "conversation"]:
             request = RetrievalRequest(query=f"{mode} test", mode=mode)  # type: ignore
             response = orchestrator.run(request)
-            assert response.routing_metadata["mode"] == mode, \
+            assert response.routing_metadata["mode"] == mode, (
                 f"Mode mismatch: expected {mode}, got {response.routing_metadata['mode']}"
+            )
 
 
 class TestProviderRouteConsistency:
     """Test that retrieval backend aligns with selected provider route."""
-    
+
     def test_injected_mem0_route_to_supabase_uses_supabase_backend(self):
         """
         When injected memory service is mem0 but route selects supabase,
@@ -361,29 +368,30 @@ class TestProviderRouteConsistency:
         """
         memory_service = MemoryService(provider="mem0")
         rerank_service = VoyageRerankService(enabled=True)
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": False, "supabase_enabled": True},
             provider_status={"mem0": "unavailable", "supabase": "available"},
         )
-        
+
         request = RetrievalRequest(
             query="supabase route test",
             mode="conversation",
             top_k=5,
             threshold=0.6,
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["selected_provider"] == "supabase"
         if response.context_packet.candidates:
             for candidate in response.context_packet.candidates:
-                assert candidate.source == "supabase", \
+                assert candidate.source == "supabase", (
                     f"Candidate source {candidate.source} != selected provider supabase"
-    
+                )
+
     def test_route_selection_matches_candidate_source(self):
         """
         Verify that when route selects a provider, all returned candidates
@@ -391,29 +399,30 @@ class TestProviderRouteConsistency:
         """
         memory_service = MemoryService(provider="supabase")
         rerank_service = VoyageRerankService(enabled=True)
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": True, "supabase_enabled": True},
             provider_status={"mem0": "available", "supabase": "available"},
         )
-        
+
         request = RetrievalRequest(
             query="test query",
             mode="conversation",
             top_k=5,
             threshold=0.6,
         )
-        
+
         response = orchestrator.run(request)
-        
+
         selected = response.routing_metadata["selected_provider"]
         if response.context_packet.candidates:
             for candidate in response.context_packet.candidates:
-                assert candidate.source == selected, \
+                assert candidate.source == selected, (
                     f"Candidate source {candidate.source} != selected provider {selected}"
-    
+                )
+
     def test_mem0_injected_matches_route_consistent(self):
         """
         When injected memory service provider matches route selection,
@@ -421,24 +430,24 @@ class TestProviderRouteConsistency:
         """
         memory_service = MemoryService(provider="mem0")
         rerank_service = VoyageRerankService(enabled=False)
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": True, "supabase_enabled": False},
             provider_status={"mem0": "available"},
         )
-        
+
         request = RetrievalRequest(
             query="mem0 consistency test",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.routing_metadata["selected_provider"] == "mem0"
         assert response.routing_metadata["rerank_type"] == "provider-native"
-    
+
     def test_provider_fallback_remains_contract_valid(self):
         """
         When real provider falls back due to unavailability,
@@ -449,20 +458,20 @@ class TestProviderRouteConsistency:
             config={"mem0_use_real_provider": True, "mem0_api_key": "invalid"},
         )
         rerank_service = VoyageRerankService(enabled=False)
-        
+
         orchestrator = RecallOrchestrator(
             memory_service=memory_service,
             rerank_service=rerank_service,
             feature_flags={"mem0_enabled": True},
         )
-        
+
         request = RetrievalRequest(
             query="provider fallback test",
             mode="conversation",
         )
-        
+
         response = orchestrator.run(request)
-        
+
         assert response.context_packet is not None
         assert response.next_action is not None
         assert response.context_packet.summary.branch is not None

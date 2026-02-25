@@ -127,16 +127,17 @@ Each level gates the next:
 | `/prime` | Dispatches 2 parallel agents for context | Start of every session |
 | `/planning [feature]` | 6-phase analysis with conditional research, mvp.md workflow | Before building any feature |
 | `/execute [plan]` | Implements plan OR fixes code review issues | After planning, or after code review |
-| `/code-loop` | Automated review → fix → review loop until clean, then commit | After implementation (replaces manual fix loop) |
-| `/commit` | Creates conventional-format git commit | After implementation passes review |
+| `/code-loop` | Automated review → fix → review loop until clean | After implementation (replaces manual fix loop) |
+| `/commit` | Creates conventional-format git commit | After final review approval |
 | `/code-review` | 1 generalist agent + UBS pre-scan | After implementation (or use `/code-loop`) |
+| `/final-review` | Summarizes all changes, verifies acceptance criteria, asks for human approval | After `/code-loop`, before `/commit` |
 | `/system-review` | Plan vs. reality analysis, memory suggestions | After complex features, periodic audits |
 
 **Note:** `/execute` handles both plan execution and code review fixes (fix mode auto-detected).
 
-**Solo Developer Mode**: Focus on `/prime` → `/planning` → `/execute` → `/code-loop` → `/commit`.
+**Solo Developer Mode**: Focus on `/prime` → `/planning` → `/execute` → `/code-loop` → `/final-review` → `/commit`.
 
-**Manual Fix Loop** (alternative to `/code-loop`): `/code-review` → `/execute` (fix mode) → `/code-review` until clean → `/commit`.
+**Manual Fix Loop** (alternative to `/code-loop`): `/code-review` → `/execute` (fix mode) → `/code-review` until clean → `/final-review` → `/commit`.
 
 ---
 

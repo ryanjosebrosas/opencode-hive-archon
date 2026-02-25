@@ -1,7 +1,9 @@
 """Dependency injection helpers."""
+
 from typing import Any
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
+from second_brain.services.trace import TraceCollector
 
 
 def get_feature_flags() -> dict[str, bool]:
@@ -39,6 +41,13 @@ def create_voyage_rerank_service(
 ) -> VoyageRerankService:
     """Create voyage rerank service instance."""
     return VoyageRerankService(enabled=enabled, model=model)
+
+
+def create_trace_collector(
+    max_traces: int = 1000,
+) -> TraceCollector:
+    """Create trace collector instance."""
+    return TraceCollector(max_traces=max_traces)
 
 
 def get_default_config() -> dict[str, Any]:

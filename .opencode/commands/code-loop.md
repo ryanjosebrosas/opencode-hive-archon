@@ -1,5 +1,5 @@
 ---
-description: Automated review → fix → review loop until clean, then commit
+description: Automated review → fix → review loop until clean
 agent: build
 ---
 
@@ -9,10 +9,12 @@ agent: build
 
 Automates the fix loop workflow:
 ```
-/code-review → /planning (fix-slice) → /execute (fix plan) → /code-review → /commit
+/code-review → /planning (fix-slice) → /execute (fix plan) → /code-review
 ```
 
 Runs until all issues are fixed or unfixable error detected.
+
+**Next step after clean exit:** Run `/final-review` to summarize all changes and get human approval, then `/commit`.
 
 Slice completion rule:
 - A slice is considered complete only when code review returns no Critical/Major issues (or user explicitly accepts remaining minor issues).
@@ -101,7 +103,7 @@ At the start of EACH iteration, save progress checkpoint:
 
 | Condition | Action |
 |-----------|--------|
-| 0 issues + validation passes | → Commit ✓ |
+| 0 issues + validation passes | → Hand off to `/final-review` |
 | Only Minor issues | → Fix if quick and safe; otherwise ask user whether to defer |
 | Unfixable error detected | → Stop, report what's blocking |
 
@@ -129,19 +131,19 @@ At the start of EACH iteration, save progress checkpoint:
 
 ---
 
-## Commit (When Loop Exits Clean)
+## Handoff (When Loop Exits Clean)
 
-1. **Run `/commit`**
-   - Message: `fix({feature}): address code review feedback`
-
-2. **Report completion:**
+1. **Report completion:**
    ```
-   ✅ Code loop complete
-   
+   Code loop complete
+
    Iterations: N
    Issues fixed: X (Critical: Y, Major: Z, Minor: W)
-   Commit: {hash}
+   Status: Ready for /final-review
    ```
+
+2. **Next step:** Tell the user to run `/final-review` for a summary + approval gate, then `/commit`.
+   - Do NOT auto-commit. The user must approve via `/final-review` first.
 
 ---
 
