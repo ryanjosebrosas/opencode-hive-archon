@@ -124,16 +124,19 @@ Each level gates the next:
 
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
-| `/prime` | Dispatches 5-6 parallel agents for context | Start of every session |
-| `/planning [feature]` | 6-phase deep analysis, structured plan | Before building any feature |
-| `/execute [plan]` | Implements plan file task-by-task | After planning, fresh session |
+| `/prime` | Dispatches 2 parallel agents for context | Start of every session |
+| `/planning [feature]` | 6-phase analysis with conditional research, mvp.md workflow | Before building any feature |
+| `/execute [plan]` | Implements plan OR fixes code review issues | After planning, or after code review |
+| `/code-loop` | Automated review → fix → review loop until clean, then commit | After implementation (replaces manual fix loop) |
 | `/commit` | Creates conventional-format git commit | After implementation passes review |
-| `/code-review` | 4 parallel review agents | After implementation |
-| `/code-review-fix` | Applies fixes from code review | After code review surfaces issues |
-| `/swarm-execute` | Parallel multi-agent execution | 15+ tasks, complex features |
+| `/code-review` | 1 generalist agent + UBS pre-scan | After implementation (or use `/code-loop`) |
 | `/system-review` | Plan vs. reality analysis, memory suggestions | After complex features, periodic audits |
 
-**Solo Developer Mode**: Focus on `/prime` → `/planning` → `/execute` → `/code-review` → `/commit`. Use `/system-review` optionally for process improvement.
+**Note:** `/execute` handles both plan execution and code review fixes (fix mode auto-detected).
+
+**Solo Developer Mode**: Focus on `/prime` → `/planning` → `/execute` → `/code-loop` → `/commit`.
+
+**Manual Fix Loop** (alternative to `/code-loop`): `/code-review` → `/execute` (fix mode) → `/code-review` until clean → `/commit`.
 
 ---
 
@@ -146,14 +149,12 @@ Each level gates the next:
 | `research-external` | Documentation search, best practices, version compatibility |
 | `research-ai-patterns` | AI/LLM integration patterns — prompts, RAG, agent orchestration |
 
-### Code Review Agents (run in parallel)
+### Code Review Agent
 | Agent | What It Catches |
 |-------|----------------|
-| `code-review-type-safety` | Missing type hints, unsafe casts |
-| `code-review-security` | SQL injection, XSS, exposed secrets |
-| `code-review-architecture` | Pattern violations, layer breaches |
-| `code-review-performance` | N+1 queries, memory leaks |
-| `code-review-ai-specific` | AI-specific issues — hardcoded prompts, token overflow, prompt injection |
+| `code-review` | Bugs, security issues, performance, architecture, types (generalist) |
+
+**Note:** Single sequential agent in a fix loop (`/code-review → /execute → /code-review → /commit`).
 
 ### Utility Agents
 | Agent | Purpose |

@@ -17,7 +17,8 @@ Transform this feature request into a **comprehensive implementation plan** thro
 
 **Key Rules**:
 - We do NOT write code in this phase. Create a context-rich plan that enables one-pass implementation.
-- The completed plan MUST be **700-1000 lines minimum**. You have failed if under 700 lines. Complex features should target 1000. Every section must have feature-specific content, not placeholders.
+- The completed plan should be **fit-for-purpose** — comprehensive enough for one-pass implementation, no artificial constraints.
+- Every section must contain feature-specific content — not generic placeholders.
 
 ## Determine Feature Name
 
@@ -34,21 +35,78 @@ Read `templates/STRUCTURED-PLAN-TEMPLATE.md` now — it defines the exact struct
 
 ---
 
-## PHASE 0: Interactive Discovery (Vibe Planning Buddy)
+## MVP.md Check
 
-**Goal**: Collaboratively discover scope, approach, and priorities before formal planning.
+**Check for `mvp.md` at repo root:**
 
-**Escape hatch**: If the user provides detailed requirements, references an existing plan, or wants to skip discovery — proceed to Phase 1.
+**If EXISTS:**
+1. Read `mvp.md`
+2. Reference the big idea: "This feature serves: {big idea from mvp.md}"
+3. Quick confirmation: "Does this still match your vision?"
+4. If YES → Skip Phase 0, proceed to Phase 1
+5. If NO → "What changed?" → Update mvp.md (only if user confirms vision changed)
 
-**Process**:
+**If NOT EXISTS:**
+1. Proceed to Phase 0 (Vibe Planning)
+2. After Phase 0, CREATE `mvp.md` with the big idea (one paragraph)
 
-1. **Understand the user's level**: Adapt language — technical users get architecture questions, non-technical get outcome-focused questions.
-2. **Challenge constructively**: Ask probing questions to sharpen the vision — what problem does this solve? What's the simplest valuable version? Have you seen this done well?
-3. **Explore inspiration**: If user has reference projects/repos, analyze their approach. If not, suggest 2-3 approaches with trade-offs.
-4. **Scope negotiation**: Push back on scope creep. Suggest vertical slices. Identify hidden complexity.
-5. **Confirm readiness**: Summarize agreed scope, list key decisions, get user confirmation before proceeding.
+---
 
-**Rules**: This is a CONVERSATION, not a checklist. Be genuinely curious. If the user has a clear vision, respect that. Spend 3-10 minutes depending on clarity.
+## PHASE 0: Vibe Planning (Create mvp.md if First Feature)
+
+**Goal:** Discover the BIG IDEA through conversation. Adapt to user's energy.
+
+**If user wants to explore:**
+- Go deep — ask about inspiration, reference projects, trade-offs
+- Explore options: "What if we tried X?" "Have you seen Y done well?"
+- Synthesize: "So the vision is..."
+- Time: 30-60 mins
+
+**If user has clear vision:**
+- Go fast — confirm understanding, identify first brick
+- "What's the simplest version that solves this?"
+- Time: 10-15 mins
+
+**End of Phase 0:**
+- Ask: "What's the BIG IDEA in one paragraph?"
+- User responds → Write to `mvp.md` at repo root
+- Confirm: "This is our vision — we'll reference it for every feature"
+
+**mvp.md Format:**
+```
+# {Product Name}
+
+{One paragraph — what you're building and why. 5-10 lines.}
+```
+
+**Rules:**
+- This is a CONVERSATION, not a checklist
+- Adapt to user's energy and communication style
+- If user has reference projects, study them together
+- End with clarity: one paragraph that captures the vision
+
+---
+
+### Quick Alignment (mvp.md Exists — Subsequent Features)
+
+**When mvp.md already exists:**
+
+1. **Read mvp.md** — understand the big idea
+2. **Align this feature:** "Based on mvp.md, {feature} is part of {capability}"
+3. **Quick confirm:** "Does this still match your vision?"
+    - If YES → Proceed to Phase 1 (skip Phase 0)
+    - If NO → "What changed?" → Discuss → Update mvp.md if vision changed
+4. **Proceed to Phase 1**
+
+**Why skip Phase 0?**
+- Vision is already documented
+- No need to re-discover what's already clear
+- Save time for building, not re-planning
+
+**When to ask Phase 0 questions anyway:**
+- Feature seems misaligned with mvp.md
+- User indicates vision might have evolved
+- Feature is complex and needs deeper exploration
 
 ---
 
