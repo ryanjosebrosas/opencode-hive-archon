@@ -18,6 +18,10 @@ Slice completion rule:
 - A slice is considered complete only when code review returns no Critical/Major issues (or user explicitly accepts remaining minor issues).
 - Start the next slice only after this completion condition.
 
+Incremental rule:
+- Keep each loop focused on one concrete outcome.
+- If fixes spread into unrelated domains, stop and split into a follow-up loop/plan.
+
 ## Usage
 
 ```
@@ -74,17 +78,13 @@ At the start of EACH iteration, save progress checkpoint:
    - After this fix pass succeeds, mark the input review file as done by renaming it to append `.done` before `.md`
      - Example: `requests/code-reviews/{feature}-review #{N}.md` -> `requests/code-reviews/{feature}-review #{N}.done.md`
 
-4. **Run validation:**
-   ```bash
-   # Linting
-   npm run lint 2>/dev/null || echo "No lint configured"
-   
-   # Type check
-   npm run typecheck 2>/dev/null || echo "No typecheck configured"
-   
-   # Tests
-   npm test 2>/dev/null || echo "No tests configured"
-   ```
+4. **Run full validation for this slice:**
+   - Run lint/style checks
+   - Run type safety checks
+   - Run unit tests
+   - Run integration tests
+   - Run manual verification steps from the active plan
+   - Use project-specific commands from the current plan/repo (not JS-only defaults)
 
 5. **Check for unfixable errors:**
    - Command not found → Stop, report missing tool
@@ -97,7 +97,7 @@ At the start of EACH iteration, save progress checkpoint:
 | Condition | Action |
 |-----------|--------|
 | 0 issues + validation passes | → Commit ✓ |
-| Only Minor issues | → Ask user: "Fix or skip?" |
+| Only Minor issues | → Fix if quick and safe; otherwise ask user whether to defer |
 | Unfixable error detected | → Stop, report what's blocking |
 
 ### User Interruption Handling

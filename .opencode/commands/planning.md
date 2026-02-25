@@ -16,10 +16,16 @@ Slice discipline rule (required):
 - Plan one slice at a time.
 - Do not start planning the next slice until the current slice is execution-complete and code-review clean (or explicitly accepted by user with minor skips).
 
+Incremental scope guardrails (required):
+- Each plan targets one concrete outcome, not a broad epic.
+- Keep each execution slice small enough for focused delivery (target: ~3-5 file touches unless justified).
+- If a plan naturally exceeds a small slice, split it into sequential sub-plans before execution.
+- Avoid mixed-scope slices (for example, command-system refactors plus backend behavior changes in one slice).
+
 Lean mode (default):
 - Required artifacts per feature are only:
   1) `requests/{descriptive-name} #<n>.md` (plan)
-  2) `requests/execution-reports/{feature}-report.md` (execution report, produced by `/execute`)
+  2) `requests/execution-reports/{feature}-report.done.md` (execution report, produced by `/execute`)
 - Additional docs are optional and created only when they change implementation behavior.
 
 Important execution rule for this command:
@@ -173,6 +179,11 @@ Before moving to Phase 2, confirm the phase output with the user:
 Also confirm implementation specificity before proceeding:
 - "Should this feature be spec-only or implemented in code in this loop?"
 - "Which stack/framework should this plan target?"
+
+Mandatory sizing check before Phase 2:
+- Explicitly state the single outcome this slice delivers.
+- List expected files touched and ensure the list stays small by default.
+- If scope is too large for one clean loop, stop and split into follow-up slices.
 
 ### Phase 2: Codebase Intelligence Gathering
 

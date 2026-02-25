@@ -45,6 +45,13 @@ As a {user type}, I want to {action}, so that {benefit}.
 - **Primary Systems Affected**: {list all components/services}
 - **Dependencies**: {external libraries or services required}
 
+### Slice Guardrails (Required)
+
+- **Single Outcome**: {one concrete outcome this slice delivers}
+- **Expected Files Touched**: {target list, keep small by default}
+- **Scope Boundary**: {what this slice intentionally does NOT include}
+- **Split Trigger**: {when to stop and create a follow-up slice}
+
 ---
 
 ## CONTEXT REFERENCES
@@ -193,27 +200,33 @@ As a {user type}, I want to {action}, so that {benefit}.
 ## VALIDATION COMMANDS
 
 > Execute every command to ensure zero regressions and 100% feature correctness.
+> Full validation depth is required for every slice; one proof signal is not enough.
 
 ### Level 1: Syntax & Style
 ```
 {linting and formatting commands}
 ```
 
-### Level 2: Unit Tests
+### Level 2: Type Safety
+```
+{type-check commands}
+```
+
+### Level 3: Unit Tests
 ```
 {unit test commands}
 ```
 
-### Level 3: Integration Tests
+### Level 4: Integration Tests
 ```
 {integration test commands}
 ```
 
-### Level 4: Manual Validation
+### Level 5: Manual Validation
 
 {Feature-specific manual testing steps — API calls, UI testing, CLI usage, etc.}
 
-### Level 5: Additional Validation (Optional)
+### Level 6: Additional Validation (Optional)
 
 {MCP servers, additional CLI tools, or other verification methods if available.}
 

@@ -13,13 +13,18 @@ Read plan file: `$ARGUMENTS`
 
 Lean mode (default):
 - Do not create extra documentation files during execution unless explicitly required by the plan.
-- Required artifact from execution is the report at `requests/execution-reports/{feature}-report.md`.
+- Required artifact from execution is the report at `requests/execution-reports/{feature}-report.done.md`.
 - Archon notes/documents are allowed for handoff but should not duplicate large markdown outputs.
 - Archon is mandatory for `/execute`; do not run without Archon connectivity.
 
 Slice gate (required):
 - Execute only the current approved slice plan.
 - Do not begin implementation for a new slice while unresolved Critical/Major code-review findings remain for the current slice.
+
+Incremental execution guardrails (required):
+- Deliver one concrete outcome per run.
+- Keep changes narrowly scoped and avoid mixing unrelated domains in one pass.
+- If execution expands beyond a small slice, stop and split remaining work into a follow-up plan.
 
 ### 0.5. Detect Plan Type
 
@@ -111,12 +116,18 @@ Create all test files specified in the plan. Implement test cases. Ensure edge c
 
 Execute ALL validation commands from the plan in order. Fix failures before continuing.
 
+Validation policy (non-skippable):
+- Every execution loop must run full validation depth for the current slice.
+- Minimum expected pyramid: syntax/style -> type safety -> unit tests -> integration tests -> manual verification.
+- Do not treat single checks as sufficient proof of completion.
+
 ### 5. Final Verification
 
 - All tasks completed
 - All tests passing
 - All validations pass
 - Code follows project conventions
+- Slice remained focused (single outcome, no mixed-scope spillover)
 
 **Archon** (required):
 - Mark completed tasks: `archon_manage_task(action="update", task_id="...", status="done")`
