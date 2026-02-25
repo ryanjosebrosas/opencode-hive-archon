@@ -139,9 +139,18 @@ If `requests/INDEX.md` exists, update plan status entry:
 - Add reference to execution report path on the same line.
 - Do not create `requests/INDEX.md` if it does not exist.
 
+### 6.6 Mark Source Markdown as Done
+
+After successful execution, mark done status in filenames only:
+- Rename the executed input file (`$ARGUMENTS`) by appending `.done` before `.md`.
+  - Example: `requests/my-feature-plan.md` -> `requests/my-feature-plan.done.md`
+- Save the execution report using a `.done.md` filename.
+  - Example: `requests/execution-reports/{feature}-report.done.md`
+- Do not modify markdown H1/title text just to mark done status.
+
 ## Output Report
 
-Save this report to: `requests/execution-reports/{feature}-report.md`
+Save this report to: `requests/execution-reports/{feature}-report.done.md`
 
 Use the feature name derived in Step 1. Create the `requests/execution-reports/` directory if it doesn't exist.
 

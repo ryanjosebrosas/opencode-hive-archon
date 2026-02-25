@@ -278,6 +278,79 @@ class TestConvenienceFunction:
         assert isinstance(response.routing_metadata, dict)
 
 
+class TestModePropagation:
+    """Test routing metadata mode reflects actual request mode."""
+    
+    def test_mode_propagation_conversation(self):
+        """Test mode=conversation propagates to routing_metadata."""
+        memory_service = MemoryService(provider="mem0")
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=VoyageRerankService(),
+        )
+        
+        request = RetrievalRequest(
+            query="conversation mode test",
+            mode="conversation",
+        )
+        
+        response = orchestrator.run(request)
+        
+        assert response.routing_metadata["mode"] == "conversation"
+    
+    def test_mode_propagation_fast(self):
+        """Test mode=fast propagates to routing_metadata."""
+        memory_service = MemoryService(provider="mem0")
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=VoyageRerankService(),
+        )
+        
+        request = RetrievalRequest(
+            query="fast mode test",
+            mode="fast",
+        )
+        
+        response = orchestrator.run(request)
+        
+        assert response.routing_metadata["mode"] == "fast"
+    
+    def test_mode_propagation_accurate(self):
+        """Test mode=accurate propagates to routing_metadata."""
+        memory_service = MemoryService(provider="mem0")
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=VoyageRerankService(),
+        )
+        
+        request = RetrievalRequest(
+            query="accurate mode test",
+            mode="accurate",
+        )
+        
+        response = orchestrator.run(request)
+        
+        assert response.routing_metadata["mode"] == "accurate"
+    
+    def test_mode_not_hardcoded_to_conversation(self):
+        """Verify mode is not hardcoded to conversation."""
+        memory_service = MemoryService(provider="mem0")
+        
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=VoyageRerankService(),
+        )
+        
+        for mode in ["fast", "accurate", "conversation"]:
+            request = RetrievalRequest(query=f"{mode} test", mode=mode)  # type: ignore
+            response = orchestrator.run(request)
+            assert response.routing_metadata["mode"] == mode, \
+                f"Mode mismatch: expected {mode}, got {response.routing_metadata['mode']}"
+
+
 class TestProviderRouteConsistency:
     """Test that retrieval backend aligns with selected provider route."""
     

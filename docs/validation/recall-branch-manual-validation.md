@@ -1,8 +1,18 @@
 # Manual Branch Validation Runbook
 
 **Purpose**: Repeatable operator validation for all retrieval branches  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Last Updated**: 2026-02-25
+
+---
+
+## Changelog
+
+### v1.1.0 (2026-02-25)
+- **Critical Fix**: Provider override now gated by health/feature checks
+- **Critical Fix**: Missing provider status defaults to `available` for enabled providers
+- **Critical Fix**: Rerank semantics corrected for SUCCESS branch (non-mem0)
+- **Enhancement**: Mode propagation verified for all request modes
 
 ---
 
@@ -211,6 +221,17 @@ Use this table to record validation results:
 | Branch code mismatch | Fallback emitter logic | `orchestration/fallbacks.py` |
 | Non-deterministic results | Unordered collections | `agents/recall.py` (line ~40) |
 | EMPTY_SET when should succeed | Provider status check | `deps.py` |
+| Override selects unavailable provider | Override gating failure | `orchestration/retrieval_router.py:168-176` |
+| Missing status causes false none | Status normalization failure | `orchestration/retrieval_router.py:5-29` |
+| Mode mismatch in metadata | Mode propagation failure | `agents/recall.py:170-187` |
+
+### Critical Fix Notes
+
+1. **Override Health-Gating Rule**: Provider override requests are now validated against both feature flags AND provider health status. Override is rejected if provider is disabled, unavailable, or degraded.
+
+2. **Missing-Status Normalization Rule**: When provider status is missing from the snapshot, enabled providers default to `available` status. This prevents false `none` routing when health snapshots are incomplete.
+
+3. **Mode Fidelity Check**: Routing metadata `mode` field now reliably reflects the request mode (`fast`, `accurate`, `conversation`) rather than being hardcoded.
 
 ---
 

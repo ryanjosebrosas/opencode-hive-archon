@@ -278,3 +278,134 @@ class TestBranchCodes:
         assert BranchCodes.CHANNEL_MISMATCH == "CHANNEL_MISMATCH"
         assert BranchCodes.RERANK_BYPASSED == "RERANK_BYPASSED"
         assert BranchCodes.SUCCESS == "SUCCESS"
+
+
+class TestRerankSemantics:
+    """Test rerank_applied flag semantics across branches."""
+    
+    def test_rerank_bypassed_has_rerank_applied_true(self):
+        """RERANK_BYPASSED branch MUST have rerank_applied=True (provider-native applied)."""
+        candidates = [
+            ContextCandidate(
+                id="c1",
+                content="Mem0 result",
+                source="mem0",
+                confidence=0.85,
+            )
+        ]
+        packet, action = determine_branch(candidates, 0.6, rerank_bypassed=True, provider="mem0")
+        
+        assert packet.summary.branch == BranchCodes.RERANK_BYPASSED
+        assert packet.rerank_applied is True, "RERANK_BYPASSED must have rerank_applied=True"
+        assert action.branch_code == BranchCodes.RERANK_BYPASSED
+    
+    def test_success_with_rerank_bypassed_has_correct_flag(self):
+        """SUCCESS with rerank_bypassed=True for non-mem0 should have rerank_applied=False."""
+        candidates = [
+            ContextCandidate(
+                id="c1",
+                content="High confidence",
+                source="supabase",
+                confidence=0.85,
+            )
+        ]
+        packet, action = determine_branch(candidates, 0.6, rerank_bypassed=True, provider="supabase")
+        
+        assert packet.summary.branch == BranchCodes.SUCCESS
+        assert packet.rerank_applied is False, \
+            "SUCCESS with rerank_bypassed=True for non-mem0 should have rerank_applied=False"
+        assert action.branch_code == BranchCodes.SUCCESS
+    
+    def test_success_without_rerank_bypassed_has_correct_flag(self):
+        """SUCCESS with rerank_bypassed=False for non-mem0 should have rerank_applied=True."""
+        candidates = [
+            ContextCandidate(
+                id="c1",
+                content="High confidence no rerank",
+                source="supabase",
+                confidence=0.85,
+            )
+        ]
+        packet, action = determine_branch(candidates, 0.6, rerank_bypassed=False, provider="supabase")
+        
+        assert packet.summary.branch == BranchCodes.SUCCESS
+        assert packet.rerank_applied is True, \
+            "SUCCESS with rerank_bypassed=False for non-mem0 should have rerank_applied=True"
+        assert action.branch_code == BranchCodes.SUCCESS
+    
+    def test_success_mem0_edge_case_rerank_false(self):
+        """Mem0 reaching SUCCESS path (unusual) should have rerank_applied=False."""
+        candidates = [
+            ContextCandidate(
+                id="c1",
+                content="Mem0 high confidence",
+                source="mem0",
+                confidence=0.85,
+            )
+        ]
+        # Mem0 with rerank_bypassed=False is unusual but possible
+        packet, action = determine_branch(candidates, 0.6, rerank_bypassed=False, provider="mem0")
+        
+        assert packet.summary.branch == BranchCodes.SUCCESS
+        assert packet.rerank_applied is False, \
+            "Mem0 SUCCESS (unusual path) should have rerank_applied=False"
+    
+    def test_low_confidence_never_emits_rerank_bypassed(self):
+        """Low-confidence inputs MUST never emit RERANK_BYPASSED."""
+        candidates = [
+            ContextCandidate(
+                id="c1",
+                content="Low confidence mem0",
+                source="mem0",
+                confidence=0.4,
+            )
+        ]
+        packet, action = determine_branch(candidates, 0.6, rerank_bypassed=True, provider="mem0")
+        
+        assert packet.summary.branch == BranchCodes.LOW_CONFIDENCE, \
+            "Low confidence must emit LOW_CONFIDENCE, not RERANK_BYPASSED"
+        assert action.branch_code == BranchCodes.LOW_CONFIDENCE
+    
+    def test_low_confidence_rerank_applied_false(self):
+        """LOW_CONFIDENCE branch must have rerank_applied=False."""
+        candidates = [
+            ContextCandidate(
+                id="c1",
+                content="Low confidence",
+                source="mem0",
+                confidence=0.4,
+            )
+        ]
+        packet, action = determine_branch(candidates, 0.6, rerank_bypassed=True, provider="mem0")
+        
+        assert packet.rerank_applied is False, "LOW_CONFIDENCE must have rerank_applied=False"
+    
+    def test_empty_set_rerank_applied_false(self):
+        """EMPTY_SET branch must have rerank_applied=False."""
+        packet, action = determine_branch([], 0.6, rerank_bypassed=False, provider="unknown")
+        
+        assert packet.summary.branch == BranchCodes.EMPTY_SET
+        assert packet.rerank_applied is False
+    
+    def test_branch_action_pair_consistency(self):
+        """Branch and action codes must be consistent in emitted pairs."""
+        test_cases = [
+            ([], 0.6, False, "unknown", BranchCodes.EMPTY_SET, "fallback", False),
+            ([ContextCandidate(id="c1", content="Low", source="mem0", confidence=0.4)], 
+             0.6, True, "mem0", BranchCodes.LOW_CONFIDENCE, "clarify", False),
+            ([ContextCandidate(id="c1", content="High", source="mem0", confidence=0.85)], 
+             0.6, True, "mem0", BranchCodes.RERANK_BYPASSED, "proceed", True),
+            ([ContextCandidate(id="c1", content="High", source="supabase", confidence=0.85)], 
+             0.6, False, "supabase", BranchCodes.SUCCESS, "proceed", True),
+        ]
+        
+        for candidates, threshold, rerank_bypassed, provider, expected_branch, expected_action, expected_rerank in test_cases:
+            packet, action = determine_branch(candidates, threshold, rerank_bypassed, provider)
+            assert packet.summary.branch == expected_branch, \
+                f"Branch mismatch for {provider}: expected {expected_branch}, got {packet.summary.branch}"
+            assert action.action == expected_action, \
+                f"Action mismatch for {expected_branch}: expected {expected_action}, got {action.action}"
+            assert action.branch_code == packet.summary.branch, \
+                f"Branch/action code mismatch: packet has {packet.summary.branch}, action has {action.branch_code}"
+            assert packet.rerank_applied == expected_rerank, \
+                f"Rerank mismatch for {expected_branch}: expected {expected_rerank}, got {packet.rerank_applied}"

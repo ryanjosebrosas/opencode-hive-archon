@@ -370,30 +370,30 @@ PYTHONPATH=backend/src pytest tests/test_recall_flow_integration.py tests/test_m
 
 ### Implementation (verify during execution)
 
-- [ ] Router override path cannot select disabled/unhealthy providers.
-- [ ] Missing provider status keys no longer cause false `none` routing.
-- [ ] Fallback branch precedence and branch codes remain stable.
-- [ ] Rerank-related flags are branch-consistent and test-covered.
-- [ ] Routing metadata mode reflects actual request mode.
-- [ ] All targeted tests pass with no regressions.
+- [x] Router override path cannot select disabled/unhealthy providers.
+- [x] Missing provider status keys no longer cause false `none` routing.
+- [x] Fallback branch precedence and branch codes remain stable.
+- [x] Rerank-related flags are branch-consistent and test-covered.
+- [x] Routing metadata mode reflects actual request mode.
+- [x] All targeted tests pass with no regressions.
 
 ### Runtime (verify after testing/deployment)
 
-- [ ] Operators can reproduce branch outcomes from manual scenario IDs without inconsistent routing.
-- [ ] Incident triage metadata is sufficient to explain provider and rerank decisions.
-- [ ] No regressions in existing Mem0 duplicate-rerank prevention policy.
+- [x] Operators can reproduce branch outcomes from manual scenario IDs without inconsistent routing.
+- [x] Incident triage metadata is sufficient to explain provider and rerank decisions.
+- [x] No regressions in existing Mem0 duplicate-rerank prevention policy.
 
 ---
 
 ## COMPLETION CHECKLIST
 
-- [ ] Failing tests for critical findings added before fixes (or in same change with clear red/green proof)
-- [ ] Router hardening implemented with centralized eligibility checks
-- [ ] Fallback semantics tightened without contract breakage
-- [ ] Recall metadata mode bug fixed
-- [ ] Manual scenario expectations updated only when behavior intentionally changed
-- [ ] Lint, typecheck, unit, and integration commands all pass
-- [ ] Runbook and execution-report delta updated
+- [x] Failing tests for critical findings added before fixes (or in same change with clear red/green proof)
+- [x] Router hardening implemented with centralized eligibility checks
+- [x] Fallback semantics tightened without contract breakage
+- [x] Recall metadata mode bug fixed
+- [x] Manual scenario expectations updated only when behavior intentionally changed
+- [x] Lint, typecheck, unit, and integration commands all pass
+- [x] Runbook and execution-report delta updated
 
 ---
 

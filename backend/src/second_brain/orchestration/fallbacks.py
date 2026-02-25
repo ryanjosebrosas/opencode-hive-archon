@@ -194,6 +194,9 @@ def determine_branch(
         return FallbackEmitter.emit_rerank_bypassed(candidates, provider)
     
     # SUCCESS: High confidence
+    # For non-mem0: rerank_applied follows external-rerank execution state
+    # For mem0 in this path (unusual case), rerank_applied remains false
+    rerank_applied_for_success = not rerank_bypassed if provider != "mem0" else False
     return FallbackEmitter.emit_success(
-        candidates, provider, rerank_applied=rerank_bypassed
+        candidates, provider, rerank_applied=rerank_applied_for_success
     )

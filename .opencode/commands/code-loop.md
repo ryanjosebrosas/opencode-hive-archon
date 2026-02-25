@@ -71,6 +71,8 @@ At the start of EACH iteration, save progress checkpoint:
 3. **Run `/execute` (fix mode)**
    - Input: `requests/code-reviews/{feature}-review #{N}.md`
    - Fixes issues in priority order
+   - After this fix pass succeeds, mark the input review file as done by renaming it to append `.done` before `.md`
+     - Example: `requests/code-reviews/{feature}-review #{N}.md` -> `requests/code-reviews/{feature}-review #{N}.done.md`
 
 4. **Run validation:**
    ```bash
@@ -140,11 +142,15 @@ At the start of EACH iteration, save progress checkpoint:
 
 ## Output Report
 
-Save to: `requests/code-loops/{feature}-loop-report #<n>.md`
+Save to: `requests/code-loops/{feature}-loop-report #<n>.done.md`
+
+Done marker rule:
+- Mark done status in filenames only by appending `.done` before `.md`.
+- Do not modify markdown H1/title text just to indicate completion.
 
 Numbering rule:
 - Use hash numbering for loop outputs to match request artifact convention.
-- Final report filename: `requests/code-loops/{feature}-loop-report #1.md` (or next available number).
+- Final report filename: `requests/code-loops/{feature}-loop-report #1.done.md` (or next available number).
 
 ### Loop Summary
 

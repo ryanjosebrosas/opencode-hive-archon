@@ -257,3 +257,133 @@ class TestDeterministicRouting:
             
             # All runs must match
             assert all(r == results[0] for r in results)
+
+
+class TestProviderOverrideGating:
+    """Test provider override cannot bypass health/feature checks."""
+    
+    def test_override_rejected_for_unavailable_provider(self):
+        """Override MUST NOT select unavailable provider."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+            provider_override="mem0",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={"mem0": ProviderStatus.UNAVAILABLE, "supabase": ProviderStatus.AVAILABLE},
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+        )
+        assert provider != "mem0", "Override bypassed unavailable status"
+        assert provider == "supabase"
+    
+    def test_override_rejected_for_disabled_feature_flag(self):
+        """Override MUST NOT select provider disabled by feature flag."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+            provider_override="mem0",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={"mem0": ProviderStatus.AVAILABLE, "supabase": ProviderStatus.AVAILABLE},
+            feature_flags={"mem0_enabled": False, "supabase_enabled": True}
+        )
+        assert provider != "mem0", "Override bypassed disabled feature flag"
+        assert provider == "supabase"
+    
+    def test_override_rejected_for_degraded_provider(self):
+        """Override MUST NOT select degraded provider (only available allowed)."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+            provider_override="mem0",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={"mem0": ProviderStatus.DEGRADED, "supabase": ProviderStatus.AVAILABLE},
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+        )
+        assert provider != "mem0", "Override selected degraded provider"
+        assert provider == "supabase"
+    
+    def test_override_accepted_for_available_provider(self):
+        """Override accepted when provider is enabled and available."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+            provider_override="supabase",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={"mem0": ProviderStatus.AVAILABLE, "supabase": ProviderStatus.AVAILABLE},
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+        )
+        assert provider == "supabase"
+        assert options["skip_external_rerank"] is False
+
+
+class TestMissingStatusNormalization:
+    """Test missing provider status defaults to available."""
+    
+    def test_missing_status_defaults_to_available(self):
+        """Missing status key MUST default to available for enabled providers."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={},  # No status provided
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+        )
+        assert provider == "mem0", "Missing status should not block selection"
+        assert options["skip_external_rerank"] is True
+    
+    def test_partial_status_missing_key_selectable(self):
+        """Provider with missing status key should still be selectable."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="fast",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={"supabase": ProviderStatus.AVAILABLE},  # mem0 missing
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+        )
+        assert provider == "mem0", "Missing mem0 status should default to available"
+    
+    def test_explicit_unavailable_honored_over_missing(self):
+        """Explicit unavailable status MUST be honored even with other missing keys."""
+        request = RetrievalRequest(
+            query="test query",
+            mode="conversation",
+        )
+        provider, options = route_retrieval(
+            request,
+            provider_status={"mem0": ProviderStatus.UNAVAILABLE},  # supabase missing
+            feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+        )
+        assert provider == "supabase", "Explicit unavailable honored, missing defaults to available"
+
+
+class TestDeterministicAfterNormalization:
+    """Test determinism is preserved after status normalization."""
+    
+    def test_repeated_runs_with_missing_status_stable(self):
+        """Repeated runs with missing status MUST produce identical results."""
+        results = []
+        for _ in range(5):
+            request = RetrievalRequest(
+                query="deterministic test",
+                mode="conversation",
+            )
+            provider, options = route_retrieval(
+                request,
+                provider_status={},  # Empty status
+                feature_flags={"mem0_enabled": True, "supabase_enabled": True}
+            )
+            results.append((provider, options["skip_external_rerank"]))
+        
+        assert all(r == results[0] for r in results), "Non-deterministic with normalized status"
+        assert results[0][0] == "mem0"
