@@ -82,18 +82,90 @@ Required workflow:
 
 Do not skip Archon steps.
 
-### 1.6. Archon Knowledge Retrieval (required)
+### 1.6. Archon Knowledge Retrieval (recovery path only)
 
-Ground implementation with curated knowledge before code changes.
+The plan produced by `/planning` is the source of truth. It already contains all researched
+patterns, code samples, and external references needed for one-pass execution.
 
-Required workflow:
-1. List sources with `archon_rag_get_available_sources`.
-2. Run focused searches using:
+**Default behavior**: Trust the plan. Do NOT run upfront RAG searches before implementation.
+
+**Recovery trigger**: If during task execution you encounter any of these:
+- A plan reference that is ambiguous, incomplete, or conflicts with actual codebase state
+- A library API or pattern not covered by the plan's code samples
+- An integration point the plan didn't anticipate (e.g., new import path, changed function signature)
+
+Then — and only then — do targeted Archon RAG research:
+1. List sources with `archon_rag_get_available_sources` (if not already cached from preflight).
+2. Run a focused 2-5 keyword search using:
    - `archon_rag_search_knowledge_base(query=..., return_mode="pages")`
    - `archon_rag_search_code_examples(query=...)`
 3. Read full pages for top results using `archon_rag_read_full_page(page_id=...)`.
-4. If retrieval returns no relevant results, continue using plan + codebase evidence, and record "No relevant Archon RAG hits" in the report.
-5. Capture the key references (titles/URLs/page_ids) in the execution report and Archon execution document.
+4. Record what gap triggered the research and what was found in the execution report.
+
+If no gaps are encountered, record "No RAG recovery needed — plan was self-contained" in the report.
+
+### 1.7. Multi-Model Dispatch (optional acceleration)
+
+The `dispatch` tool sends prompts to other connected AI models via the OpenCode server.
+Use it to accelerate execution by delegating appropriate subtasks or gathering pre-implementation research.
+
+**Default behavior**: Execute tasks yourself. Dispatch is an optional optimization, not a requirement.
+
+**When to consider dispatching:**
+
+1. **Subtask delegation** — delegate simple/repetitive tasks to faster, cheaper models:
+   - Boilerplate code generation (CRUD, schemas, type definitions)
+   - Test file scaffolding (fixtures, basic test cases)
+   - Configuration file generation
+   - Documentation generation
+   - Repetitive pattern application across multiple files
+
+2. **Pre-implementation research** — ask another model for context before implementing:
+   - "How does library X handle Y?" — when the plan doesn't cover a specific API
+   - "What's the recommended pattern for Z?" — when facing an unfamiliar integration
+   - "Review this approach before I implement it" — sanity check on complex logic
+
+**When NOT to dispatch:**
+- Core business logic that requires understanding the full plan context
+- Tasks that require reading many project files (the dispatched model has no file access)
+- Quick, simple changes (dispatch overhead > doing it yourself)
+- When the plan explicitly specifies how to implement something (trust the plan)
+- When `opencode serve` is not running (dispatch will error — that's fine, do it yourself)
+
+**Model routing for execution tasks:**
+| Task Type | Recommended Provider/Model | Why |
+|-----------|---------------------------|-----|
+| Boilerplate generation | `bailian-coding-plan/qwen3-coder-next` | Fast, good at patterns |
+| Test scaffolding | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized |
+| Research / API lookup | `bailian-coding-plan/qwen3.5-plus` | Strong reasoning |
+| Documentation | `bailian-coding-plan/minimax-m2.5` | Good prose generation |
+| Complex code generation | `anthropic/claude-sonnet-4-20250514` | Strongest reasoning |
+
+**How to dispatch a subtask:**
+```
+dispatch({
+  provider: "bailian-coding-plan",
+  model: "qwen3-coder-next",
+  prompt: "Generate a Python {type} that:\n- {requirement 1}\n- {requirement 2}\n\nFollow this pattern:\n```python\n{paste example from plan}\n```\n\nReturn only the code, no explanations."
+})
+```
+
+**How to dispatch research:**
+```
+dispatch({
+  provider: "bailian-coding-plan",
+  model: "qwen3.5-plus",
+  prompt: "I need to implement {task description}.\nQuestion: {specific question about API/pattern/approach}\nContext: {relevant context from the plan}"
+})
+```
+
+**Using dispatch results:**
+- Review dispatched code before using it — never blindly paste
+- Adapt generated code to match project patterns (imports, naming, style)
+- If dispatch fails or returns unhelpful results, implement the task yourself
+- Note in the execution report if dispatch was used: "Task N: delegated boilerplate to {model}, reviewed and integrated"
+
+**If dispatch fails:** Implement the task yourself. Dispatch is optional. Never block execution because dispatch is unavailable.
 
 ### 2. Execute Tasks in Order
 
@@ -192,8 +264,9 @@ Use the feature name derived in Step 1. Create the `requests/execution-reports/`
 - **Plan checkboxes updated**: {yes/no}
 - **Files added**: {list with full paths, or "None"}
 - **Files modified**: {list with full paths}
-- **Archon retrieval used**: {yes/no}
-- **RAG references**: {list of page_ids/URLs used, or "None"}
+- **Archon RAG recovery used**: {yes — describe gap that triggered it / no — plan was self-contained}
+- **RAG references**: {list of page_ids/URLs used during recovery, or "None"}
+- **Dispatch used**: {yes — list tasks delegated and models used / no — all tasks self-executed}
 
 ### Completed Tasks
 

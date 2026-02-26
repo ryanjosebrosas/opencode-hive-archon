@@ -37,11 +37,13 @@ Important execution rule for this command:
 - No subagents.
 - No delegated research.
 - Do all discovery and planning directly in the main conversation.
+- Exception: the `dispatch` tool is allowed. It sends a research query to another model and returns the result inline to this conversation. You retain full reasoning control. See Phase 2 and Phase 3 for when to use it.
 
 External research is ALLOWED and ENCOURAGED:
 - Use Archon MCP RAG search for curated knowledge base lookup (required)
 - Use WebFetch for specific documentation URLs
 - Use web search for finding library docs and best practices
+- Use `dispatch` tool for targeted research queries to other AI models (optional, see Phases 2-3)
 
 Archon requirement (non-skippable):
 - `/planning` must use Archon preflight + RAG retrieval before finalizing the plan.
@@ -236,6 +238,39 @@ Code sample requirement (non-skippable):
 
 If requirements are still ambiguous, ask targeted clarification before continuing.
 
+6. Dispatch research acceleration (optional):
+
+   If `opencode serve` is running, use the `dispatch` tool to accelerate codebase intelligence by sending targeted research queries to other models. This is optional — if dispatch is unavailable, continue with local tools and Archon.
+
+   **When to dispatch during Phase 2:**
+   - Compare two library options: "What are the tradeoffs between library A and library B for {use case}?"
+   - Understand unfamiliar code patterns: "Explain the {pattern name} pattern used in {framework}. When is it appropriate?"
+   - Check API surfaces: "What methods does {library} v{version} expose for {feature}? Include required imports."
+   - Cross-check architecture decisions: "Is {proposed approach} a common pattern for {problem type}? What are the pitfalls?"
+
+   **When NOT to dispatch during Phase 2:**
+   - Questions answerable by reading local files (use Glob/Grep/Read instead)
+   - Questions answerable by Archon RAG (use Archon first, dispatch only if Archon misses)
+   - Asking another model to explore the codebase (the dispatched model has no file access)
+   - Vague, open-ended questions ("What should I build?") — dispatch works best for specific, bounded queries
+
+   **How to dispatch a research query:**
+   ```
+   dispatch({
+     provider: "bailian-coding-plan",
+     model: "qwen3.5-plus",
+     prompt: "I am planning a {feature type} feature using {stack}.\nQuestion: {specific question}\nContext: {relevant context from codebase exploration}\nBe concise — 2-3 paragraphs max.",
+     timeout: 30,
+     systemPrompt: "You are a technical research assistant. Answer concisely with concrete details. Include code examples when relevant. Do not ask follow-up questions."
+   })
+   ```
+
+   **Using dispatch results in Phase 2:**
+   - Cross-reference dispatch answers with local codebase evidence before trusting them
+   - If dispatch contradicts local evidence, trust local evidence (it's the actual codebase)
+   - Record useful dispatch findings in the plan's "Relevant Documentation" or "Patterns to Follow" sections
+   - Note the source: "Dispatch research ({model}): {finding}"
+
 ### Phase 3: Documentation Research (Local + External + Archon)
 
 **Local sources:**
@@ -255,6 +290,50 @@ If requirements are still ambiguous, ask targeted clarification before continuin
 Output a comprehensive "Relevant Documentation" list with:
 - Local repo paths with reasons
 - External documentation URLs with specific sections and why they matter
+
+**Dispatch research acceleration (optional):**
+
+After local docs and Archon retrieval, if specific documentation gaps remain, use `dispatch` to query other models:
+
+**When to dispatch during Phase 3:**
+- Library documentation not in Archon: "What is the recommended setup for {library} v{version} with {framework}?"
+- Version compatibility: "Is {library A} v{version} compatible with {library B} v{version}? Any known issues?"
+- Best practices not found locally: "What are the best practices for {pattern} in {language/framework}? Include pitfalls."
+- API reference details: "What parameters does {function/method} accept? What does it return? Include TypeScript types."
+
+**When NOT to dispatch during Phase 3:**
+- Documentation already found via Archon or WebFetch (don't duplicate)
+- General knowledge questions you can answer from training data
+- Questions that require reading the user's specific codebase (dispatch model has no file access)
+
+**How to dispatch a documentation query:**
+```
+dispatch({
+  provider: "bailian-coding-plan",
+  model: "qwen3.5-plus",
+  prompt: "Documentation research for planning:\n\nTopic: {library/API/pattern}\nSpecific question: {what you need to know}\nContext: {how it will be used in the planned feature}\n\nProvide: exact API signatures, required imports, configuration, and common gotchas.",
+  timeout: 30,
+  systemPrompt: "You are a documentation research assistant. Provide precise, factual API documentation. Include exact function signatures, parameter types, and return types. If uncertain, say so."
+})
+```
+
+**Using dispatch results in Phase 3:**
+- Verify claims against official documentation when possible (WebFetch the official docs URL)
+- Include verified dispatch findings in the plan's "Relevant Documentation" section with source attribution
+- If dispatch provides code examples, verify they compile/match current library versions before including in the plan
+- Note in plan: "Dispatch-sourced ({model}): {documentation reference}"
+
+**Model routing for planning research dispatch:**
+
+| Research Type | Recommended Provider/Model | Why |
+|---------------|---------------------------|-----|
+| Library comparison / architecture questions | `bailian-coding-plan/qwen3.5-plus` | Strong reasoning, broad knowledge |
+| API surface / code pattern questions | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized with thinking |
+| Documentation lookups / version compatibility | `bailian-coding-plan/kimi-k2.5` | Long context, good at factual recall |
+| Quick factual checks | `bailian-coding-plan/qwen3-coder-next` | Fast response, good enough for simple lookups |
+| Deep research / complex tradeoff analysis | `anthropic/claude-sonnet-4-20250514` | Strongest reasoning when accuracy is critical |
+
+These are recommendations. Use any connected model that fits the query. If unsure, default to `qwen3.5-plus`.
 
 ### Phase 4: Strategic Design and Synthesis
 
@@ -581,4 +660,5 @@ After creating the plan, provide:
 - Complexity assessment
 - Key implementation risks or considerations
 - Archon retrieval summary (sources searched and key references)
+- Dispatch research summary (queries dispatched, models used, and key findings — or "No dispatch used")
 - Estimated confidence score for one-pass success

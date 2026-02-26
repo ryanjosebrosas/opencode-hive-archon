@@ -64,6 +64,77 @@ ubs --staged --fail-on-warning
 
 ---
 
+## Multi-Model Dispatch in Loop
+
+The `dispatch` tool sends prompts to other AI models. In the code-loop context, use it for:
+
+1. **Multi-model review** — get additional review perspectives beyond the primary code-review agent
+2. **Fix delegation** — dispatch fix implementation to fast models while you orchestrate
+
+**This is optional.** If `opencode serve` is not running, skip all dispatch steps and run the loop normally.
+
+### Review Dispatch (during step 1 of each iteration)
+
+After the primary `/code-review` runs, consider dispatching the changed code to a second model for additional findings:
+
+**When to dispatch a second review:**
+- First iteration (fresh code, worth getting a second perspective)
+- When review finds security-sensitive issues (get confirmation)
+- When review finds 0 issues (sanity check — did we miss something?)
+- When changes touch multiple interconnected files
+
+**When to skip dispatch review:**
+- Later iterations with only minor fixes remaining
+- When previous dispatch review added no new findings
+- When changes are trivial (typos, formatting)
+
+**How to dispatch a review:**
+```
+dispatch({
+  provider: "bailian-coding-plan",
+  model: "qwen3-coder-plus",
+  prompt: "Review this code change for bugs, security issues, and quality problems:\n\n{paste git diff or relevant code snippets}\n\nContext: {what was changed and why}\n\nReport findings as:\n- Critical: {description}\n- Major: {description}\n- Minor: {description}\n\nIf no issues found, say 'No issues found.'"
+})
+```
+
+**Merging dispatch findings with primary review:**
+- Deduplicate — if dispatch finds the same issue as primary review, note "confirmed by {model}"
+- Add new findings to the review artifact with source attribution
+- Include in the fix plan so `/execute` addresses them
+
+### Fix Dispatch (during step 4 of each iteration)
+
+When running `/execute` to fix review findings, the execute agent may dispatch subtasks to other models.
+This is governed by `/execute`'s own dispatch guidance (section 1.7).
+
+Additionally, if you have simple, isolated fixes (e.g., "add missing null check at line 42", "rename variable X to Y"):
+
+**How to dispatch a simple fix:**
+```
+dispatch({
+  provider: "bailian-coding-plan",
+  model: "qwen3-coder-next",
+  prompt: "Fix this code issue:\n\nFile: {filename}\nIssue: {description from review}\nCurrent code:\n```\n{paste current code}\n```\n\nReturn the fixed code only, no explanations."
+})
+```
+
+**Rules for fix dispatch:**
+- Only dispatch fixes you can verify (you must review the result before applying)
+- Never dispatch architectural changes or multi-file refactors
+- If the dispatched fix looks wrong, implement it yourself
+- Track dispatched fixes in the loop report: "Fix dispatched to {model}: {description}"
+
+### Model Routing for Loop Tasks
+
+| Task | Recommended Provider/Model | Why |
+|------|---------------------------|-----|
+| Second review opinion | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized review |
+| Security-focused review | `anthropic/claude-sonnet-4-20250514` | Strong security analysis |
+| Simple fix generation | `bailian-coding-plan/qwen3-coder-next` | Fast, accurate for small fixes |
+| Complex fix generation | `anthropic/claude-sonnet-4-20250514` | Best reasoning for complex logic |
+
+---
+
 ## Fix Loop
 
 ### Checkpoint System (Context Compaction)
@@ -186,12 +257,13 @@ Numbering rule:
 - **Feature**: {feature-name}
 - **Iterations**: N
 - **Final Status**: Clean / Stopped (unfixable error) / Stopped (user interrupt) / Stopped (user choice)
+- **Dispatch used**: {yes — N dispatches across M iterations / no}
 
 ### Issues Fixed by Iteration
 
-| Iteration | Critical | Major | Minor | Total |
-|-----------|----------|-------|-------|-------|
-| 1 | X | Y | Z | T |
+| Iteration | Critical | Major | Minor | Total | Dispatches |
+|-----------|----------|-------|-------|-------|------------|
+| 1 | X | Y | Z | T | N |
 | 2 | X | Y | Z | T |
 | ... | ... | ... | ... | ... |
 | N (final) | X | Y | Z | T |
