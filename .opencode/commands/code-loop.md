@@ -34,6 +34,20 @@ Incremental rule:
 
 ---
 
+## Pre-Loop: Archon RAG Context Load
+
+Before starting the review loop, gather relevant documentation context from Archon RAG to inform the review:
+
+1. **Check Archon availability**: Call `rag_get_available_sources()`. If unavailable, skip RAG steps and proceed.
+2. **Search for relevant patterns**: Based on the feature/files being reviewed, run 1-3 targeted RAG searches:
+   - `rag_search_knowledge_base(query="<technology or pattern keywords>")` — find docs for libraries used in changed files
+   - `rag_search_code_examples(query="<pattern keywords>")` — find reference implementations
+3. **Pass context to code-review agent**: Include relevant RAG findings in the review prompt so the agent can cross-reference against curated documentation.
+
+**Keep RAG queries SHORT** (2-5 keywords). Only search for technologies/patterns that appear in the changed files.
+
+If Archon is unavailable, proceed without RAG context — the code-review agent has its own RAG access as fallback.
+
 ## Pre-Loop UBS Scan
 
 ```bash
@@ -75,9 +89,10 @@ At the start of EACH iteration, save progress checkpoint:
    - **If Critical/Major issues:** → Continue to fix step
 
 3. **Create fix plan via `/planning` (required)**
-   - Input: latest review artifact `requests/code-reviews/{feature}-review #{N}.md`
-   - Output: `requests/{feature}-review-fixes #<n>.md`
-   - The fix plan must define a single bounded fix slice (Critical/Major first)
+    - Input: latest review artifact `requests/code-reviews/{feature}-review #{N}.md`
+    - Output: `requests/{feature}-review-fixes #<n>.md`
+    - The fix plan must define a single bounded fix slice (Critical/Major first)
+    - If the review includes RAG-informed findings, include the RAG source references in the fix plan so `/execute` has the documentation context
 
 4. **Run `/execute` with the fix plan (required)**
    - Input: `requests/{feature}-review-fixes #<n>.md`

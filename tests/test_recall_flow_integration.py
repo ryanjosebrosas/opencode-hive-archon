@@ -448,6 +448,38 @@ class TestProviderRouteConsistency:
         assert response.routing_metadata["selected_provider"] == "mem0"
         assert response.routing_metadata["rerank_type"] == "provider-native"
 
+    def test_supabase_route_with_real_provider_disabled_uses_fallback(self):
+        """
+        When route selects supabase but real provider is disabled,
+        recall still returns valid contract response via fallback.
+        """
+        memory_service = MemoryService(
+            provider="supabase",
+            config={"supabase_use_real_provider": False},
+        )
+        rerank_service = VoyageRerankService(enabled=True)
+
+        orchestrator = RecallOrchestrator(
+            memory_service=memory_service,
+            rerank_service=rerank_service,
+            feature_flags={"mem0_enabled": False, "supabase_enabled": True},
+            provider_status={"mem0": "unavailable", "supabase": "available"},
+        )
+
+        request = RetrievalRequest(
+            query="supabase fallback test",
+            mode="conversation",
+            top_k=5,
+            threshold=0.6,
+        )
+
+        response = orchestrator.run(request)
+
+        assert response.context_packet is not None
+        assert response.next_action is not None
+        assert response.routing_metadata["selected_provider"] == "supabase"
+        assert isinstance(response.context_packet.candidates, list)
+
     def test_provider_fallback_remains_contract_valid(self):
         """
         When real provider falls back due to unavailability,

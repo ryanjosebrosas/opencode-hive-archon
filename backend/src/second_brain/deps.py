@@ -38,9 +38,16 @@ def create_memory_service(
 def create_voyage_rerank_service(
     enabled: bool = True,
     model: str = "rerank-2",
+    embed_model: str = "voyage-4-large",
+    embed_enabled: bool = False,
 ) -> VoyageRerankService:
     """Create voyage rerank service instance."""
-    return VoyageRerankService(enabled=enabled, model=model)
+    return VoyageRerankService(
+        enabled=enabled,
+        model=model,
+        embed_model=embed_model,
+        embed_enabled=embed_enabled,
+    )
 
 
 def create_trace_collector(
@@ -61,4 +68,8 @@ def get_default_config() -> dict[str, Any]:
         "mem0_use_real_provider": False,
         "mem0_user_id": None,
         "mem0_api_key": None,
+        "supabase_use_real_provider": False,
+        "supabase_url": None,
+        "supabase_key": None,
+        "voyage_embed_model": "voyage-4-large",
     }

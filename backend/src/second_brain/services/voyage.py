@@ -1,15 +1,68 @@
-"""Voyage AI reranking service."""
+"""Voyage AI reranking and embedding service."""
 
-from typing import Sequence
+import logging
+import os
+from typing import Any, Sequence
+
 from second_brain.contracts.context_packet import ContextCandidate
 
 
-class VoyageRerankService:
-    """External reranking service wrapper."""
+logger = logging.getLogger(__name__)
 
-    def __init__(self, enabled: bool = True, model: str = "rerank-2"):
+
+class VoyageRerankService:
+    """External reranking and embedding service wrapper."""
+
+    def __init__(
+        self,
+        enabled: bool = True,
+        model: str = "rerank-2",
+        embed_model: str = "voyage-4-large",
+        embed_enabled: bool = False,
+    ):
         self.enabled = enabled
         self.model = model
+        self.embed_model = embed_model
+        self.embed_enabled = embed_enabled
+        self._voyage_client: Any | None = None  # Intentional Any: optional external dependency
+
+    def _load_voyage_client(self) -> Any | None:
+        """Load Voyage AI client lazily."""
+        if self._voyage_client is not None:
+            return self._voyage_client
+        try:
+            import voyageai  # type: ignore[import-not-found]
+
+            api_key = os.getenv("VOYAGE_API_KEY")
+            if api_key:
+                self._voyage_client = voyageai.Client(api_key=api_key)
+            else:
+                self._voyage_client = voyageai.Client()
+            return self._voyage_client
+        except ImportError:
+            logger.debug("voyageai SDK not installed")
+        except Exception as e:
+            logger.warning("Voyage client init failed: %s", type(e).__name__)
+        return None
+
+    def embed(
+        self, text: str, input_type: str = "query"
+    ) -> tuple[list[float] | None, dict[str, Any]]:
+        """Embed text using Voyage AI. Returns (embedding_vector, metadata)."""
+        metadata: dict[str, Any] = {"embed_model": self.embed_model}
+        if not self.embed_enabled:
+            return None, {**metadata, "embed_error": "embedding_disabled"}
+        try:
+            client = self._load_voyage_client()
+            if client is None:
+                return None, {**metadata, "embed_error": "client_unavailable"}
+            result = client.embed([text], model=self.embed_model, input_type=input_type)
+            if not result.embeddings:
+                return None, {**metadata, "embed_error": "empty_embeddings"}
+            return result.embeddings[0], {**metadata, "total_tokens": result.total_tokens}
+        except Exception as e:
+            logger.warning("Voyage embed failed: %s", type(e).__name__)
+            return None, {**metadata, "embed_error": type(e).__name__}
 
     def rerank(
         self,

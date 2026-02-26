@@ -34,6 +34,13 @@ class MemoryService:
         self._mem0_user_id = self.config.get("mem0_user_id")
         self._mem0_api_key = self.config.get("mem0_api_key")
 
+        self._supabase_enabled = self.config.get("supabase_use_real_provider", False)
+        self._supabase_url = self.config.get("supabase_url") or os.getenv("SUPABASE_URL")
+        self._supabase_key = self.config.get("supabase_key") or os.getenv("SUPABASE_KEY")
+
+        self._voyage_service: Any | None = None  # Intentional Any: lazy-loaded service
+        self._supabase_provider: Any | None = None  # Intentional Any: lazy-loaded service
+
     def search_memories(
         self,
         query: str,
@@ -76,6 +83,14 @@ class MemoryService:
         if self._mock_data is not None:
             results = self._search_mock(normalized_query, normalized_top_k, normalized_threshold)
             metadata = {"provider": self.provider, "mock_mode": True}
+        elif self._should_use_supabase_provider():
+            supabase_results, supabase_metadata = self._search_with_supabase(
+                normalized_query,
+                normalized_top_k,
+                normalized_threshold,
+            )
+            results = supabase_results
+            metadata = supabase_metadata
         elif self._should_use_real_provider():
             real_results, real_metadata = self._search_with_provider(
                 normalized_query,
@@ -113,8 +128,15 @@ class MemoryService:
             return False
         if self.provider != "mem0":
             return False
-        # Check if we have credentials to attempt provider call
         return self._mem0_api_key is not None or self._has_env_api_key()
+
+    def _should_use_supabase_provider(self) -> bool:
+        """Check if Supabase real provider should be used."""
+        if not self._supabase_enabled:
+            return False
+        if self.provider != "supabase":
+            return False
+        return self._supabase_url is not None and self._supabase_key is not None
 
     def _has_env_api_key(self) -> bool:
         """Check if API key is available from environment."""
@@ -183,6 +205,52 @@ class MemoryService:
             if value:
                 message = message.replace(value, "[REDACTED]")
         return message[:200]
+
+    def _load_voyage_service(self) -> Any:
+        """Load Voyage embedding service lazily."""
+        if self._voyage_service is not None:
+            return self._voyage_service
+        from second_brain.services.voyage import VoyageRerankService
+
+        self._voyage_service = VoyageRerankService(
+            embed_enabled=True,
+            embed_model=self.config.get("voyage_embed_model", "voyage-4-large"),
+        )
+        return self._voyage_service
+
+    def _load_supabase_provider(self) -> Any:
+        """Load Supabase provider lazily."""
+        if self._supabase_provider is not None:
+            return self._supabase_provider
+        from second_brain.services.supabase import SupabaseProvider
+
+        self._supabase_provider = SupabaseProvider(config=self.config)
+        return self._supabase_provider
+
+    def _search_with_supabase(
+        self,
+        query: str,
+        top_k: int,
+        threshold: float,
+    ) -> tuple[list[MemorySearchResult], dict[str, Any]]:
+        """Search using Supabase provider with Voyage embedding."""
+        voyage = self._load_voyage_service()
+        embedding, embed_meta = voyage.embed(query, input_type="query")
+        if embedding is None:
+            return self._search_fallback(query, top_k, threshold), {
+                "provider": self.provider,
+                "fallback_reason": "embedding_failed",
+                "embed_error": embed_meta.get("embed_error"),
+            }
+
+        provider = self._load_supabase_provider()
+        results, search_meta = provider.search(embedding, top_k, threshold)
+
+        if not results and search_meta.get("fallback_reason"):
+            fallback = self._search_fallback(query, top_k, threshold)
+            return fallback, {**search_meta, "used_fallback": True}
+
+        return results, search_meta
 
     def _normalize_mem0_results(
         self,

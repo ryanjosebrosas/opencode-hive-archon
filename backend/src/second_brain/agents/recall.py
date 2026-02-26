@@ -310,7 +310,7 @@ class RecallOrchestrator:
         provider: str,
         skip_external_rerank: bool,
         threshold: float,
-    ) -> tuple:
+    ) -> tuple[ContextPacket, NextAction]:
         """Force specific branch output for validation testing."""
         from second_brain.orchestration.fallbacks import FallbackEmitter
 

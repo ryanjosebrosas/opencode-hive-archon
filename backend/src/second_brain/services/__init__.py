@@ -2,11 +2,13 @@
 
 from second_brain.services.memory import MemoryService, MemorySearchResult
 from second_brain.services.voyage import VoyageRerankService
+from second_brain.services.supabase import SupabaseProvider
 from second_brain.services.trace import TraceCollector
 
 __all__ = [
     "MemoryService",
     "MemorySearchResult",
     "VoyageRerankService",
+    "SupabaseProvider",
     "TraceCollector",
 ]
