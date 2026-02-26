@@ -1,9 +1,15 @@
 """Dependency injection helpers."""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
 from second_brain.services.trace import TraceCollector
+from second_brain.services.conversation import ConversationStore
+
+if TYPE_CHECKING:
+    from second_brain.orchestration.planner import Planner
 
 
 def get_feature_flags() -> dict[str, bool]:
@@ -55,6 +61,46 @@ def create_trace_collector(
 ) -> TraceCollector:
     """Create trace collector instance."""
     return TraceCollector(max_traces=max_traces)
+
+
+def create_conversation_store(
+    max_turns: int = 50,
+    max_sessions: int = 100,
+) -> ConversationStore:
+    """Create conversation store instance."""
+    return ConversationStore(
+        max_turns_per_session=max_turns,
+        max_sessions=max_sessions,
+    )
+
+
+def create_planner(
+    memory_service: MemoryService | None = None,
+    rerank_service: VoyageRerankService | None = None,
+    conversation_store: ConversationStore | None = None,
+    trace_collector: TraceCollector | None = None,
+) -> Planner:
+    """Create planner with default dependencies."""
+    from second_brain.orchestration.planner import Planner
+    from second_brain.agents.recall import RecallOrchestrator
+
+    _memory = memory_service or create_memory_service()
+    _rerank = rerank_service or create_voyage_rerank_service()
+    _conversations = conversation_store or create_conversation_store()
+
+    orchestrator = RecallOrchestrator(
+        memory_service=_memory,
+        rerank_service=_rerank,
+        feature_flags=get_feature_flags(),
+        provider_status=get_provider_status(),
+        trace_collector=trace_collector,
+    )
+
+    return Planner(
+        recall_orchestrator=orchestrator,
+        conversation_store=_conversations,
+        trace_collector=trace_collector,
+    )
 
 
 def get_default_config() -> dict[str, Any]:

@@ -97,6 +97,14 @@ class TestRetrievalTraceModel:
 class TestTraceCollector:
     """Unit tests for TraceCollector service."""
 
+    def test_collector_rejects_non_positive_max_traces(self):
+        """max_traces must be positive to avoid eviction crashes."""
+        try:
+            TraceCollector(max_traces=0)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "max_traces" in str(e)
+
     def test_collector_record_and_retrieve(self):
         """Record a trace, get_traces returns it."""
         collector = TraceCollector()

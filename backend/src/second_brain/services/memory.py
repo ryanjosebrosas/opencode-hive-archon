@@ -2,12 +2,14 @@
 
 import logging
 import os
+import threading
 from dataclasses import dataclass
 from typing import Any, Optional
 from second_brain.contracts.context_packet import ContextCandidate
 
 
 logger = logging.getLogger(__name__)
+_MEM0_ENV_LOCK = threading.Lock()
 
 
 @dataclass
@@ -150,11 +152,22 @@ class MemoryService:
         try:
             from mem0 import Memory  # type: ignore[import-untyped]
 
-            api_key = self._mem0_api_key
-            if not api_key:
-                api_key = os.getenv("MEM0_API_KEY")
+            config_api_key = self._mem0_api_key
+            if config_api_key:
+                try:
+                    self._mem0_client = Memory(api_key=config_api_key)  # type: ignore[call-arg]
+                    return self._mem0_client
+                except TypeError:
+                    logger.debug(
+                        "Mem0 client does not accept api_key kwarg; trying temporary env path"
+                    )
+                    client = self._load_mem0_client_with_temp_env(Memory, config_api_key)
+                    if client is not None:
+                        self._mem0_client = client
+                        return self._mem0_client
 
-            if api_key:
+            env_api_key = os.getenv("MEM0_API_KEY")
+            if env_api_key:
                 self._mem0_client = Memory()
                 return self._mem0_client
         except ImportError:
@@ -163,6 +176,20 @@ class MemoryService:
             logger.warning("Mem0 client initialization failed: %s", type(error).__name__)
 
         return None
+
+    def _load_mem0_client_with_temp_env(self, memory_cls: Any, api_key: str) -> Any | None:
+        """Initialize Mem0 client using temporary env bridge for legacy SDKs."""
+        with _MEM0_ENV_LOCK:
+            had_value = "MEM0_API_KEY" in os.environ
+            previous = os.environ.get("MEM0_API_KEY")
+            os.environ["MEM0_API_KEY"] = api_key
+            try:
+                return memory_cls()
+            finally:
+                if had_value and previous is not None:
+                    os.environ["MEM0_API_KEY"] = previous
+                else:
+                    os.environ.pop("MEM0_API_KEY", None)
 
     def _search_with_provider(
         self,

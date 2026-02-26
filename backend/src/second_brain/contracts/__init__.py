@@ -9,12 +9,20 @@ from second_brain.contracts.context_packet import (
     RetrievalResponse,
 )
 from second_brain.contracts.trace import RetrievalTrace
+from second_brain.contracts.conversation import (
+    ConversationTurn,
+    ConversationState,
+    PlannerResponse,
+)
 
 __all__ = [
-    "ContextCandidate",
     "ConfidenceSummary",
+    "ContextCandidate",
     "ContextPacket",
+    "ConversationState",
+    "ConversationTurn",
     "NextAction",
+    "PlannerResponse",
     "RetrievalRequest",
     "RetrievalResponse",
     "RetrievalTrace",

@@ -1,11 +1,20 @@
 """MCP server for tool exposure."""
 
-from typing import Any, Optional, Literal, cast
+from __future__ import annotations
+
+import threading
+from typing import TYPE_CHECKING, Any, Literal, Optional
 from second_brain.agents.recall import RecallOrchestrator
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
 from second_brain.services.trace import TraceCollector
 from second_brain.schemas import MCPCompatibilityResponse
+
+if TYPE_CHECKING:
+    from second_brain.services.conversation import ConversationStore
+    from second_brain.orchestration.planner import Planner
+
+RetrievalMode = Literal["fast", "accurate", "conversation"]
 
 
 class MCPServer:
@@ -14,14 +23,20 @@ class MCPServer:
     def __init__(self):
         self.debug_mode = False
         self.trace_collector: TraceCollector | None = None
+        self._conversation_store: ConversationStore | None = None
+        self._issued_session_ids: set[str] = set()
+        self._chat_lock = threading.Lock()
+        self._planner: Planner | None = None
 
     def enable_tracing(self, max_traces: int = 1000) -> None:
         """Enable trace collection."""
         self.trace_collector = TraceCollector(max_traces=max_traces)
+        self._planner = None
 
     def disable_tracing(self) -> None:
         """Disable trace collection."""
         self.trace_collector = None
+        self._planner = None
 
     def get_traces(self, n: int = 10) -> list[dict[str, Any]]:
         """Get recent traces as dicts."""
@@ -32,7 +47,7 @@ class MCPServer:
     def recall_search(
         self,
         query: str,
-        mode: str = "conversation",
+        mode: RetrievalMode = "conversation",
         top_k: int = 5,
         threshold: float = 0.6,
         provider_override: Optional[str] = None,
@@ -55,7 +70,7 @@ class MCPServer:
 
         request = RetrievalRequest(
             query=query,
-            mode=cast(Literal["fast", "accurate", "conversation"], mode),
+            mode=mode,
             top_k=top_k,
             threshold=threshold,
             provider_override=provider_override,
@@ -166,6 +181,62 @@ class MCPServer:
         """Disable debug mode."""
         self.debug_mode = False
 
+    def chat(
+        self,
+        query: str,
+        session_id: str | None = None,
+        mode: RetrievalMode = "conversation",
+        top_k: int = 5,
+        threshold: float = 0.6,
+    ) -> dict[str, Any]:
+        """
+        Chat with the second brain - full query -> retrieval -> response loop.
+
+        Args:
+            query: User's question or request
+            session_id: Optional session ID for multi-turn conversation
+            mode: Retrieval mode (fast, accurate, conversation)
+            top_k: Maximum context candidates to retrieve
+            threshold: Confidence threshold for retrieval
+
+        Returns:
+            PlannerResponse as dict with response_text, action_taken,
+            branch_code, suggestions, and retrieval metadata
+        """
+        from second_brain.deps import create_planner
+        from second_brain.services.conversation import ConversationStore
+
+        with self._chat_lock:
+            if self._conversation_store is None:
+                self._conversation_store = ConversationStore()
+
+            # Reject arbitrary client-supplied session IDs unless previously issued
+            # by this server instance.
+            safe_session_id = session_id
+            if safe_session_id and safe_session_id not in self._issued_session_ids:
+                safe_session_id = None
+            if safe_session_id and not self._conversation_store.has_session(safe_session_id):
+                safe_session_id = None
+
+            if self._planner is None:
+                self._planner = create_planner(
+                    conversation_store=self._conversation_store,
+                    trace_collector=self.trace_collector,
+                )
+
+            response = self._planner.chat(
+                query=query,
+                session_id=safe_session_id,
+                mode=mode,
+                top_k=top_k,
+                threshold=threshold,
+            )
+            self._issued_session_ids.add(response.session_id)
+            self._issued_session_ids.intersection_update(
+                self._conversation_store.list_session_ids()
+            )
+        return response.model_dump()
+
 
 # Global MCP server instance
 _mcp_server: Optional[MCPServer] = None
@@ -181,7 +252,7 @@ def get_mcp_server() -> MCPServer:
 
 def recall_search_tool(
     query: str,
-    mode: str = "conversation",
+    mode: RetrievalMode = "conversation",
     top_k: int = 5,
     threshold: float = 0.6,
 ) -> dict[str, Any]:
@@ -199,3 +270,21 @@ def validate_branch_tool(scenario_id: str) -> dict[str, Any]:
     """MCP tool: Validate branch scenario."""
     server = get_mcp_server()
     return server.validate_branch(scenario_id)
+
+
+def chat_tool(
+    query: str,
+    session_id: str | None = None,
+    mode: RetrievalMode = "conversation",
+    top_k: int = 5,
+    threshold: float = 0.6,
+) -> dict[str, Any]:
+    """MCP tool: Chat with second brain."""
+    server = get_mcp_server()
+    return server.chat(
+        query=query,
+        session_id=session_id,
+        mode=mode,
+        top_k=top_k,
+        threshold=threshold,
+    )

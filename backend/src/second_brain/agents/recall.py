@@ -1,7 +1,7 @@
 """Recall agent for retrieval orchestration."""
 
 import time
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from second_brain.contracts.context_packet import (
     RetrievalRequest,
@@ -114,7 +114,7 @@ class RecallOrchestrator:
             # Step 2: Retrieve candidates from provider-consistent memory service
             skip_external_rerank = route_options.get("skip_external_rerank", False)
             memory_service = self._resolve_memory_service_for_provider(provider)
-            candidates, _provider_metadata = memory_service.search_memories(
+            candidates, provider_metadata = memory_service.search_memories(
                 query=request.query,
                 top_k=request.top_k,
                 threshold=request.threshold,
@@ -147,6 +147,7 @@ class RecallOrchestrator:
                     route_options=route_options,
                     route_options_skip_rerank=skip_external_rerank,
                     rerank_metadata=rerank_metadata,
+                    provider_metadata=provider_metadata,
                     mode=request.mode,
                 )
                 routing_metadata["validation_mode"] = True
@@ -174,6 +175,7 @@ class RecallOrchestrator:
                     route_options=route_options,
                     route_options_skip_rerank=skip_external_rerank,
                     rerank_metadata=rerank_metadata,
+                    provider_metadata=provider_metadata,
                     mode=request.mode,
                 )
 
@@ -251,10 +253,11 @@ class RecallOrchestrator:
         route_options: dict,
         route_options_skip_rerank: bool,
         rerank_metadata: dict,
+        provider_metadata: dict[str, Any] | None = None,
         mode: str = "conversation",
     ) -> dict[str, Any]:
         """Build rich routing metadata for response."""
-        return {
+        metadata = {
             "selected_provider": provider,
             "mode": mode,
             "skip_external_rerank": route_options_skip_rerank,
@@ -263,6 +266,9 @@ class RecallOrchestrator:
             "feature_flags_snapshot": dict(self.feature_flags),
             "provider_status_snapshot": dict(self.provider_status),
         }
+        if provider_metadata:
+            metadata["provider_metadata"] = provider_metadata
+        return metadata
 
     def _build_trace(
         self,
@@ -377,7 +383,7 @@ class RecallOrchestrator:
 
 def run_recall(
     query: str,
-    mode: str = "conversation",
+    mode: Literal["fast", "accurate", "conversation"] = "conversation",
     top_k: int = 5,
     threshold: float = 0.6,
     provider_override: Optional[str] = None,
@@ -403,7 +409,7 @@ def run_recall(
     """
     request = RetrievalRequest(
         query=query,
-        mode=mode,  # type: ignore
+        mode=mode,
         top_k=top_k,
         threshold=threshold,
         provider_override=provider_override,

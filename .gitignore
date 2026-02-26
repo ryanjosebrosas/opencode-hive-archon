@@ -18,3 +18,10 @@ requests/execution-reports/
 
 # UBS scan artifacts
 py-bug-scan-report.txt
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+
+# Local Windows artifact
+nul

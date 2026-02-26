@@ -1,6 +1,9 @@
 """Unit tests for MemoryService mock data lifecycle."""
 
 import logging
+import os
+import sys
+from types import SimpleNamespace
 
 from second_brain.services.memory import MemoryService, MemorySearchResult
 
@@ -258,6 +261,54 @@ class TestProviderPath:
         ]
         if metadata.get("fallback_reason") == "provider_error":
             assert "error_type" in metadata
+
+    def test_config_api_key_does_not_mutate_process_environment(self, monkeypatch):
+        """Config API key path should not write MEM0_API_KEY to process env."""
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
+
+        captured: dict[str, str | None] = {"api_key": None}
+
+        class FakeMemory:
+            def __init__(self, api_key: str | None = None):
+                captured["api_key"] = api_key
+
+        monkeypatch.setitem(sys.modules, "mem0", SimpleNamespace(Memory=FakeMemory))
+
+        service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": True, "mem0_api_key": "test-key"},
+        )
+
+        client = service._load_mem0_client()
+
+        assert client is not None
+        assert captured["api_key"] == "test-key"
+        assert os.getenv("MEM0_API_KEY") is None
+
+    def test_config_api_key_works_when_sdk_requires_env(self, monkeypatch):
+        """Fallback path should bridge config key through temporary env only."""
+        monkeypatch.delenv("MEM0_API_KEY", raising=False)
+
+        captured: dict[str, str | None] = {"env_key": None}
+
+        class EnvOnlyMemory:
+            def __init__(self, api_key: str | None = None):
+                if api_key is not None:
+                    raise TypeError("api_key unsupported")
+                captured["env_key"] = os.getenv("MEM0_API_KEY")
+
+        monkeypatch.setitem(sys.modules, "mem0", SimpleNamespace(Memory=EnvOnlyMemory))
+
+        service = MemoryService(
+            provider="mem0",
+            config={"mem0_use_real_provider": True, "mem0_api_key": "legacy-key"},
+        )
+
+        client = service._load_mem0_client()
+
+        assert client is not None
+        assert captured["env_key"] == "legacy-key"
+        assert os.getenv("MEM0_API_KEY") is None
 
     def test_non_mem0_provider_ignores_real_provider_config(self):
         """Non-Mem0 providers ignore mem0_use_real_provider config."""
