@@ -19,11 +19,13 @@ class VoyageRerankService:
         model: str = "rerank-2",
         embed_model: str = "voyage-4-large",
         embed_enabled: bool = False,
+        use_real_rerank: bool = False,
     ):
         self.enabled = enabled
         self.model = model
         self.embed_model = embed_model
         self.embed_enabled = embed_enabled
+        self.use_real_rerank = use_real_rerank
         self._voyage_client: Any | None = None  # Intentional Any: optional external dependency
 
     def _load_voyage_client(self) -> Any | None:
@@ -64,12 +66,79 @@ class VoyageRerankService:
             logger.warning("Voyage embed failed: %s", type(e).__name__)
             return None, {**metadata, "embed_error": type(e).__name__}
 
+    def _real_rerank(
+        self,
+        query: str,
+        candidates: Sequence[ContextCandidate],
+        top_k: int,
+    ) -> list[ContextCandidate] | None:
+        """
+        Rerank using real Voyage AI API. Returns None on failure (caller should fallback).
+        """
+        try:
+            client = self._load_voyage_client()
+            if client is None:
+                logger.debug("Voyage client unavailable for rerank")
+                return None
+
+            # Extract document texts for Voyage API
+            documents = [c.content for c in candidates]
+
+            # Call Voyage rerank API
+            reranking = client.rerank(
+                query=query,
+                documents=documents,
+                model=self.model,
+                top_k=top_k,
+            )
+
+            if not reranking.results:
+                logger.debug("Voyage rerank returned empty results")
+                return None
+
+            # Map Voyage results back to ContextCandidate using original index
+            reranked: list[ContextCandidate] = []
+            candidates_list = list(candidates)  # ensure indexable
+            for r in reranking.results:
+                if r.index >= len(candidates_list):
+                    logger.warning(
+                        "Voyage returned invalid index %d for %d candidates",
+                        r.index,
+                        len(candidates_list),
+                    )
+                    continue
+                original = candidates_list[r.index]
+                try:
+                    score = float(r.relevance_score)
+                except (TypeError, ValueError):
+                    logger.warning("Invalid relevance_score: %r", r.relevance_score)
+                    continue
+                confidence = max(0.0, min(1.0, score))
+                reranked.append(
+                    ContextCandidate(
+                        id=original.id,
+                        content=original.content,
+                        source=original.source,
+                        confidence=confidence,
+                        metadata={
+                            **original.metadata,
+                            "rerank_adjusted": True,
+                            "original_confidence": original.confidence,
+                        },
+                    )
+                )
+            return reranked
+
+        except Exception as e:
+            logger.warning("Voyage rerank failed: %s", type(e).__name__)
+            return None
+
     def rerank(
         self,
         query: str,
         candidates: Sequence[ContextCandidate],
         top_k: int = 5,
-    ) -> tuple[list[ContextCandidate], dict[str, str]]:
+    ) -> tuple[list[ContextCandidate], dict[str, Any]]:
         """
         Rerank candidates by relevance to query.
 
@@ -81,7 +150,7 @@ class VoyageRerankService:
         Returns:
             Tuple of (reranked candidates, metadata with rerank_type)
         """
-        metadata = {
+        metadata: dict[str, Any] = {
             "rerank_type": "none",
             "rerank_model": self.model,
         }
@@ -98,10 +167,20 @@ class VoyageRerankService:
             metadata["bypass_reason"] = "single_candidate"
             return list(candidates), metadata
 
-        # Deterministic mock rerank for testing (no external API call)
-        # In production, this would call Voyage AI API
+        # Try real Voyage rerank if enabled
+        if self.use_real_rerank:
+            real_result = self._real_rerank(query, candidates, top_k)
+            if real_result is not None:
+                metadata["rerank_type"] = "external"
+                metadata["real_rerank"] = True
+                return real_result, metadata
+            # Real rerank failed, fall through to mock
+            logger.debug("Real rerank failed, falling back to mock")
+
+        # Deterministic mock rerank (fallback or default)
         reranked = self._mock_rerank(query, candidates, top_k)
         metadata["rerank_type"] = "external"
+        metadata["real_rerank"] = False
 
         return reranked, metadata
 
