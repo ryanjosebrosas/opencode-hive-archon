@@ -30,10 +30,12 @@ class Planner:
         recall_orchestrator: RecallOrchestrator,
         conversation_store: ConversationStore,
         trace_collector: TraceCollector | None = None,
+        llm_service: Any | None = None,
     ):
         self.recall = recall_orchestrator
         self.conversations = conversation_store
         self.trace_collector = trace_collector
+        self.llm_service = llm_service
 
     def chat(
         self,
@@ -184,6 +186,14 @@ class Planner:
         )
         self.trace_collector.record(trace)
 
+    def _get_last_user_query(self, session_id: str) -> str:
+        """Get the last user message from the conversation."""
+        state = self.conversations.get_or_create(session_id)
+        for turn in reversed(state.turns):
+            if turn.role == "user":
+                return turn.content
+        return ""
+
     def _format_proceed(
         self,
         packet: ContextPacket,
@@ -196,7 +206,34 @@ class Planner:
         if not candidates:
             return self._format_fallback(packet, branch, session_id, metadata)
 
-        # Build context summary from top candidates
+        # Try LLM synthesis if service available
+        if self.llm_service is not None:
+            candidate_dicts = [
+                {
+                    "content": c.content,
+                    "source": c.source,
+                    "confidence": c.confidence,
+                    "metadata": c.metadata,
+                }
+                for c in candidates
+            ]
+            query = self._get_last_user_query(session_id)
+            response_text, llm_metadata = self.llm_service.synthesize(
+                query=query,
+                context_candidates=candidate_dicts,
+            )
+            metadata["llm"] = llm_metadata
+            return PlannerResponse(
+                response_text=response_text,
+                action_taken="proceed",
+                branch_code=branch,
+                session_id=session_id,
+                candidates_used=len(candidates),
+                confidence=packet.summary.top_confidence,
+                retrieval_metadata=metadata,
+            )
+
+        # Fallback: f-string formatting (no LLM)
         context_parts = []
         for i, c in enumerate(candidates[:3], 1):
             content = c.content

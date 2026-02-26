@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import threading
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast
 from second_brain.agents.recall import RecallOrchestrator
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
@@ -16,11 +17,13 @@ if TYPE_CHECKING:
 
 RetrievalMode = Literal["fast", "accurate", "conversation"]
 
+logger = logging.getLogger(__name__)
+
 
 class MCPServer:
     """MCP server exposing recall flow as tools."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.debug_mode = False
         self.trace_collector: TraceCollector | None = None
         self._conversation_store: ConversationStore | None = None
@@ -203,7 +206,7 @@ class MCPServer:
             PlannerResponse as dict with response_text, action_taken,
             branch_code, suggestions, and retrieval metadata
         """
-        from second_brain.deps import create_planner
+        from second_brain.deps import create_planner, create_llm_service
         from second_brain.services.conversation import ConversationStore
 
         with self._chat_lock:
@@ -219,9 +222,11 @@ class MCPServer:
                 safe_session_id = None
 
             if self._planner is None:
+                llm = create_llm_service()
                 self._planner = create_planner(
                     conversation_store=self._conversation_store,
                     trace_collector=self.trace_collector,
+                    llm_service=llm,
                 )
 
             response = self._planner.chat(
@@ -288,3 +293,66 @@ def chat_tool(
         top_k=top_k,
         threshold=threshold,
     )
+
+
+def create_fastmcp_server() -> Any | None:
+    """Create FastMCP server wrapping MCPServer methods."""
+    try:
+        from fastmcp import FastMCP
+    except ImportError:
+        logger.warning("fastmcp not installed - MCP transport unavailable")
+        return None
+
+    mcp = FastMCP("Second Brain")
+    server = get_mcp_server()
+
+    @mcp.tool()
+    def recall_search(
+        query: str,
+        mode: str = "conversation",
+        top_k: int = 5,
+        threshold: float = 0.6,
+    ) -> dict:  # type: ignore[type-arg]
+        """Search your knowledge base for relevant context."""
+        if mode not in {"fast", "accurate", "conversation"}:
+            mode = "conversation"
+        return server.recall_search(
+            query=query,
+            mode=cast(RetrievalMode, mode),
+            top_k=top_k,
+            threshold=threshold,
+        )
+
+    @mcp.tool()
+    def chat(
+        query: str,
+        session_id: str | None = None,
+        mode: str = "conversation",
+    ) -> dict:  # type: ignore[type-arg]
+        """Ask a question and get an answer grounded in your knowledge base."""
+        if mode not in {"fast", "accurate", "conversation"}:
+            mode = "conversation"
+        return server.chat(query=query, session_id=session_id, mode=cast(RetrievalMode, mode))
+
+    @mcp.tool()
+    def ingest_markdown(
+        directory: str,
+        knowledge_type: str = "note",
+        source_origin: str = "obsidian",
+    ) -> dict:  # type: ignore[type-arg]
+        """Ingest markdown files from a directory into your knowledge base."""
+        from second_brain.ingestion.markdown import ingest_markdown_directory
+
+        return ingest_markdown_directory(
+            directory=directory,
+            knowledge_type=cast(Any, knowledge_type),
+            source_origin=cast(Any, source_origin),
+        )
+
+    return mcp
+
+
+if __name__ == "__main__":
+    mcp = create_fastmcp_server()
+    if mcp:
+        mcp.run()

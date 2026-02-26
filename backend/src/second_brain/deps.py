@@ -100,6 +100,7 @@ def create_planner(
     rerank_service: VoyageRerankService | None = None,
     conversation_store: ConversationStore | None = None,
     trace_collector: TraceCollector | None = None,
+    llm_service: Any | None = None,
 ) -> Planner:
     """Create planner with default dependencies."""
     from second_brain.orchestration.planner import Planner
@@ -121,6 +122,7 @@ def create_planner(
         recall_orchestrator=orchestrator,
         conversation_store=_conversations,
         trace_collector=trace_collector,
+        llm_service=llm_service,
     )
 
 
