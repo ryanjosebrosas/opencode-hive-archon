@@ -90,6 +90,7 @@ class MemoryService:
                 normalized_query,
                 normalized_top_k,
                 normalized_threshold,
+                filters=filters,
             )
             results = supabase_results
             metadata = supabase_metadata
@@ -150,25 +151,27 @@ class MemoryService:
             return self._mem0_client
 
         try:
-            from mem0 import Memory  # type: ignore[import-untyped]
+            from mem0 import Memory
+
+            memory_cls: Any = Memory
 
             config_api_key = self._mem0_api_key
             if config_api_key:
                 try:
-                    self._mem0_client = Memory(api_key=config_api_key)  # type: ignore[call-arg]
+                    self._mem0_client = memory_cls(api_key=config_api_key)
                     return self._mem0_client
                 except TypeError:
                     logger.debug(
                         "Mem0 client does not accept api_key kwarg; trying temporary env path"
                     )
-                    client = self._load_mem0_client_with_temp_env(Memory, config_api_key)
+                    client = self._load_mem0_client_with_temp_env(memory_cls, config_api_key)
                     if client is not None:
                         self._mem0_client = client
                         return self._mem0_client
 
             env_api_key = os.getenv("MEM0_API_KEY")
             if env_api_key:
-                self._mem0_client = Memory()
+                self._mem0_client = memory_cls()
                 return self._mem0_client
         except ImportError:
             logger.debug("Mem0 SDK not installed; falling back to deterministic path")
@@ -259,6 +262,7 @@ class MemoryService:
         query: str,
         top_k: int,
         threshold: float,
+        filters: Optional[dict[str, Any]] = None,
     ) -> tuple[list[MemorySearchResult], dict[str, Any]]:
         """Search using Supabase provider with Voyage embedding."""
         voyage = self._load_voyage_service()
@@ -270,8 +274,28 @@ class MemoryService:
                 "embed_error": embed_meta.get("embed_error"),
             }
 
+        if len(embedding) != 1024:
+            return self._search_fallback(query, top_k, threshold), {
+                "provider": self.provider,
+                "fallback_reason": "embedding_dimension_mismatch",
+                "expected_dimension": 1024,
+                "actual_dimension": len(embedding),
+                "embed_model": embed_meta.get("embed_model"),
+            }
+
         provider = self._load_supabase_provider()
-        results, search_meta = provider.search(embedding, top_k, threshold)
+        filter_type: str | None = None
+        if isinstance(filters, dict):
+            candidate_filter_type = filters.get("knowledge_type")
+            if isinstance(candidate_filter_type, str):
+                filter_type = candidate_filter_type
+
+        results, search_meta = provider.search(
+            embedding,
+            top_k,
+            threshold,
+            filter_type=filter_type,
+        )
 
         if not results and search_meta.get("fallback_reason"):
             fallback = self._search_fallback(query, top_k, threshold)
@@ -302,10 +326,25 @@ class MemoryService:
                     confidence = 0.0
                 raw_metadata = item.get("metadata", {})
 
+                # Extract knowledge schema metadata forwarded via Mem0 metadata dict
+                knowledge_meta: dict[str, Any] = {}
+                if isinstance(raw_metadata, dict):
+                    for key in ("knowledge_type", "document_id", "chunk_index", "source_origin"):
+                        if key in raw_metadata:
+                            knowledge_meta[key] = raw_metadata[key]
+
+                raw_categories = item.get("categories")
+                categories: list[str] = []
+                if isinstance(raw_categories, list):
+                    categories = [value for value in raw_categories if isinstance(value, str)]
+
                 metadata = {
                     "real_provider": True,
                     **(raw_metadata if isinstance(raw_metadata, dict) else {}),
+                    **knowledge_meta,  # ensure knowledge keys are present even if already in raw_metadata
                 }
+                if categories:
+                    metadata["categories"] = categories
 
                 results.append(
                     MemorySearchResult(

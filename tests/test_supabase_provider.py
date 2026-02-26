@@ -23,12 +23,22 @@ class TestSupabaseProviderSearch:
             {
                 "id": "doc-1",
                 "similarity": 0.92,
-                "metadata": {"content": "Test document 1", "topic": "ai"},
+                "content": "Test document 1",
+                "knowledge_type": "document",
+                "document_id": "doc-parent-1",
+                "chunk_index": 0,
+                "source_origin": "manual",
+                "metadata": {"topic": "ai"},
             },
             {
                 "id": "doc-2",
                 "similarity": 0.78,
-                "metadata": {"content": "Test document 2", "topic": "ml"},
+                "content": "Test document 2",
+                "knowledge_type": "note",
+                "document_id": "doc-parent-2",
+                "chunk_index": 1,
+                "source_origin": "notion",
+                "metadata": {"topic": "ml"},
             },
         ]
         mock_client.rpc.return_value.execute.return_value = mock_response
@@ -45,6 +55,10 @@ class TestSupabaseProviderSearch:
         assert results[0].content == "Test document 1"
         assert results[0].source == "supabase"
         assert results[0].confidence == 0.92
+        assert results[0].metadata["knowledge_type"] == "document"
+        assert results[0].metadata["document_id"] == "doc-parent-1"
+        assert results[0].metadata["chunk_index"] == 0
+        assert results[0].metadata["source_origin"] == "manual"
         assert metadata.get("real_provider") is True
 
     def test_search_client_unavailable_returns_empty(self):
@@ -79,9 +93,8 @@ class TestSupabaseProviderSearch:
         """Similarity values outside 0-1 are clamped."""
         provider = SupabaseProvider()
         results = provider._normalize_results(
-            [{"id": "x", "similarity": 1.5, "metadata": {"content": "test"}}],
+            [{"id": "x", "similarity": 1.5, "content": "test"}],
             top_k=5,
-            threshold=0.0,
         )
         assert results[0].confidence == 1.0
 
@@ -91,7 +104,6 @@ class TestSupabaseProviderSearch:
         results = provider._normalize_results(
             [{"similarity": 0.8}],
             top_k=5,
-            threshold=0.0,
         )
         assert results[0].id == "supa-0"
         assert results[0].content == ""
@@ -205,6 +217,27 @@ class TestMemoryServiceSupabasePath:
         )
         candidates, metadata = service.search_memories("test query", top_k=5)
         assert len(candidates) >= 1
+
+    def test_supabase_embedding_dimension_mismatch_uses_fallback(self):
+        """When embedding size is not 1024, falls back before Supabase RPC."""
+        service = MemoryService(
+            provider="supabase",
+            config={
+                "supabase_use_real_provider": True,
+                "supabase_url": "https://test.supabase.co",
+                "supabase_key": "test-key",
+            },
+        )
+        mock_voyage = MagicMock()
+        mock_voyage.embed.return_value = ([0.1] * 512, {"embed_model": "voyage-3-large"})
+        service._voyage_service = mock_voyage
+
+        candidates, metadata = service.search_memories("test query", top_k=5)
+
+        assert len(candidates) >= 1
+        assert metadata.get("fallback_reason") == "embedding_dimension_mismatch"
+        assert metadata.get("expected_dimension") == 1024
+        assert metadata.get("actual_dimension") == 512
 
     def test_existing_mem0_path_unchanged(self):
         """Mem0 provider path is not affected by Supabase changes."""

@@ -33,7 +33,7 @@ class VoyageRerankService:
         if self._voyage_client is not None:
             return self._voyage_client
         try:
-            import voyageai  # type: ignore[import-not-found]
+            import voyageai
 
             api_key = os.getenv("VOYAGE_API_KEY")
             if api_key:

@@ -14,6 +14,18 @@ from second_brain.contracts.conversation import (
     ConversationState,
     PlannerResponse,
 )
+from second_brain.contracts.knowledge import (
+    KnowledgeChunk,
+    KnowledgeDocument,
+    KnowledgeEntity,
+    KnowledgeRelationship,
+    KnowledgeSource,
+    GraphitiNodeType,
+    GraphitiEdgeType,
+    KnowledgeTypeValue,
+    RelationshipTypeValue,
+    SourceOriginValue,
+)
 
 __all__ = [
     "ConfidenceSummary",
@@ -21,9 +33,19 @@ __all__ = [
     "ContextPacket",
     "ConversationState",
     "ConversationTurn",
+    "GraphitiEdgeType",
+    "GraphitiNodeType",
+    "KnowledgeChunk",
+    "KnowledgeDocument",
+    "KnowledgeEntity",
+    "KnowledgeRelationship",
+    "KnowledgeSource",
+    "KnowledgeTypeValue",
     "NextAction",
     "PlannerResponse",
+    "RelationshipTypeValue",
     "RetrievalRequest",
     "RetrievalResponse",
     "RetrievalTrace",
+    "SourceOriginValue",
 ]

@@ -9,6 +9,28 @@ from second_brain.services.memory import MemorySearchResult
 
 logger = logging.getLogger(__name__)
 
+_VALID_KNOWLEDGE_TYPES = {
+    "note",
+    "document",
+    "decision",
+    "conversation",
+    "task",
+    "signal",
+    "playbook",
+    "case_study",
+    "transcript",
+}
+
+_VALID_SOURCE_ORIGINS = {
+    "notion",
+    "obsidian",
+    "email",
+    "manual",
+    "youtube",
+    "web",
+    "other",
+}
+
 
 class SupabaseProvider:
     """Supabase pgvector search provider."""
@@ -42,6 +64,7 @@ class SupabaseProvider:
         query_embedding: list[float],
         top_k: int = 5,
         threshold: float = 0.6,
+        filter_type: str | None = None,
     ) -> tuple[list[MemorySearchResult], dict[str, Any]]:
         """Search using Supabase pgvector. Returns (results, metadata)."""
         metadata: dict[str, Any] = {"provider": "supabase"}
@@ -50,10 +73,15 @@ class SupabaseProvider:
             if client is None:
                 return [], {**metadata, "fallback_reason": "client_unavailable"}
             response = client.rpc(
-                "match_vectors",
-                {"query_embedding": query_embedding, "match_count": top_k},
+                "match_knowledge_chunks",
+                {
+                    "query_embedding": query_embedding,
+                    "match_count": top_k,
+                    "match_threshold": threshold,
+                    "filter_type": filter_type,
+                },
             ).execute()
-            results = self._normalize_results(response.data or [], top_k, threshold)
+            results = self._normalize_results(response.data or [], top_k)
             return results, {
                 **metadata,
                 "real_provider": True,
@@ -72,9 +100,8 @@ class SupabaseProvider:
         self,
         rpc_results: list[dict[str, Any]],
         top_k: int,
-        threshold: float,
     ) -> list[MemorySearchResult]:
-        """Normalize Supabase RPC results to MemorySearchResult."""
+        """Normalize match_knowledge_chunks RPC results to MemorySearchResult."""
         results: list[MemorySearchResult] = []
 
         if not rpc_results:
@@ -87,10 +114,27 @@ class SupabaseProvider:
             except (TypeError, ValueError):
                 confidence = 0.0
 
-            row_metadata = row.get("metadata", {})
-            content = ""
-            if isinstance(row_metadata, dict):
-                content = str(row_metadata.get("content", row_metadata.get("text", "")))
+            # Read from real columns — not nested metadata blob
+            content = str(row.get("content", ""))
+            raw_knowledge_type = str(row.get("knowledge_type", "document"))
+            knowledge_type = (
+                raw_knowledge_type if raw_knowledge_type in _VALID_KNOWLEDGE_TYPES else "document"
+            )
+            document_id = row.get("document_id")
+            chunk_index_raw = row.get("chunk_index", 0)
+            try:
+                chunk_index = int(chunk_index_raw)
+            except (TypeError, ValueError):
+                chunk_index = 0
+            raw_source_origin = str(row.get("source_origin", "manual"))
+            source_origin = (
+                raw_source_origin if raw_source_origin in _VALID_SOURCE_ORIGINS else "manual"
+            )
+
+            # Preserve any extra jsonb metadata from the row
+            extra_metadata = row.get("metadata", {})
+            if not isinstance(extra_metadata, dict):
+                extra_metadata = {}
 
             results.append(
                 MemorySearchResult(
@@ -99,8 +143,12 @@ class SupabaseProvider:
                     source="supabase",
                     confidence=confidence,
                     metadata={
+                        **extra_metadata,
                         "real_provider": True,
-                        **(row_metadata if isinstance(row_metadata, dict) else {}),
+                        "knowledge_type": knowledge_type,
+                        "document_id": document_id,
+                        "chunk_index": chunk_index,
+                        "source_origin": source_origin,
                     },
                 )
             )
