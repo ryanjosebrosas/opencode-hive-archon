@@ -344,6 +344,37 @@ These are recommendations. Use any connected model that fits the query. If unsur
 - Ensure maintainability and scalability match project constraints.
 - Include an "Alternatives considered" summary and why final choice won.
 
+Council pressure-test (optional):
+
+If the feature involves non-trivial architecture decisions, consider running a council discussion to pressure-test your design before writing the plan tasks:
+
+**When to run a council:**
+- Multiple valid architectural approaches exist (e.g., event-driven vs polling, SQL vs NoSQL)
+- Feature has security implications worth multi-perspective review
+- You're uncertain about edge cases or failure modes
+- The user explicitly asked for multi-model input
+
+**When to skip:**
+- Architecture is straightforward and well-established in the codebase
+- Feature is a small enhancement following existing patterns
+- Time-sensitive — council adds 2-5 minutes
+
+**How to run:**
+```
+council({
+  topic: "Architecture decision: {describe the choice and constraints}",
+  context: "{paste relevant code patterns, constraints, and requirements}",
+  mode: "structured",
+  rounds: 2
+})
+```
+
+**Using council results:**
+- Record key findings in the plan's "Key Design Decisions" section
+- Note any concerns raised that need mitigation in the "Risks" section
+- If the council reached consensus, note it. If they disagreed, present both sides to the user for a decision
+- Source: "Council discussion ({list models}): {finding}"
+
 Lean-mode doc gate (required):
 - Before adding any extra documentation file, verify at least one is true:
   - It defines a new shared contract/interface required by multiple modules/agents.
