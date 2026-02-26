@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
@@ -44,15 +45,28 @@ def create_memory_service(
 def create_voyage_rerank_service(
     enabled: bool = True,
     model: str = "rerank-2",
-    embed_model: str = "voyage-4-large",
-    embed_enabled: bool = False,
+    embed_model: str | None = None,
+    embed_enabled: bool | None = None,
+    use_real_rerank: bool | None = None,
 ) -> VoyageRerankService:
-    """Create voyage rerank service instance."""
+    """Create voyage rerank service instance with env-var defaults."""
+    _embed_model = embed_model or os.getenv("VOYAGE_EMBED_MODEL") or "voyage-4-large"
+    _embed_enabled = (
+        embed_enabled
+        if embed_enabled is not None
+        else os.getenv("VOYAGE_EMBED_ENABLED", "false").lower() == "true"
+    )
+    _use_real_rerank = (
+        use_real_rerank
+        if use_real_rerank is not None
+        else os.getenv("VOYAGE_USE_REAL_RERANK", "false").lower() == "true"
+    )
     return VoyageRerankService(
         enabled=enabled,
         model=model,
-        embed_model=embed_model,
-        embed_enabled=embed_enabled,
+        embed_model=_embed_model,
+        embed_enabled=_embed_enabled,
+        use_real_rerank=_use_real_rerank,
     )
 
 
@@ -72,6 +86,13 @@ def create_conversation_store(
         max_turns_per_session=max_turns,
         max_sessions=max_sessions,
     )
+
+
+def create_llm_service() -> Any:
+    """Create LLM service for synthesis. Returns OllamaLLMService instance."""
+    from second_brain.services.llm import OllamaLLMService
+
+    return OllamaLLMService()
 
 
 def create_planner(
@@ -104,18 +125,19 @@ def create_planner(
 
 
 def get_default_config() -> dict[str, Any]:
-    """Get default configuration for recall flow."""
+    """Get configuration from environment variables with safe defaults."""
     return {
         "default_mode": "conversation",
         "default_top_k": 5,
         "default_threshold": 0.6,
         "mem0_rerank_native": True,
         "mem0_skip_external_rerank": True,
-        "mem0_use_real_provider": False,
-        "mem0_user_id": None,
-        "mem0_api_key": None,
-        "supabase_use_real_provider": False,
-        "supabase_url": None,
-        "supabase_key": None,
-        "voyage_embed_model": "voyage-4-large",
+        "mem0_use_real_provider": os.getenv("MEM0_USE_REAL_PROVIDER", "false").lower() == "true",
+        "mem0_user_id": os.getenv("MEM0_USER_ID"),
+        "mem0_api_key": os.getenv("MEM0_API_KEY"),
+        "supabase_use_real_provider": os.getenv("SUPABASE_USE_REAL_PROVIDER", "false").lower()
+        == "true",
+        "supabase_url": os.getenv("SUPABASE_URL"),
+        "supabase_key": os.getenv("SUPABASE_KEY"),
+        "voyage_embed_model": os.getenv("VOYAGE_EMBED_MODEL", "voyage-4-large"),
     }
