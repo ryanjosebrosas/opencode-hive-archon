@@ -273,6 +273,19 @@ export default tool({
       return `[dispatch error] Invalid mode: "${args.mode}". Must be "text" or "agent".`
     }
 
+    // Agent mode provider compatibility warning
+    // Agent mode requires providers that support tool-use API (Anthropic, OpenAI).
+    // Free providers (bailian, zai, ollama) return 404 on agent mode — they don't support tool calling.
+    const AGENT_COMPATIBLE_PROVIDERS = ["anthropic", "openai", "opencode"]
+    if (isAgentMode && resolvedProvider && !AGENT_COMPATIBLE_PROVIDERS.includes(resolvedProvider)) {
+      return (
+        `[dispatch error] Agent mode is not supported by provider '${resolvedProvider}'.\n` +
+        `Agent mode requires tool-use API support. Compatible providers: ${AGENT_COMPATIBLE_PROVIDERS.join(", ")}.\n` +
+        `Free providers (bailian, zai, ollama) only support text mode.\n` +
+        `Either use mode:'text' or switch to a compatible provider (e.g. anthropic/claude-sonnet-4-6).`
+      )
+    }
+
     // Validate steps arg
     if (args.steps !== undefined) {
       if (!Number.isInteger(args.steps) || args.steps < 1 || args.steps > 100) {

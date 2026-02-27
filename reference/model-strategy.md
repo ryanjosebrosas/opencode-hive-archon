@@ -74,9 +74,21 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 **Agent mode permissions**: read, edit, bash, glob, grep, list, todoread, todowrite. Denies: task (no recursive dispatch), external_directory, webfetch, websearch.
 
+**Agent mode provider compatibility**: Agent mode requires tool-use API support. Only these providers work:
+- `anthropic` — Confirmed working (Claude Sonnet)
+- `openai` — Expected to work (GPT/Codex)
+- `opencode` — Expected to work (built-in)
+
+Free providers (`bailian-coding-plan`, `zai-coding-plan`, `ollama-cloud`) return 404 on agent mode because they don't support tool calling API format. Use text mode for these providers.
+
 **Agent mode example:**
 ```
-dispatch({ taskType: "complex-codegen", mode: "agent", prompt: "Implement X. Read existing code first. Run ruff/mypy after." })
+dispatch({ provider: "anthropic", model: "claude-sonnet-4-6", mode: "agent", prompt: "Implement X. Read existing code first. Run ruff/mypy after." })
+```
+
+**Text mode example (free models):**
+```
+dispatch({ taskType: "complex-codegen", prompt: "Generate a Python service that does X. Return only the code." })
 ```
 
 ---
