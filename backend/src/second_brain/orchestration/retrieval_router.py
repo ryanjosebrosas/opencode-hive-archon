@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 from second_brain.contracts.context_packet import RetrievalRequest
 
 
@@ -72,7 +72,7 @@ class RouteDecision:
         mode: Literal["fast", "accurate", "conversation"],
         available_providers: list[str],
         provider_status: dict[str, str],
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, dict[str, Any]]:
         """
         Select provider and route options deterministically.
 
@@ -148,7 +148,7 @@ def route_retrieval(
     request: RetrievalRequest,
     provider_status: dict[str, str] | None = None,
     feature_flags: dict[str, bool] | None = None,
-) -> tuple[str, dict]:
+) -> tuple[str, dict[str, Any]]:
     """
     Route retrieval request to appropriate provider.
 

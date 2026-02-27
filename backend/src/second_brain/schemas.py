@@ -1,5 +1,7 @@
 """Schema definitions for MCP compatibility."""
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 from second_brain.contracts.context_packet import RetrievalResponse
 
@@ -13,16 +15,16 @@ class MCPCompatibilityResponse(BaseModel):
     """
 
     # Contract envelope (canonical)
-    context_packet: dict = Field(..., description="Context packet with candidates and summary")
-    next_action: dict = Field(..., description="Next action with branch code")
+    context_packet: dict[str, Any] = Field(..., description="Context packet with candidates and summary")
+    next_action: dict[str, Any] = Field(..., description="Next action with branch code")
 
     # Legacy compatibility fields (optional, additive only)
-    candidates: list[dict] = Field(default_factory=list, description="Legacy flat candidates list")
+    candidates: list[dict[str, Any]] = Field(default_factory=list, description="Legacy flat candidates list")
     branch: str = Field(default="", description="Legacy branch code")
     confidence: float = Field(default=0.0, description="Legacy top confidence")
 
     # Routing metadata
-    routing_metadata: dict = Field(default_factory=dict, description="Route decision metadata")
+    routing_metadata: dict[str, Any] = Field(default_factory=dict, description="Route decision metadata")
 
     @classmethod
     def from_retrieval_response(

@@ -37,9 +37,9 @@ class VoyageRerankService:
 
             api_key = os.getenv("VOYAGE_API_KEY")
             if api_key:
-                self._voyage_client = voyageai.Client(api_key=api_key)
+                self._voyage_client = voyageai.Client(api_key=api_key)  # type: ignore[attr-defined]
             else:
-                self._voyage_client = voyageai.Client()
+                self._voyage_client = voyageai.Client()  # type: ignore[attr-defined]
             return self._voyage_client
         except ImportError:
             logger.debug("voyageai SDK not installed")
