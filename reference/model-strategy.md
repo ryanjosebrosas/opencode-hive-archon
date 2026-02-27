@@ -76,7 +76,7 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 | Tool | Purpose | Key Feature |
 |------|---------|-------------|
-| `dispatch` | Send a prompt to any single AI model | Three modes: `text` (prompt-response), `agent` (full tool access), `relay` (XML tag tool access for free providers). 27 taskType auto-routes across 5 tiers |
+| `dispatch` | Send a prompt to any single AI model | Two modes: `text` (prompt-response), `agent` (full tool access via native OpenCode infrastructure - free providers too). 27 taskType auto-routes across 5 tiers |
 | `batch-dispatch` | Same prompt to multiple models in parallel | Min 2 models; comparison output with wall-time reporting |
 | `council` | Multi-model discussion (models see each other's responses) | Shared session; structured or freeform modes; auto-selects 4 diverse models |
 
@@ -85,34 +85,6 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 **Pre-dispatch**: Always run `/prime` before your first dispatch in any session to ensure models have fresh project context.
 
-### Shared Relay Utilities
-
-File: `.opencode/tools/_relay-utils.ts`
-
-Shared module extracted from dispatch.ts. Both dispatch.ts and council.ts import from it.
-
-| Export | Purpose |
-|--------|---------|
-| `RELAY_INSTRUCTIONS` | Full relay mode instructions (for T1-T3 text-based tool access) |
-| `ARCHON_RELAY_INSTRUCTIONS` | Archon-only instructions (for T4-T5 agent mode with Archon access) |
-| `parseToolCalls()` | Parse XML `<tool>` tags from model response text |
-| `executeTool()` | Execute a parsed tool call (read, glob, grep, bash, edit, archon_search, archon_sources) |
-| `relayLoop()` | Full relay loop: send prompt → parse tools → execute → send results → repeat (max 5 turns) |
-| `initArchonSession()` | Initialize Archon MCP session (required before tool calls) |
-| `callArchonTool()` | Call an Archon MCP tool with JSON-RPC |
-
-**Relay mode flow:**
-1. Prepend RELAY_INSTRUCTIONS to prompt (teaches model XML tag format)
-2. Send to model via text mode (no native tool-use API needed)
-3. Parse `<tool>` tags from response
-4. Execute tools locally (file read, grep, Archon MCP, etc.)
-5. Send results back as `<tool_result>` blocks
-6. Repeat until model responds with no tool tags (max 5 turns)
-
-**Agent mode Archon access:**
-- T4/T5 agent mode sessions get native file tools from OpenCode
-- ARCHON_RELAY_INSTRUCTIONS is prepended so they can also query Archon via XML tags
-- Post-response loop checks for archon_search/archon_sources tags and executes them
 
 ### Dispatch Modes
 
@@ -123,31 +95,17 @@ Shared module extracted from dispatch.ts. Both dispatch.ts and council.ts import
 
 **Agent mode permissions**: read, edit, bash, glob, grep, list, todoread, todowrite. Denies: task (no recursive dispatch), external_directory, webfetch, websearch.
 
-**Agent mode provider compatibility**: Agent mode requires tool-use API support. Only these providers work:
-- `anthropic` — Confirmed working (Claude Sonnet)
-- `openai` — Expected to work (GPT/Codex)
-- `opencode` — Expected to work (built-in)
-
-Free providers (`bailian-coding-plan-test`, `zai-coding-plan`, `ollama-cloud`) don't support native agent mode (tool-use API). Use **relay mode** instead — it gives them file read/write, grep, glob, bash, and Archon MCP access through a text-based XML tag relay loop.
-
-**Auto-fallback**: If you request `mode:"agent"` with a free provider, dispatch automatically falls back to `mode:"relay"` instead of erroring.
+**Agent mode works with ALL providers.** OpenCode's native infrastructure gives all providers (free and paid) the same capabilities: file read/write, grep, glob, bash, Archon MCP access. No fallback required.
 
 **Three dispatch modes:**
 | Mode | Tool Access | Providers | Use For |
 |------|------------|-----------|---------|
 | `text` (default) | None | All | Reviews, opinions, analysis |
-| `agent` | Full (native API) | Anthropic, OpenAI | T4-T5 implementation, validation |
-| `relay` | Full (XML tag relay) | All (designed for T1-T3) | T1-T3 implementation with file/Archon access |
+| `agent` | Full (native agent infrastructure) | All (free and paid via OpenCode native tools) | Implementation tasks for all providers |
 
-**Agent mode example (T4-T5):**
+**Agent mode example (any provider):**
 ```
-dispatch({ provider: "anthropic", model: "claude-sonnet-4-6", mode: "agent", prompt: "Implement X. Read existing code first. Run ruff/mypy after." })
-```
-
-**Relay mode example (T1-T3 — auto-fallback from agent):**
-```
-dispatch({ provider: "bailian-coding-plan-test", model: "qwen3.5-plus", mode: "agent", prompt: "Read src/main.py, then implement feature X" })
-// Auto-falls back to relay mode. Model uses <tool name="read" path="src/main.py" /> to read files.
+dispatch({ provider: "bailian-coding-plan-test", model: "qwen3.5-plus", mode: "agent", prompt: "Implement X. Read existing code first. Run ruff/mypy after." })
 ```
 
 **Text mode example (reviews):**

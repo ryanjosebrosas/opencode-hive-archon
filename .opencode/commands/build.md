@@ -97,7 +97,7 @@ Print progress dashboard:
 3. **Dispatch plan writing to T1 (FREE):**
    ```
    dispatch({
-     mode: "relay",
+     mode: "agent",
      provider: "bailian-coding-plan-test",
      model: "qwen3.5-plus",
      prompt: "{full context + spec details + template}"
@@ -115,7 +115,7 @@ Print progress dashboard:
    - If over 1000: acceptable but flag if significantly over
 
 **Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
-**If relay fails (output too large):** Split plan writing into sections or write directly from Opus context.
+**If agent mode times out:** Increase timeout or split plan writing into sections...
 
 ---
 
@@ -162,14 +162,14 @@ Dispatch implementation to T1:
 
 ```
 dispatch({
-  mode: "relay",
+  mode: "agent",
   provider: "bailian-coding-plan-test",
   model: "qwen3.5-plus",
   prompt: "Implement the following plan exactly as specified:\n\n{full plan content}\n\nRead all files listed in CONTEXT REFERENCES before implementing.\nFollow all patterns listed in Patterns to Follow.\nExecute tasks in the exact order specified in STEP-BY-STEP TASKS.\nRun validation commands after each task.\nReturn a summary of files changed and validation results."
 })
 ```
 
-**Fallback:** If relay can't handle large file writes, split into multiple dispatch calls per phase/task group.
+**Fallback:** If agent mode can't handle large file writes, split into multiple dispatch calls per phase/task group.
 **If T1 fails completely:** Try `zai-coding-plan/glm-4.7` as fallback T1.
 
 ---

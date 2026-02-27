@@ -270,6 +270,20 @@ export default tool({
       .string()
       .min(1, "prompt is required")
       .describe("The prompt to send to all target models"),
+    mode: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Dispatch mode for agent mode: 'text' (default) or 'agent'. " +
+        "Agent mode enables tool use (files, bash, search) for ALL providers via native OpenCode agent framework.",
+      ),
+    agent: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Agent name when mode is 'agent': 'build' (default, full tool access), " +
+        "'general' (standard tools), or other configured agent. Ignored in text mode.",
+      ),
     port: tool.schema
       .number()
       .optional()
@@ -313,13 +327,14 @@ export default tool({
       .optional()
       .describe(
         "Optional: use a pre-defined batch pattern instead of explicit models. " +
-          "Patterns are curated model groups for specific workflows. " +
-          "Values: free-review-gauntlet, free-heavy-architecture, free-security-audit, " +
-          "free-plan-review, free-impl-validation, free-regression-sweep, " +
-          "multi-review, plan-review, pre-impl-scan, heavy-architecture. " +
-          "When provided, 'models' arg is ignored.",
+        "Patterns are curated model groups for specific workflows. " +
+        "Values: free-review-gauntlet, free-heavy-architecture, free-security-audit, " +
+        "free-plan-review, free-impl-validation, free-regression-sweep, " +
+        "multi-review, plan-review, pre-impl-scan, heavy-architecture. " +
+        "When provided, 'models' arg is ignored.",
       ),
   },
+
   async execute(args, _context) {
     // 0. Resolve routing: taskType → helpful redirect (batch requires explicit models)
     let modelsJson = args.models
@@ -495,10 +510,34 @@ export default tool({
       const timeoutId = setTimeout(() => controller.abort(), effectiveTimeout * 1000)
 
       try {
-        // Create session
-        const session = await client.session.create({
+        // Build prompt with optional primer prefix
+        const promptText = _primerContent
+          ? `${_primerContent}\n\n---\n\n${args.prompt}`
+          : args.prompt
+
+        // Create session - with permissions if in agent mode
+        const sessionParams: Record<string, unknown> = {
           title: `batch → ${target.provider}/${target.model}`,
-        })
+        }
+        
+        if (args.mode === "agent") {
+          sessionParams.permission = [
+            { permission: "read", pattern: "*", action: "allow" },
+            { permission: "edit", pattern: "*", action: "allow" },
+            { permission: "bash", pattern: "*", action: "allow" },
+            { permission: "glob", pattern: "*", action: "allow" },
+            { permission: "grep", pattern: "*", action: "allow" },
+            { permission: "list", pattern: "*", action: "allow" },
+            { permission: "todoread", pattern: "*", action: "allow" },
+            { permission: "todowrite", pattern: "*", action: "allow" },
+            { permission: "task", pattern: "*", action: "deny" },
+            { permission: "external_directory", pattern: "*", action: "deny" },
+            { permission: "webfetch", pattern: "*", action: "deny" },
+            { permission: "websearch", pattern: "*", action: "deny" },
+          ]
+        }
+
+        const session = await client.session.create(sessionParams as any)
         sessionId = session.data?.id
         if (!sessionId) {
           return {
@@ -509,23 +548,23 @@ export default tool({
           }
         }
 
-        // Build prompt with optional primer prefix
-        const promptText = _primerContent
-          ? `${_primerContent}\n\n---\n\n${args.prompt}`
-          : args.prompt
-
-        // Send prompt
-        const result = await client.session.prompt(
-          {
-            sessionID: sessionId,
-            model: {
-              providerID: target.provider,
-              modelID: target.model,
-            },
-            system: args.systemPrompt,
-            format: parsedFormat,
-            parts: [{ type: "text" as const, text: promptText }],
+        const promptArgs: Record<string, unknown> = {
+          sessionID: sessionId,
+          model: {
+            providerID: target.provider,
+            modelID: target.model,
           },
+          system: args.systemPrompt,
+          format: parsedFormat,
+          parts: [{ type: "text" as const, text: promptText }],
+        }
+
+        if (args.mode === "agent" && args.agent !== "plan") {
+          promptArgs.agent = args.agent || "build"  // Default to "build" agent for full tool access
+        }
+
+        const result = await client.session.prompt(
+          promptArgs as any,
           { signal: controller.signal },
         )
 
@@ -642,8 +681,10 @@ export default tool({
     const modifiers: string[] = []
     if (_primerContent) modifiers.push("primer")
     if (args.systemPrompt) modifiers.push("custom-system")
-    if (parsedFormat) modifiers.push("structured-json")
+    if (parsedFormat) modifiers.push("structured-json")  
     if (args.timeout) modifiers.push(`timeout-${args.timeout}s`)
+    if (args.mode === "agent") modifiers.push("agent-mode")
+    if (args.mode === "agent") modifiers.push(`agent-${args.agent || "build"}`)
     const modifierStr =
       modifiers.length > 0 ? ` [${modifiers.join(", ")}]` : ""
 

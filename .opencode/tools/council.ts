@@ -3,11 +3,6 @@ import { createOpencodeClient } from "@opencode-ai/sdk/v2/client"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import {
-  parseToolCalls,
-  executeTool,
-  ToolCall,
-} from "./_relay-utils"
 
 // Load project primer once at module scope — prepended to the first council prompt
 const PRIMER_FILENAME = "_dispatch-primer.md"
@@ -191,7 +186,7 @@ const getStructuredPrompt = (
       `You are in a council discussion with ${modelCount} AI models.\n` +
       `Topic: ${topic}\n${contextBlock}\n` +
       `This is Round 1 of ${totalRounds} (Proposals).\n` +
-      `You have tool access via XML tags. Use <tool name='read' path='...' /> to read files or <tool name='archon_search' query='...' /> to search the knowledge base before forming your opinion.\n` +
+      `You have full tool access. Use your read, grep, and search tools to examine the codebase before forming your opinion.\n` +
       `Share your perspective. Think independently — propose your approach, ` +
       `identify key concerns, and suggest solutions.\n` +
       `Keep your response focused (3-5 paragraphs max). Take a clear position.`
@@ -240,7 +235,7 @@ const getFreeformPrompt = (
     return (
       `You are in a freeform council discussion with ${modelCount} AI models.\n` +
       `Topic: ${topic}\n${contextBlock}\n` +
-      `You have tool access via XML tags. Use <tool name='read' path='...' /> to read files or <tool name='archon_search' query='...' /> to search the knowledge base before forming your opinion.\n` +
+      `You have full tool access. Use your read, grep, and search tools to examine the codebase before forming your opinion.\n` +
       `You're speaking first. Share your perspective.\n` +
       `Be specific and take a clear position.\n` +
       `Keep it concise (2-3 paragraphs).`
@@ -282,6 +277,7 @@ const executeTurn = async (
       {
         sessionID: sessionId,
         model: { providerID: model.provider, modelID: model.model },
+        agent: "build",
         parts: [{ type: "text" as const, text: prompt }],
       },
       { signal: controller.signal },
@@ -330,51 +326,7 @@ const executeTurn = async (
     // Extract initial response text
     let responseText = extractTextFromParts(data?.parts) || "[no text in response]"
 
-    // Check for tool calls and handle relay mode (max 3 relay turns per council turn)
-    for (let relayTurn = 0; relayTurn < 3; relayTurn++) {
-      const toolCalls = parseToolCalls(responseText)
-      
-      if (toolCalls.length === 0) {
-        // No tool calls — model is done
-        break
-      }
-
-      // Execute tool calls
-      const results: string[] = []
-      for (const call of toolCalls) {
-        const toolResult = await executeTool(call)
-        results.push(`<tool_result name="${call.name}">\n${toolResult}\n</tool_result>`)
-      }
-
-      // Build follow-up prompt with results
-      const followUpPrompt = `Here are the results of your tool calls:\n\n${results.join("\n\n")}\n\nContinue your council response. If you need more tools, use <tool> tags. Otherwise, provide your final response with NO tool tags.`
-
-      // Send follow-up prompt to the same session and get continuation
-      const followUpController = new AbortController()
-      const followUpTimeoutId = setTimeout(() => followUpController.abort(), timeout * 1000)
-
-      try {
-        const followUpResult = await client.session.prompt(
-          {
-            sessionID: sessionId,
-            model: { providerID: model.provider, modelID: model.model },
-            parts: [{ type: "text" as const, text: followUpPrompt }],
-          },
-          { signal: followUpController.signal },
-        )
-        clearTimeout(followUpTimeoutId)
-
-        const followUpData = asRecord((followUpResult as any)?.data)
-        if (followUpData) {
-          responseText = extractTextFromParts(followUpData?.parts) || responseText
-        }
-      } catch (followUpErr: unknown) {
-        clearTimeout(followUpTimeoutId)
-        // If follow-up fails, use what we have so far
-        break
-      }
-    }
-
+    // Direct response (no more XML relay loop - models can access tools natively via agent mode)
     return {
       model, round, turn,
       text: responseText,
@@ -655,6 +607,20 @@ export default tool({
     try {
       const session = await client.session.create({
         title: `Council: ${truncatedTitle}`,
+        permission: [
+          { permission: "read", pattern: "*", action: "allow" },
+          { permission: "edit", pattern: "*", action: "allow" },
+          { permission: "bash", pattern: "*", action: "allow" },
+          { permission: "glob", pattern: "*", action: "allow" },
+          { permission: "grep", pattern: "*", action: "allow" },
+          { permission: "list", pattern: "*", action: "allow" },
+          { permission: "todoread", pattern: "*", action: "allow" },
+          { permission: "todowrite", pattern: "*", action: "allow" },
+          { permission: "task", pattern: "*", action: "deny" },
+          { permission: "external_directory", pattern: "*", action: "deny" },
+          { permission: "webfetch", pattern: "*", action: "deny" },
+          { permission: "websearch", pattern: "*", action: "deny" },
+        ]
       })
       sessionId = session.data?.id ?? ""
       if (!sessionId) {

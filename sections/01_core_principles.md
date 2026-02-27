@@ -6,7 +6,7 @@
 - Opus using swarm-worker-* agents (these are Claude Code built-in agents, not the 5-tier cascade)
 - Opus writing code in a response and asking user to apply it
 
-**Valid implementation path**: Plan in requests/ -> dispatch(mode:"relay", provider:"bailian-coding-plan-test", ...) -> T1 edits via relay -> T2 review via dispatch(taskType:"code-review")
+**Valid implementation path**: Plan in requests/ -> dispatch(mode:"agent", provider:"bailian-coding-plan-test", ...) -> T1 edits via native agent mode -> T2 review via dispatch(taskType:"code-review")
 
 **COUNCIL OUTPUT RULE — Never Pre-Summarize** — When running /council or any multi-model dispatch, present RAW model outputs to the user FIRST. Do NOT summarize, synthesize, or fabricate consensus before the user has read the actual responses. Wait for user acknowledgment before offering analysis. Running parallel single-shot prompts is NOT the same as the actual council tool (which uses shared sessions with rebuttals and synthesis rounds).
 

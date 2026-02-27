@@ -3,27 +3,7 @@ import { createOpencodeClient } from "@opencode-ai/sdk/v2/client"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import {
-  MAX_RELAY_TURNS,
-  ARCHON_MCP_URL,
-  RELAY_INSTRUCTIONS,
-  ARCHON_RELAY_INSTRUCTIONS,
-  PROJECT_ROOT,
-  ToolCall,
-  parseToolCalls,
-  parseAttrs,
-  executeRead,
-  executeGlob,
-  executeGrep,
-  executeBash,
-  executeEdit,
-  initArchonSession,
-  callArchonTool,
-  executeArchonSearch,
-  executeArchonSources,
-  executeTool,
-  relayLoop,
-} from "./_relay-utils"
+
 
 // Load project primer once at module scope — prepended to every dispatched prompt
 const PRIMER_FILENAME = "_dispatch-primer.md"
@@ -189,14 +169,14 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
 export default tool({
   description:
     "Dispatch a prompt to any connected AI model via the OpenCode server. " +
-    "Three modes: 'text' (default) for prompt-response, 'agent' for full tool access " +
-    "(Anthropic/OpenAI only), 'relay' for text-based tool access (T1-T3 free providers). " +
-    "Relay mode gives T1-T3 models file read/write, search, and Archon access through XML tags. " +
+    "Two modes: 'text' (default) for prompt-response, 'agent' for full tool access " +
+    "(works with ALL providers via OpenCode's native agent framework). " +
+    "Agent mode lets models read files, edit code, run bash commands, and search the knowledge base. " +
     "5-tier cost-optimized cascade: T1 Implementation (FREE: bailian-coding-plan-test qwen3), " +
     "T2 First Validation (FREE: zai glm-5), T3 Second Validation (FREE: ollama deepseek), " +
     "T4 Code Review (PAID cheap: openai codex), T5 Final Review (PAID: anthropic, last resort). " +
-    "Auto-routes via taskType or explicit provider/model. Auto-fallback: agent→relay for T1-T3. " +
-    "Use mode:'agent'/'relay' for T1 implementation, mode:'text' for reviews/opinions. " +
+    "Auto-routes via taskType or explicit provider/model. " +
+    "Use mode:'agent' for implementation tasks, mode:'text' for reviews/opinions. " +
     "taskType examples: boilerplate, complex-codegen, code-review, thinking-review, " +
     "second-validation, codex-review, final-review. " +
     "Provider/model examples: bailian-coding-plan-test/qwen3.5-plus, zai-coding-plan/glm-5, " +
@@ -225,11 +205,9 @@ export default tool({
       .optional()
       .describe(
         "Dispatch mode: 'text' (default) for prompt-response only, " +
-          "'agent' for full tool access (Anthropic/OpenAI only), " +
-          "'relay' for text-based tool access (T1-T3 free providers via XML tags). " +
-          "Agent/relay modes let the model read code, make edits, and run validation autonomously. " +
-          "Auto-fallback: agent→relay for incompatible providers. " +
-          "Use 'agent'/'relay' for implementation tasks, 'text' for reviews/opinions.",
+        "'agent' for full tool access (works with ALL providers via native agent framework). " +
+        "Agent mode lets the model read code, make edits, run validation, and search knowledge base autonomously. " +
+        "Use 'agent' for implementation tasks, 'text' for reviews/opinions.",
       ),
     steps: tool.schema
       .number()
@@ -300,9 +278,7 @@ export default tool({
     // 0. Resolve mode and routing
     let effectiveMode = args.mode || "text"
     const isAgentMode = effectiveMode === "agent"
-    const isRelayMode = effectiveMode === "relay"
-    const DEFAULT_AGENT_TIMEOUT = 300 // 5 minutes for agent/relay mode (multi-step)
-    const DEFAULT_AGENT_STEPS = 25
+    const DEFAULT_AGENT_TIMEOUT = 300 // 5 minutes for agent mode (multi-step)
 
     // 0. Resolve routing: taskType → provider/model (explicit args override)
     let resolvedProvider = args.provider
@@ -333,33 +309,22 @@ export default tool({
     }
 
     // Validate mode arg
-    if (args.mode && args.mode !== "text" && args.mode !== "agent" && args.mode !== "relay") {
-      return `[dispatch error] Invalid mode: "${args.mode}". Must be "text", "agent", or "relay".`
+    if (args.mode && args.mode !== "text" && args.mode !== "agent") {
+      return `[dispatch error] Invalid mode: "${args.mode}". Must be "text" or "agent".`
     }
 
-    // Agent mode provider compatibility with auto-fallback to relay
-    // Agent mode requires providers that support tool-use API (Anthropic, OpenAI).
-    // Free providers (bailian-coding-plan-test, zai, ollama) return 404 on agent mode — they don't support tool calling.
-    const AGENT_COMPATIBLE_PROVIDERS = ["anthropic", "openai"]
-    let autoFallbackNote = ""
-    
-    if (isAgentMode && resolvedProvider && !AGENT_COMPATIBLE_PROVIDERS.includes(resolvedProvider)) {
-      // Auto-fallback from agent to relay for incompatible providers
-      effectiveMode = "relay"
-      autoFallbackNote = " (auto-fallback from agent)"
-    }
+
 
     // Update mode flags after potential fallback
     const finalIsAgentMode = effectiveMode === "agent"
-    const finalIsRelayMode = effectiveMode === "relay"
 
     // Validate steps arg
     if (args.steps !== undefined) {
       if (!Number.isInteger(args.steps) || args.steps < 1 || args.steps > 100) {
         return "[dispatch error] steps must be an integer between 1 and 100"
       }
-      if (!finalIsAgentMode && !finalIsRelayMode) {
-        return "[dispatch error] 'steps' is only valid in agent or relay mode"
+      if (!finalIsAgentMode) {
+        return "[dispatch error] 'steps' is only valid in agent mode"
       }
     }
 
@@ -404,8 +369,8 @@ export default tool({
       )
     }
 
-    // 2.5. Set up timeout (mandatory — agent/relay mode gets longer default)
-    const effectiveTimeout = args.timeout ?? ((finalIsAgentMode || finalIsRelayMode) ? DEFAULT_AGENT_TIMEOUT : DEFAULT_TIMEOUT_SECONDS)
+    // 2.5. Set up timeout (mandatory — agent mode gets longer default)
+    const effectiveTimeout = args.timeout ?? (finalIsAgentMode ? DEFAULT_AGENT_TIMEOUT : DEFAULT_TIMEOUT_SECONDS)
     if (!Number.isFinite(effectiveTimeout) || effectiveTimeout <= 0) {
       return "[dispatch error] timeout must be a positive number of seconds"
     }
@@ -443,8 +408,8 @@ export default tool({
 
     // 3. Session — reuse or create
     const isReusedSession = !!args.sessionId
-    // Agent/relay mode: default to preserving session (for multi-turn). Text mode: cleanup by default.
-    const shouldCleanup = args.cleanup ?? ((finalIsAgentMode || finalIsRelayMode) ? false : !isReusedSession)
+    // Agent mode: default to preserving session (for multi-turn). Text mode: cleanup by default.
+    const shouldCleanup = args.cleanup ?? (finalIsAgentMode ? false : !isReusedSession)
     let sessionId = args.sessionId
 
     if (!sessionId) {
@@ -454,9 +419,7 @@ export default tool({
         const sessionParams: Record<string, unknown> = {
           title: finalIsAgentMode
             ? `agent → ${resolvedProvider}/${resolvedModel}`
-            : finalIsRelayMode
-              ? `relay → ${resolvedProvider}/${resolvedModel}`
-              : `dispatch → ${resolvedProvider}/${resolvedModel}`,
+            : `dispatch → ${resolvedProvider}/${resolvedModel}`,
         }
 
         if (finalIsAgentMode) {
@@ -494,57 +457,40 @@ export default tool({
       ? `${_primerContent}\n\n---\n\n${args.prompt}`
       : args.prompt
 
-    // 4.1a. Agent mode: prepend Archon relay instructions so T4/T5 can query knowledge base
-    if (finalIsAgentMode) {
-      promptText = ARCHON_RELAY_INSTRUCTIONS + "\n\n---\n\n" + promptText
-    }
-
-    // 4.1. Handle relay mode vs normal prompt
+    // 4.1. Handle normal prompt
     let result: unknown
-    let relayMetadata: { turns: number; toolCalls: number } | undefined
 
-    if (finalIsRelayMode) {
-      // Relay mode: run the relay loop
-      try {
-        const relayResult = await relayLoop(
-          client,
-          resolvedProvider,
-          resolvedModel,
-          promptText,
-          effectiveTimeout * 1000
-        )
-        relayMetadata = { turns: relayResult.turns, toolCalls: relayResult.toolCalls }
-        // Construct a result object that matches the expected format
-        result = {
-          data: {
-            parts: [{ type: "text", text: relayResult.finalResponse }],
-            info: {
-              tokens: { output: relayResult.finalResponse.length },
-            }
-          }
-        }
-      } catch (err: unknown) {
-        clearTimeout(timeoutId)
-        if (
-          (err instanceof Error && err.name === "AbortError") ||
-          controller.signal.aborted
-        ) {
-          // Cleanup session on timeout
-          if (shouldCleanup && sessionId) {
-            try {
-              await client.session.delete({ sessionID: sessionId })
-            } catch {
-              // Best effort cleanup
-            }
-          }
-          return (
-            `[dispatch error] Relay timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.\n` +
-            (args.timeout !== undefined
-              ? `Consider increasing the timeout or using a faster model.`
-              : `This was the default ${DEFAULT_AGENT_TIMEOUT}s timeout. Set 'timeout' arg for a custom value.`)
-          )
-        }
-        // Attempt cleanup on failure
+    // Normal mode (text or agent)
+    try {
+      // Agent mode: set agent to "general" for tool access, pass steps limit
+      const promptParams: Record<string, unknown> = {
+        sessionID: sessionId,
+        model: {
+          providerID: resolvedProvider,
+          modelID: resolvedModel,
+        },
+        system: args.systemPrompt,
+        format: parsedFormat,
+        parts: [{ type: "text" as const, text: promptText }],
+      }
+
+      if (finalIsAgentMode) {
+        // "build" agent has full tool access in OpenCode
+        promptParams.agent = "build"
+      }
+
+      result = await client.session.prompt(
+        promptParams as any,
+        { signal: controller.signal },
+      )
+    } catch (err: unknown) {
+      clearTimeout(timeoutId)
+      // Check if this was a timeout abort
+      if (
+        (err instanceof Error && err.name === "AbortError") ||
+        controller.signal.aborted
+      ) {
+        // Cleanup session on timeout
         if (shouldCleanup && sessionId) {
           try {
             await client.session.delete({ sessionID: sessionId })
@@ -553,102 +499,25 @@ export default tool({
           }
         }
         return (
-          `[dispatch error] Relay failed for ${resolvedProvider}/${resolvedModel}: ${getErrorMessage(err)}\n` +
-          `Common causes: model not connected (run '/connect ${resolvedProvider}'), ` +
-          `invalid model ID, or provider auth missing.`
+          `[dispatch error] Timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.\n` +
+          (args.timeout !== undefined
+            ? `Consider increasing the timeout or using a faster model.`
+            : `This was the default ${DEFAULT_TIMEOUT_SECONDS}s timeout. Set 'timeout' arg for a custom value.`)
         )
       }
-    } else {
-      // Normal mode (text or agent)
-      try {
-        // Agent mode: set agent to "general" for tool access, pass steps limit
-        const promptParams: Record<string, unknown> = {
-          sessionID: sessionId,
-          model: {
-            providerID: resolvedProvider,
-            modelID: resolvedModel,
-          },
-          system: args.systemPrompt,
-          format: parsedFormat,
-          parts: [{ type: "text" as const, text: promptText }],
+      // Attempt cleanup on failure if we created the session
+      if (shouldCleanup && sessionId) {
+        try {
+          await client.session.delete({ sessionID: sessionId })
+        } catch {
+          // Best effort cleanup
         }
-
-        if (finalIsAgentMode) {
-          // "general" agent has full tool access in OpenCode
-          promptParams.agent = "general"
-        }
-
-        result = await client.session.prompt(
-          promptParams as any,
-          { signal: controller.signal },
-        )
-
-        // 4.2a. Agent mode post-response: check for Archon XML tags and execute them
-        if (finalIsAgentMode) {
-          for (let archonTurn = 0; archonTurn < 3; archonTurn++) {
-            const resultData = asRecord((result as any)?.data)
-            const responseText = extractTextFromParts(resultData?.parts)
-            const archonCalls = parseToolCalls(responseText).filter(
-              (c: ToolCall) => c.name === "archon_search" || c.name === "archon_sources"
-            )
-
-            if (archonCalls.length === 0) break
-
-            // Execute Archon tool calls
-            const archonResults: string[] = []
-            for (const call of archonCalls) {
-              const toolResult = await executeTool(call)
-              archonResults.push(`<tool_result name="${call.name}">\n${toolResult}\n</tool_result>`)
-            }
-
-            // Send results back to the session
-            result = await client.session.prompt(
-              {
-                sessionID: sessionId,
-                model: { providerID: resolvedProvider, modelID: resolvedModel },
-                parts: [{ type: "text" as const, text: `Here are the Archon knowledge base results:\n\n${archonResults.join("\n\n")}\n\nContinue your work. Use more <tool> tags for additional Archon queries if needed, or provide your final response.` }],
-                ...(finalIsAgentMode ? { agent: "general" } : {}),
-              } as any,
-              { signal: controller.signal },
-            )
-          }
-        }
-      } catch (err: unknown) {
-        clearTimeout(timeoutId)
-        // Check if this was a timeout abort
-        if (
-          (err instanceof Error && err.name === "AbortError") ||
-          controller.signal.aborted
-        ) {
-          // Cleanup session on timeout
-          if (shouldCleanup && sessionId) {
-            try {
-              await client.session.delete({ sessionID: sessionId })
-            } catch {
-              // Best effort cleanup
-            }
-          }
-          return (
-            `[dispatch error] Timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.\n` +
-            (args.timeout !== undefined
-              ? `Consider increasing the timeout or using a faster model.`
-              : `This was the default ${DEFAULT_TIMEOUT_SECONDS}s timeout. Set 'timeout' arg for a custom value.`)
-          )
-        }
-        // Attempt cleanup on failure if we created the session
-        if (shouldCleanup && sessionId) {
-          try {
-            await client.session.delete({ sessionID: sessionId })
-          } catch {
-            // Best effort cleanup
-          }
-        }
-        return (
-          `[dispatch error] Prompt failed for ${resolvedProvider}/${resolvedModel}: ${getErrorMessage(err)}\n` +
-          `Common causes: model not connected (run '/connect ${resolvedProvider}'), ` +
-          `invalid model ID, or provider auth missing.`
-        )
       }
+      return (
+        `[dispatch error] Prompt failed for ${resolvedProvider}/${resolvedModel}: ${getErrorMessage(err)}\n` +
+        `Common causes: model not connected (run '/connect ${resolvedProvider}'), ` +
+        `invalid model ID, or provider auth missing.`
+      )
     }
 
     // Clear timeout if prompt completed successfully
@@ -757,14 +626,12 @@ export default tool({
     // 7. Return response with metadata header
     const modifiers: string[] = []
     if (finalIsAgentMode) modifiers.push("agent-mode")
-    if (finalIsRelayMode) modifiers.push(`relay-mode${autoFallbackNote}`)
-    if (relayMetadata) modifiers.push(`${relayMetadata.turns} turns, ${relayMetadata.toolCalls} tools`)
     if (_primerContent) modifiers.push("primer")
     if (routedVia) modifiers.push(`routed: ${routedVia}`)
     if (args.systemPrompt) modifiers.push("custom-system")
     if (parsedFormat) modifiers.push("structured-json")
     if (args.timeout !== undefined) modifiers.push(`timeout-${effectiveTimeout}s`)
-    if ((finalIsAgentMode || finalIsRelayMode) && args.steps) modifiers.push(`steps-${args.steps}`)
+    if (finalIsAgentMode && args.steps) modifiers.push(`steps-${args.steps}`)
     const modifierStr =
       modifiers.length > 0 ? ` [${modifiers.join(", ")}]` : ""
     const header = `--- dispatch response from ${resolvedProvider}/${resolvedModel}${modifierStr} ---\n`

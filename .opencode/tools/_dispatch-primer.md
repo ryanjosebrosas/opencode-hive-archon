@@ -83,7 +83,7 @@ At least 3 free models from different providers must agree before bypassing paid
 - Fewer than 3 agree = escalate to T4
 - For security-critical code: ALWAYS use T4 regardless of free consensus
 
-- **T1 models (text/relay mode)**: You are the implementer. Generate code, tests, boilerplate. Return complete file contents — the orchestrator applies them. Read ALL context in the prompt before generating. Follow project patterns exactly.
+- **T1 models (text/agent mode)**: You are the implementer. You have full tool access in agent mode — read files, make edits, run validation commands directly. For text mode, generate code/tests/docs as before, return complete file contents. Read ALL context in the prompt before generating. Follow project patterns exactly.
 - **T2 models (specialized review, FREE)**: Review T1's output from your specialty angle (logic, architecture, security, style). Report findings as Critical/Major/Minor. Be thorough — your reviews drive the fix loop. You are FREE — use generously.
 - **T3 models (independent review, FREE)**: Different model family = different blind spots. Report findings as Critical/Major/Minor. You are FREE — use generously.
 - **T4 models (code review gate, PAID)**: Near-final quality gate. Only invoked when free gauntlet has disagreement. Focus on subtle bugs, performance, architecture fit.
@@ -116,9 +116,9 @@ At least 3 free models from different providers must agree before bypassing paid
 - All real-provider flags default to `false` — existing tests run without env vars
 - If `bailian-coding-plan-test` returns 404, fall back to `zai-coding-plan/glm-4.7`
 
-## Archon MCP Tools (Available in agent mode and relay mode)
+## Archon MCP Tools (Available in agent mode)
 
-If you have MCP access (agent mode) or relay tool access (relay mode), these Archon tools are available:
+In agent mode, these Archon MCP tools are available through OpenCode's native tool infrastructure:
 - `rag_search_knowledge_base` — Search curated documentation (use 2-5 keyword queries)
 - `rag_search_code_examples` — Find reference code implementations
 - `rag_read_full_page` — Read full documentation pages
@@ -131,9 +131,7 @@ Endpoint: http://159.195.45.47:8051/mcp
 ## Dispatch Modes
 
 - **text** (default): Simple prompt-response. No file/tool access. Best for reviews and opinions.
-- **agent**: Full tool access via OpenCode agent framework. Works with Anthropic and OpenAI only.
-- **relay**: Text-based tool relay for T1-T3 free providers. Model outputs XML tool tags, orchestrator executes them and sends results back. Gives file read/write, grep, glob, bash, and Archon MCP access.
-- **Auto-fallback**: If you request `mode:"agent"` with a T1-T3 provider, it automatically falls back to `mode:"relay"` instead of erroring.
+- **agent**: Full tool access via OpenCode's native agent framework. Works with ALL providers. Models can read files, edit code, run bash, search the codebase, and access Archon MCP tools.
 
 ## Validation Requirements
 

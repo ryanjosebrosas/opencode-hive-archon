@@ -12,8 +12,8 @@
 >
 > **The ONLY valid implementation path:**
 > 1. Write a plan to requests/
-> 2. dispatch({ mode: "relay", provider: "bailian-coding-plan-test", model: "qwen3.5-plus", prompt: "..." })
-> 3. T1 model reads files and makes edits via relay XML tags
+> 2. dispatch({ mode: "agent", provider: "bailian-coding-plan-test", model: "qwen3.5-plus", prompt: "..." })
+> 3. T1 model reads files and makes edits via OpenCode's native tool infrastructure
 > 4. Opus reviews result, dispatches T2 review via dispatch(taskType: "code-review")
 >
 > **Permitted Opus actions (these are NOT implementation):**
