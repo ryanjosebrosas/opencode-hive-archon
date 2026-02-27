@@ -120,7 +120,7 @@ These are used internally by `/build` or available for manual use:
 | `/commit` | Conventional-format git commit | Used internally by `/build`, or manual |
 | `/pr` | Push branch, create PR | Used by `/ship`, or manual |
 | `/final-review` | Pre-commit approval gate | Used by `/ship` |
-| `/code-review` | Generalist review + UBS pre-scan | Manual code review |
+| `/code-review` | Generalist review — bugs, security, quality | Manual code review |
 | `/system-review` | Plan vs. reality analysis | After complex features |
 
 ### `/build` Automation Levels by Spec Depth

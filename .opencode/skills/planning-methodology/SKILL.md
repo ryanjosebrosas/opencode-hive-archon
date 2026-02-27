@@ -1,6 +1,6 @@
 ---
 name: planning-methodology
-description: Guide for systematic 6-phase feature planning with template-driven output and confidence scoring
+description: Guide for systematic interactive planning with template-driven output and confidence scoring
 license: MIT
 compatibility: opencode
 ---

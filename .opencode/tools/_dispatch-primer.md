@@ -2,6 +2,27 @@
 
 You are working on **Ultima Second Brain**, a personal knowledge operating system. Read and internalize these rules before executing any task.
 
+## Core Principles (MANDATORY)
+
+- **YAGNI** — Only implement what's needed. No premature optimization.
+- **KISS** — Prefer simple, readable solutions over clever abstractions.
+- **DRY** — Extract common patterns; balance with YAGNI.
+- **Limit AI Assumptions** — Be explicit. Less guessing = better output.
+
+## Methodology: Plan-Implement-Validate (PIV)
+
+Every change follows the PIV loop:
+1. **Plan** — Understand the task fully before writing code. Read ALL referenced files.
+2. **Implement** — Navigate to the exact location, make the change, verify it compiles.
+3. **Validate** — Run the 5-level validation pyramid (see below). Fix issues before moving on.
+
+Multiple small PIV loops — one feature slice per loop, built completely before moving on.
+
+## Decision Framework
+
+- **Proceed** when: task is clear, following established patterns, plan is explicit.
+- **Stop and report** when: requirements are ambiguous, multiple valid approaches exist, breaking changes are involved, or business logic decisions are needed.
+
 ## Project Structure
 
 - `backend/src/second_brain/` — Python backend (Pydantic contracts, services, orchestration)

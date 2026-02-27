@@ -1,5 +1,6 @@
 ---
 description: Interactive discovery session — explore ideas WITH the user, then produce a structured plan
+agent: build
 ---
 
 # Planning: Interactive Discovery + Structured Plan

@@ -1,5 +1,21 @@
 import { tool } from "@opencode-ai/plugin"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client"
+import { readFileSync } from "node:fs"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+// Load project primer once at module scope — prepended to the first council prompt
+const PRIMER_FILENAME = "_dispatch-primer.md"
+let _primerContent: string | null = null
+try {
+  const toolDir = typeof import.meta.dirname === "string"
+    ? import.meta.dirname
+    : dirname(fileURLToPath(import.meta.url))
+  _primerContent = readFileSync(join(toolDir, PRIMER_FILENAME), "utf-8")
+} catch {
+  // Non-fatal: primer file missing or unreadable — council proceeds without it
+  _primerContent = null
+}
 
 // --- Utility functions (duplicated from dispatch.ts — tools must be self-contained) ---
 
@@ -321,7 +337,11 @@ const runStructuredCouncil = async (
   let turnCounter = 0
 
   for (let round = 1; round <= rounds; round++) {
-    const prompt = getStructuredPrompt(round, rounds, models.length, topic, context)
+    const basePrompt = getStructuredPrompt(round, rounds, models.length, topic, context)
+    // Prepend primer to first round so all models see project context in shared session
+    const prompt = (round === 1 && _primerContent)
+      ? `${_primerContent}\n\n---\n\n${basePrompt}`
+      : basePrompt
     for (const model of models) {
       turnCounter++
       const turnResult = await executeTurn(
@@ -349,7 +369,11 @@ const runFreeformCouncil = async (
   for (let i = 0; i < totalTurns; i++) {
     const model = models[i % models.length]
     const roundNum = Math.floor(i / models.length) + 1
-    const prompt = getFreeformPrompt(i, totalTurns, models.length, topic, context)
+    const basePrompt = getFreeformPrompt(i, totalTurns, models.length, topic, context)
+    // Prepend primer to first turn so all models see project context in shared session
+    const prompt = (i === 0 && _primerContent)
+      ? `${_primerContent}\n\n---\n\n${basePrompt}`
+      : basePrompt
     const turnResult = await executeTurn(
       client, sessionId, model, prompt, timeout, roundNum, i + 1,
     )

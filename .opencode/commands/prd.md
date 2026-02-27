@@ -1,6 +1,7 @@
 ---
-description: Create a full Product Requirements Document — the detailed build blueprint
+description: Create a Product Requirements Document from conversation
 argument-hint: [output-filename]
+agent: build
 ---
 
 # PRD: Product Requirements Document

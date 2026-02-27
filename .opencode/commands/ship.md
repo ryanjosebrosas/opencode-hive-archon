@@ -20,7 +20,7 @@ Final command in the build pipeline. Runs full integration tests, T5 final revie
 ## Pipeline Position
 
 ```
-/mvp → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /decompose → /build next (repeat) → /ship
 ```
 
 This is the final step.

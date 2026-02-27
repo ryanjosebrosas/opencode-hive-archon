@@ -3,7 +3,7 @@ description: Break PRD into dependency-sorted spec list (BUILD_ORDER.md)
 agent: build
 ---
 
-# Decompose: MVP → Build Order
+# Decompose: PRD → Build Order
 
 Break the MVP vision into concrete, dependency-sorted specs. Produces `specs/BUILD_ORDER.md` — the single source of truth for what to build and in what order.
 

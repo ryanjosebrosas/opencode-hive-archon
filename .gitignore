@@ -11,7 +11,7 @@ requests/
 # Worktrees
 worktrees/
 
-# Swarm hive data (removed)
+# Local workspace data
 .hive/
 
 # Environment files

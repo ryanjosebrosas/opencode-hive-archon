@@ -20,10 +20,10 @@ Establish or update the product vision that drives everything else. This is the 
 ## Pipeline Position
 
 ```
-/mvp → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /decompose → /build next (repeat) → /ship
 ```
 
-This is Step 1. Output feeds directly into `/decompose`.
+This is Step 1. Output feeds into `/prd` for detailed requirements.
 
 ---
 

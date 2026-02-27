@@ -559,7 +559,7 @@ Track these to measure improvement:
 
 ### Phase 2 (Not Implemented)
 
-- [ ] Auto-run `/swarm-execute` for 15+ task plans
+- [ ] Auto-run parallel dispatch for 15+ task plans
 - [ ] Parallel system-review agents (one per divergence category)
 - [ ] Trend analysis across multiple reviews
 - [ ] Auto-update AGENTS.md based on repeated patterns

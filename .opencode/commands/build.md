@@ -264,7 +264,7 @@ If the integration check fails, report immediately — don't proceed to next spe
 
 ## Notes
 
-- `/build` wraps existing commands internally: `/planning` → `/execute` → `/code-loop` → `/commit`
+- `/build` wraps existing commands internally: `/planning` → `/execute` → `/code-loop` → `/final-review` → `/commit`
 - The old commands remain available for manual use outside the `/build` flow
 - `build-state.json` is the cross-session context bridge — read it at the start of every `/build`
 - Light specs should take 5-10 minutes. Standard: 15-25 minutes. Heavy: 30-60 minutes.
