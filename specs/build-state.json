@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-04",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04"],
+  "lastSpec": "P1-05",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -16,7 +16,9 @@
     "_CONFIGURED flag reset in conftest.py for test isolation",
     "SecondBrainError base class with to_dict() serialization",
     "Defensive dict copy in error context attributes",
-    "raise TypedError(...) from e for exception chaining in recall.py"
+    "raise TypedError(...) from e for exception chaining in recall.py",
+    "get_args(Literal) to derive validation sets from type definitions",
+    "DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT for migration pattern"
   ],
   "decisionsLog": [
     {
@@ -63,6 +65,11 @@
       "spec": "P1-04",
       "decision": "Planner catches (SecondBrainError, ValidationError) instead of 5 manual exception types",
       "reason": "SecondBrainError covers all typed errors from recall.py; ValidationError needed for Pydantic RetrievalRequest construction"
+    },
+    {
+      "spec": "P1-05",
+      "decision": "Derive _VALID_SOURCE_ORIGINS via get_args(SourceOriginValue) instead of hardcoded set",
+      "reason": "Eliminates triple-definition drift risk — single source of truth in Literal type"
     }
   ]
 }

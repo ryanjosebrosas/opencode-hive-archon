@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 4/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 5/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -28,7 +28,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 4/83 complete
 
 ### B. Schema & Migrations (5 specs)
 
-- [ ] `P1-05` **flexible-metadata-schema** (standard) — Extend SourceOriginValue to include zoom, json, text, leadworks. Ensure KnowledgeChunk.metadata accepts arbitrary source-specific data via dict[str, Any].
+- [x] `P1-05` **flexible-metadata-schema** (standard) — Extend SourceOriginValue to include zoom, json, text, leadworks. Ensure KnowledgeChunk.metadata accepts arbitrary source-specific data via dict[str, Any].
   - depends: P1-01
   - touches: contracts/knowledge.py, migrations/ (002_extend_source_origin.sql)
   - acceptance: KnowledgeChunk instantiates with source_origin="zoom". Metadata field accepts nested dicts. Existing tests pass.
