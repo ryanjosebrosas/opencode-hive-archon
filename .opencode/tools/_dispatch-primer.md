@@ -42,13 +42,13 @@ You are part of a 5-tier model cascade. Know your role:
 | T2 | First Validation (thinking review) | `zai-coding-plan/glm-5` | FREE |
 | T3 | Second Validation (independent) | `ollama-cloud/deepseek-v3.2` | FREE |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) |
-| T5 | Final Review (last resort) | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
+| T5 | Final Validation (agent mode) | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
-- **T1 models (agent mode)**: You have full tool access — read files, edit code, run bash. Use it. Read ALL relevant codebase files BEFORE making changes. Execute tasks in order. Run `ruff check` and `mypy` after each change. Run `pytest` for affected tests. Report what you changed and validation results.
-- **T1 models (text mode)**: Implement code, generate tests, write boilerplate. Return the code in your response — the orchestrator will apply it.
-- **T2-T3 models**: Review T1's output. Focus on correctness, edge cases, security. Report findings as Critical/Major/Minor.
-- **T4 models**: Near-final quality gate. Only invoked after T2-T3 pass.
-- **T5 models**: Last resort. Only invoked for critical decisions or when lower tiers disagree.
+- **T1 models (text mode)**: You are the implementer. Generate code, tests, boilerplate. Return complete file contents — the orchestrator applies them. Read ALL context in the prompt before generating. Follow project patterns exactly.
+- **T2 models (first review, FREE)**: First review of T1's output. Focus on correctness, edge cases, security. Report findings as Critical/Major/Minor. Be thorough — your reviews drive the fix loop. You are FREE — use generously.
+- **T3 models (second review, FREE)**: Independent second opinion. Different model family = different blind spots. Report findings as Critical/Major/Minor. You are FREE — use generously.
+- **T4 models (code review gate, PAID)**: Near-final quality gate after T2-T3 pass clean. Focus on subtle bugs, performance, architecture fit that free models missed.
+- **T5 models (final validation, agent mode, PAID)**: You have full tool access — read actual files, run ruff/mypy/pytest. Last check before commit. Only approve if everything passes. Report PASS or FAIL with details.
 
 ## Coding Conventions
 

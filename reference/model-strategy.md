@@ -93,13 +93,23 @@ dispatch({ taskType: "complex-codegen", prompt: "Generate a Python service that 
 
 ---
 
+## Cascade Review-Fix Loop
+
+Each tier reviews, and if issues found, T1 (FREE) fixes and the same tier re-reviews. Max 3 iterations per tier.
+
+```
+T1 implement → T2 review ⟲ T1 fix → T3 review ⟲ T1 fix → T4 gate ⟲ T1 fix → T5 validate ⟲ T1 fix → commit
+```
+
 ## `/build` Automation Levels by Spec Depth
 
-| Depth | Plan Size | T1 Impl | T2 Review | T3 Second | T4 Gate | Tests Required |
-|-------|-----------|---------|-----------|-----------|---------|----------------|
-| light | ~100 lines | Direct or T1 | — | — | — | L1-L2 (syntax, types) |
-| standard | ~300 lines | T1 dispatch | T2 review | — | T4 gate | L1-L3 (+ unit tests) |
-| heavy | ~700 lines | T1 dispatch | T2 review | T3 opinion | T4 gate | L1-L4 (+ integration) |
+| Depth | Plan Size | T1 Impl (FREE) | T2 Review (FREE) | T3 Second (FREE) | T4 Gate (PAID) | T5 Final (PAID) | Tests |
+|-------|-----------|-----------------|-------------------|-------------------|----------------|-----------------|-------|
+| light | ~100 lines | T1 text mode | — | — | — | — | L1-L2 |
+| standard | ~300 lines | T1 text mode | T2 review ⟲ | — | T4 gate | T5 validates | L1-L3 |
+| heavy | ~700 lines | T1 text mode | T2 review ⟲ | T3 review ⟲ | T4 gate ⟲ | T5 validates ⟲ | L1-L4 |
+
+⟲ = review-fix loop (max 3 iterations per tier)
 
 ---
 

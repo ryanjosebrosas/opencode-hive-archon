@@ -131,11 +131,13 @@ These are used internally by `/build` or available for manual use:
 
 ### `/build` Automation Levels by Spec Depth
 
-| Depth | Plan Size | T1 Impl | T2 Review | T3 Second | T4 Gate | Tests Required |
-|-------|-----------|---------|-----------|-----------|---------|----------------|
-| light | ~100 lines | Direct or T1 | — | — | — | L1-L2 (syntax, types) |
-| standard | ~300 lines | T1 dispatch | T2 review | — | T4 gate | L1-L3 (+ unit tests) |
-| heavy | ~700 lines | T1 dispatch | T2 review | T3 opinion | T4 gate | L1-L4 (+ integration) |
+| Depth | Plan Size | T1 (FREE) | T2 (FREE) | T3 (FREE) | T4 (PAID) | T5 (PAID) | Tests |
+|-------|-----------|-----------|-----------|-----------|-----------|-----------|-------|
+| light | ~100 lines | T1 text | — | — | — | — | L1-L2 |
+| standard | ~300 lines | T1 text | T2 ⟲ | — | T4 gate | T5 validates | L1-L3 |
+| heavy | ~700 lines | T1 text | T2 ⟲ | T3 ⟲ | T4 ⟲ | T5 ⟲ | L1-L4 |
+
+⟲ = review-fix loop with T1 (max 3 iterations). T5 uses agent mode (reads files, runs tests).
 
 ---
 
