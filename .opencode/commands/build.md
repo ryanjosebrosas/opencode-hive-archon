@@ -102,59 +102,47 @@ Print progress dashboard:
 #### Single Plan Mode (Default)
 
 4. **Dispatch plan writing to T1 (FREE):**
-   ```
-   dispatch({
-     mode: "agent",
-     provider: "bailian-coding-plan-test",
-     model: "qwen3.5-plus",
-     prompt: "{full context + spec details + templates/STRUCTURED-PLAN-TEMPLATE.md}"
-   })
-   ```
-   - The T1 model writes the plan following `templates/STRUCTURED-PLAN-TEMPLATE.md`
-   - Plan MUST be 700-1000 lines — this is a hard requirement
-   - Plan MUST include actual code samples (copy-pasteable), not summaries
-   - Plan MUST include exact file paths, line references, import statements
-   - Plan MUST include validation commands for every task
-   - Save to: `requests/{spec-id}-{spec-name}-plan.md`
+    ```
+    dispatch({
+      mode: "agent",
+      provider: "bailian-coding-plan-test",
+      model: "qwen3.5-plus",
+      prompt: "/prime\n\nThen run /planning {spec-id} {spec-name}\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}"
+    })
+    ```
+    - The T1 model runs /planning which writes the plan following `templates/STRUCTURED-PLAN-TEMPLATE.md`
+    - Plan MUST be 700-1000 lines — this is a hard requirement
+    - Plan MUST include actual code samples (copy-pasteable), not summaries
+    - Plan MUST include exact file paths, line references, import statements
+    - Plan MUST include validation commands for every task
+    - Save to: `requests/{spec-id}-{spec-name}-plan.md`
 
 5. **Validate plan size:**
-   - Count lines. If under 700: reject, re-dispatch with explicit "plan is too short, expand code samples and task detail"
-   - If over 1000: acceptable but flag if significantly over
+    - Count lines. If under 700: reject, re-dispatch with explicit "plan is too short, expand code samples and task detail"
+    - If over 1000: acceptable but flag if significantly over
 
 #### Master + Sub-Plan Mode (Exception)
 
 4. **Dispatch master plan writing to T1 (FREE):**
-   ```
-   dispatch({
-     mode: "agent",
-     provider: "bailian-coding-plan-test",
-     model: "qwen3.5-plus",
-     prompt: "{full context + spec details + templates/MASTER-PLAN-TEMPLATE.md}"
-   })
-   ```
-   - The T1 model writes the master plan following `templates/MASTER-PLAN-TEMPLATE.md`
-   - Master plan MUST be ~400-600 lines — defines phases, task groupings, phase gates
-   - Save to: `requests/{spec-id}-{spec-name}-master-plan.md`
+    ```
+    dispatch({
+      mode: "agent",
+      provider: "bailian-coding-plan-test",
+      model: "qwen3.5-plus",
+      prompt: "/prime\n\nThen run /planning {spec-id} {spec-name}\n\nThis is a complex spec — use Master + Sub-Plan mode.\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}"
+    })
+    ```
+    - The T1 model runs /planning in master mode which writes the master plan + all sub-plans
+    - Master plan MUST be ~400-600 lines — defines phases, task groupings, phase gates
+    - Each sub-plan MUST be 700-1000 lines
+    - Save to: `requests/{spec-id}-{spec-name}-master-plan.md` + `requests/{spec-id}-{spec-name}-phase-*.md`
 
 5. **Validate master plan size:**
-   - Count lines. If under 400 or over 600: reject, re-dispatch with size adjustment guidance
+    - Count lines. If under 400 or over 600: reject, re-dispatch with size adjustment guidance
 
-6. **For each phase in master plan, dispatch sub-plan writing:**
-   ```
-   dispatch({
-     mode: "agent",
-     provider: "bailian-coding-plan-test",
-     model: "qwen3.5-plus",
-     prompt: "{full context + master plan + this phase details + templates/SUB-PLAN-TEMPLATE.md + prior phase handoff notes (if phase > 1)}"
-   })
-   ```
-   - Each sub-plan follows `templates/SUB-PLAN-TEMPLATE.md`
-   - Each sub-plan MUST be 700-1000 lines
-   - Phase 2+ sub-plans include handoff notes from prior phase as context
-   - Save to: `requests/{spec-id}-{spec-name}-phase-{N}.md`
-
-7. **Validate each sub-plan size:**
-   - Same as single plan: 700-1000 lines required
+6. **Validate each sub-plan size:**
+    - Same as single plan: 700-1000 lines required
+    - /planning in master mode creates all sub-plans automatically — no separate dispatch loop needed
 
 **Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
 **If agent mode times out:** Increase timeout or split plan writing into sections...
@@ -233,37 +221,28 @@ dispatch({
   mode: "agent",
   provider: "bailian-coding-plan-test",
   model: "qwen3.5-plus",
-  prompt: "Implement the following plan exactly as specified:\n\n{full plan content}\n\nRead all files listed in CONTEXT REFERENCES before implementing.\nFollow all patterns listed in Patterns to Follow.\nExecute tasks in the exact order specified in STEP-BY-STEP TASKS.\nRun validation commands after each task.\nReturn a summary of files changed and validation results."
+  prompt: "/prime\n\nThen: /execute requests/{spec-id}-{spec-name}-plan.md"
 })
 ```
 
-**Fallback:** If agent mode can't handle large file writes, split into multiple dispatch calls per phase/task group.
-**If T1 fails completely:** Try `zai-coding-plan/glm-4.7` as fallback T1.
+**Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
 
 #### Master + Sub-Plan Mode (Exception)
 
-Execute sub-plans SEQUENTIALLY — one phase at a time:
+Execute with master plan — `/execute` handles sub-plan looping automatically:
 
-1. **For each sub-plan in order (phase 1, then phase 2, etc.):**
-   ```
-   dispatch({
-     mode: "agent",
-     provider: "bailian-coding-plan-test",
-     model: "qwen3.5-plus",
-     prompt: "Implement the following sub-plan exactly as specified:\n\n{sub-plan content}\n\nPrior phase handoff notes: {handoff notes from phase N-1, if applicable}\n\nRead all files listed in CONTEXT REFERENCES.\nFollow patterns from prior phases.\nExecute tasks in order.\nRun validation commands after each task.\nReturn handoff notes for next phase + summary of files changed and validation results."
-   })
-   ```
+```
+dispatch({
+  mode: "agent",
+  provider: "bailian-coding-plan-test",
+  model: "qwen3.5-plus",
+  prompt: "/prime\n\nThen: /execute requests/{spec-id}-{spec-name}-master-plan.md"
+})
+```
 
-2. **After each phase completes:**
-   - Run validation (Step 6)
-   - If validation PASSES: continue to next phase
-   - If validation FAILS: STOP — do not continue to next phase
-   - Extract handoff notes from phase output and include in next phase dispatch
+`/execute` detects master plans automatically and loops through sub-plans sequentially (Step 0.5 + Step 2.5). No need for manual per-phase dispatch loops.
 
-3. **If a phase fails:**
-   - The failed state propagates — pipeline stops
-   - Report which phase failed and why
-   - Do NOT continue to subsequent phases
+**Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
 
 ---
 

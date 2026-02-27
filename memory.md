@@ -92,7 +92,7 @@
 - [2026-02-28] **Relay mode eliminated**: Deleted _relay-utils.ts (423 lines), simplified dispatch 3→2 modes (text/agent). Removed AGENT_COMPATIBLE_PROVIDERS — ALL providers use native agent mode via `agent: "build"`. Committed 31da27a.
 - [2026-02-28] **Chicken-and-egg lesson**: T1 in old relay mode = text-only, can't edit files. Used T4 (codex) to bootstrap the fix. After restart, free providers work natively.
 - [2026-02-28] **Gemini models removed**: Replaced broken gemini-3-pro-preview/flash with zai-coding-plan/glm-4.7 in dispatch, batch-dispatch, council. Committed 39a0f5d.
-- [2026-02-28] **Sub-plan system (APPROVED, NOT YET IMPLEMENTED)**: Master plan (~500 lines, overview + human checklist) + sub-plans (700-1000 lines each, one per phase). /build loops sub-plans sequentially. Each sub-plan has prior-phase summary + full context. Plan file: `requests/sub-plan-system-plan.md`.
+- [2026-02-28] **Sub-plan system IMPLEMENTED**: Master plan (~500 lines, MASTER-PLAN-TEMPLATE) + sub-plans (700-1000 lines each, SUB-PLAN-TEMPLATE). /planning auto-detects complexity (>=10 tasks → master+sub-plans). /build Steps 2-5 loop sub-plans sequentially with handoff notes. /execute detects `-master-plan.md` files. Fixed stale plan-size tables in decompose.md + model-strategy.md. Committed 834e1dd.
 - [2026-02-28] **Tool reload requires CLI restart**: Restarting `opencode serve` reloads server-side code, but MCP tool plugins in Claude Code CLI stay cached until CLI restarts. Both must restart for dispatch tool changes to take effect.
 
 ---

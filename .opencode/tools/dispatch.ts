@@ -453,7 +453,9 @@ export default tool({
     }
 
     // 4. Build prompt with optional primer prefix
-    let promptText = _primerContent
+    // Agent mode: skip primer — agent runs /prime and reads AGENTS.md itself
+    // Text mode: prepend primer (model has no file access)
+    let promptText = (!finalIsAgentMode && _primerContent)
       ? `${_primerContent}\n\n---\n\n${args.prompt}`
       : args.prompt
 
