@@ -201,14 +201,14 @@ Return ONLY the replacement text for each section. Be precise.`
 
   let t1Output: string
   try {
-    t1Output = await dispatchText(client, "bailian-coding-plan", "qwen3.5-plus", t1Prompt, "t1-cascade-docs", 120)
+    t1Output = await dispatchText(client, "bailian-coding-plan-test", "qwen3.5-plus", t1Prompt, "t1-cascade-docs", 120)
   } catch {
     console.log("  Falling back to zai-coding-plan/glm-4.7...")
     try {
       t1Output = await dispatchText(client, "zai-coding-plan", "glm-4.7", t1Prompt, "t1-cascade-docs-fallback", 120)
     } catch {
       console.log("  Second fallback to bailian/qwen3-coder-plus...")
-      t1Output = await dispatchText(client, "bailian-coding-plan", "qwen3-coder-plus", t1Prompt, "t1-cascade-docs-fb2", 120)
+      t1Output = await dispatchText(client, "bailian-coding-plan-test", "qwen3-coder-plus", t1Prompt, "t1-cascade-docs-fb2", 120)
     }
   }
 
@@ -276,7 +276,7 @@ Do the edits correctly reflect this cascade? Report PASS/FAIL per file. Focus on
 
   // ============ SUMMARY ============
   console.log("=== CASCADE SUMMARY ===")
-  console.log(`T1 (FREE bailian/qwen3.5-plus): Generated edits for 3 files`)
+  console.log(`T1 (FREE bailian-coding-plan-test/qwen3.5-plus): Generated edits for 3 files`)
   console.log(`T2 (FREE zai/glm-5): ${t2Output.includes("SKIPPED") ? "SKIPPED" : "Reviewed"}`)
   console.log(`T3 (FREE ollama/deepseek): ${t3Output.includes("SKIPPED") ? "SKIPPED" : "Reviewed"}`)
   console.log(`\nNext steps:`)

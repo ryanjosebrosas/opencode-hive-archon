@@ -38,7 +38,7 @@ You are part of a 5-tier model cascade. Know your role:
 
 | Tier | Role | Provider/Model | Cost |
 |------|------|----------------|------|
-| T1 | Implementation (all codegen) | `bailian-coding-plan/qwen3.5-plus` (+ coder-next, coder-plus) | FREE |
+| T1 | Implementation (all codegen) | `bailian-coding-plan-test/qwen3.5-plus` (+ coder-next, coder-plus) | FREE |
 | T2 | First Validation (thinking review) | `zai-coding-plan/glm-5` | FREE |
 | T3 | Second Validation (independent) | `ollama-cloud/deepseek-v3.2` | FREE |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) |
@@ -75,11 +75,11 @@ You are part of a 5-tier model cascade. Know your role:
 - `os.getenv()` returns string — compare `.lower() == "true"` for booleans
 - Supabase needs `service_role` key (not anon) for inserts
 - All real-provider flags default to `false` — existing tests run without env vars
-- If `bailian-coding-plan` returns 404, fall back to `zai-coding-plan/glm-4.7`
+- If `bailian-coding-plan-test` returns 404, fall back to `zai-coding-plan/glm-4.7`
 
-## Archon MCP Tools (Available in agent mode)
+## Archon MCP Tools (Available in agent mode and relay mode)
 
-If you have MCP access, these Archon tools are available for RAG search and task management:
+If you have MCP access (agent mode) or relay tool access (relay mode), these Archon tools are available:
 - `rag_search_knowledge_base` — Search curated documentation (use 2-5 keyword queries)
 - `rag_search_code_examples` — Find reference code implementations
 - `rag_read_full_page` — Read full documentation pages
@@ -88,6 +88,13 @@ If you have MCP access, these Archon tools are available for RAG search and task
 - `manage_project` / `find_projects` — Project management
 
 Endpoint: http://159.195.45.47:8051/mcp
+
+## Dispatch Modes
+
+- **text** (default): Simple prompt-response. No file/tool access. Best for reviews and opinions.
+- **agent**: Full tool access via OpenCode agent framework. Works with Anthropic and OpenAI only.
+- **relay**: Text-based tool relay for T1-T3 free providers. Model outputs XML tool tags, orchestrator executes them and sends results back. Gives file read/write, grep, glob, bash, and Archon MCP access.
+- **Auto-fallback**: If you request `mode:"agent"` with a T1-T3 provider, it automatically falls back to `mode:"relay"` instead of erroring.
 
 ## Validation Requirements
 

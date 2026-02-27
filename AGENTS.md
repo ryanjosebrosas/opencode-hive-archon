@@ -68,14 +68,14 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 | Tier | Role | Provider/Model | Cost |
 |------|------|----------------|------|
-| T1 | Implementation | `bailian-coding-plan/qwen3.5-plus` (+ coder-next, coder-plus) | FREE |
+| T1 | Implementation | `bailian-coding-plan-test/qwen3.5-plus` (+ coder-next, coder-plus) | FREE |
 | T2 | First Validation | `zai-coding-plan/glm-5` | FREE |
 | T3 | Second Validation | `ollama-cloud/deepseek-v3.2` | FREE |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) |
 | T5 | Final Review | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
 **Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
-**Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7`.
+**Fallback**: If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
 **Council**: `/council` dispatches to 13 real models across 4 providers for multi-model debates.
 **Full details**: Read `reference/model-strategy.md` for task routing, council models, MCP tools, and dispatch configuration.
 

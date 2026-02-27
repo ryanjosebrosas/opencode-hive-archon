@@ -61,14 +61,14 @@ Use it to get second opinions on complex or security-sensitive code.
 | Task Type | Recommended Provider/Model | Why |
 |-----------|---------------------------|-----|
 | Security review | `anthropic/claude-sonnet-4-20250514` | Strong at security analysis |
-| Architecture review | `bailian-coding-plan/qwen3.5-plus` | Good architectural reasoning |
-| Logic verification | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized |
-| General second opinion | `bailian-coding-plan/qwen3-coder-next` | Fast, capable coder |
+| Architecture review | `bailian-coding-plan-test/qwen3.5-plus` | Good architectural reasoning |
+| Logic verification | `bailian-coding-plan-test/qwen3-coder-plus` | Code-specialized |
+| General second opinion | `bailian-coding-plan-test/qwen3-coder-next` | Fast, capable coder |
 
 **How to dispatch a review:**
 ```
 dispatch({
-  provider: "bailian-coding-plan",
+  provider: "bailian-coding-plan-test",
   model: "qwen3-coder-plus",
   prompt: "Review this code for [security/architecture/logic] issues:\n\n```python\n{paste the relevant code}\n```\n\nFocus on: {specific concern}\nContext: {what the code does, what changed}"
 })

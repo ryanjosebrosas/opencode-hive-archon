@@ -10,14 +10,14 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 | Tier | Role | Provider/Model | Cost | Used By |
 |------|------|----------------|------|---------|
-| T1 | Implementation | `bailian-coding-plan/qwen3.5-plus` (+ coder-next, coder-plus) | FREE | `/execute` dispatch |
+| T1 | Implementation | `bailian-coding-plan-test/qwen3.5-plus` (+ coder-next, coder-plus) | FREE | `/execute` dispatch |
 | T2 | First Validation | `zai-coding-plan/glm-5` | FREE | `/code-review`, `/code-loop` |
 | T3 | Second Validation | `ollama-cloud/deepseek-v3.2` | FREE | `/code-loop` second opinion |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) | `/code-loop` near-final |
 | T5 | Final Review | `anthropic/claude-sonnet-4-6` | PAID (expensive) | `/final-review` last resort |
 
 **Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
-**Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7`.
+**Fallback**: If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
 
 ---
 
@@ -45,7 +45,7 @@ Tool: `.opencode/tools/council.ts`, Command: `.opencode/commands/council.md`
 
 | Provider | Models | Cost |
 |----------|--------|------|
-| bailian-coding-plan | qwen3.5-plus, qwen3-coder-plus, qwen3-max, glm-5, kimi-k2.5 | FREE |
+| bailian-coding-plan-test | qwen3.5-plus, qwen3-coder-plus, qwen3-max, glm-5, kimi-k2.5 | FREE |
 | ollama-cloud | deepseek-v3.2, qwen3.5:397b, kimi-k2-thinking | FREE |
 | zai-coding-plan | glm-5, glm-4.7, glm-4.5, glm-4.7-flash | FREE |
 | openai | gpt-5.3-codex | PAID (cheap) |
@@ -79,16 +79,31 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 - `openai` — Expected to work (GPT/Codex)
 - `opencode` — Expected to work (built-in)
 
-Free providers (`bailian-coding-plan`, `zai-coding-plan`, `ollama-cloud`) return 404 on agent mode because they don't support tool calling API format. Use text mode for these providers.
+Free providers (`bailian-coding-plan-test`, `zai-coding-plan`, `ollama-cloud`) don't support native agent mode (tool-use API). Use **relay mode** instead — it gives them file read/write, grep, glob, bash, and Archon MCP access through a text-based XML tag relay loop.
 
-**Agent mode example:**
+**Auto-fallback**: If you request `mode:"agent"` with a free provider, dispatch automatically falls back to `mode:"relay"` instead of erroring.
+
+**Three dispatch modes:**
+| Mode | Tool Access | Providers | Use For |
+|------|------------|-----------|---------|
+| `text` (default) | None | All | Reviews, opinions, analysis |
+| `agent` | Full (native API) | Anthropic, OpenAI | T4-T5 implementation, validation |
+| `relay` | Full (XML tag relay) | All (designed for T1-T3) | T1-T3 implementation with file/Archon access |
+
+**Agent mode example (T4-T5):**
 ```
 dispatch({ provider: "anthropic", model: "claude-sonnet-4-6", mode: "agent", prompt: "Implement X. Read existing code first. Run ruff/mypy after." })
 ```
 
-**Text mode example (free models):**
+**Relay mode example (T1-T3 — auto-fallback from agent):**
 ```
-dispatch({ taskType: "complex-codegen", prompt: "Generate a Python service that does X. Return only the code." })
+dispatch({ provider: "bailian-coding-plan-test", model: "qwen3.5-plus", mode: "agent", prompt: "Read src/main.py, then implement feature X" })
+// Auto-falls back to relay mode. Model uses <tool name="read" path="src/main.py" /> to read files.
+```
+
+**Text mode example (reviews):**
+```
+dispatch({ taskType: "thinking-review", prompt: "Review this code for bugs: ..." })
 ```
 
 ---

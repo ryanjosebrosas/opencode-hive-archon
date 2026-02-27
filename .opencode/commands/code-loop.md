@@ -128,8 +128,8 @@ dispatch({
 |------|------|----------|----------------|------|
 | First code review | T2 | `code-review` | `zai-coding-plan/glm-5` | FREE |
 | Second review opinion | T3 | `second-validation` | `ollama-cloud/deepseek-v3.2` | FREE |
-| Simple fix generation | T1a | `simple-fix` | `bailian-coding-plan/qwen3-coder-next` | FREE |
-| Complex fix generation | T1c | `complex-fix` | `bailian-coding-plan/qwen3.5-plus` | FREE |
+| Simple fix generation | T1a | `simple-fix` | `bailian-coding-plan-test/qwen3-coder-next` | FREE |
+| Complex fix generation | T1c | `complex-fix` | `bailian-coding-plan-test/qwen3.5-plus` | FREE |
 | Security-focused review | T2 | `security-review` | `zai-coding-plan/glm-5` | FREE |
 | Near-final code review | T4 | `codex-review` | `openai/gpt-5.3-codex` | PAID (cheap) |
 | Final critical review | T5 | `final-review` | `anthropic/claude-sonnet-4-6` | PAID (last resort) |

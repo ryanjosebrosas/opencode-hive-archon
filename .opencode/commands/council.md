@@ -80,12 +80,12 @@ const client = createOpencodeClient({ baseUrl: 'http://127.0.0.1:4096' });
 const PROMPT = readFileSync('.opencode/.tmp/council-prompt.txt', 'utf-8');
 
 const models = [
-  // bailian-coding-plan (5 models — FREE)
-  { providerID: 'bailian-coding-plan', modelID: 'qwen3.5-plus', label: 'Qwen-3.5-Plus' },
-  { providerID: 'bailian-coding-plan', modelID: 'qwen3-coder-plus', label: 'Qwen-Coder-Plus' },
-  { providerID: 'bailian-coding-plan', modelID: 'qwen3-max-2026-01-23', label: 'Qwen-3-Max' },
-  { providerID: 'bailian-coding-plan', modelID: 'glm-5', label: 'BL-GLM-5' },
-  { providerID: 'bailian-coding-plan', modelID: 'kimi-k2.5', label: 'BL-Kimi-K2.5' },
+  // bailian-coding-plan-test (5 models — FREE)
+  { providerID: 'bailian-coding-plan-test', modelID: 'qwen3.5-plus', label: 'Qwen-3.5-Plus' },
+  { providerID: 'bailian-coding-plan-test', modelID: 'qwen3-coder-plus', label: 'Qwen-Coder-Plus' },
+  { providerID: 'bailian-coding-plan-test', modelID: 'qwen3-max-2026-01-23', label: 'Qwen-3-Max' },
+  { providerID: 'bailian-coding-plan-test', modelID: 'glm-5', label: 'BL-GLM-5' },
+  { providerID: 'bailian-coding-plan-test', modelID: 'kimi-k2.5', label: 'BL-Kimi-K2.5' },
   // ollama-cloud (3 models — FREE)
   { providerID: 'ollama-cloud', modelID: 'deepseek-v3.2', label: 'DeepSeek-v3.2' },
   { providerID: 'ollama-cloud', modelID: 'qwen3.5:397b', label: 'OC-Qwen3.5-397B' },
@@ -197,7 +197,7 @@ If the council is for an important decision, save to `requests/council-discussio
 
 ## Council Models (13 total)
 
-### bailian-coding-plan (5 models — FREE)
+### bailian-coding-plan-test (5 models — FREE)
 
 | Model | Family | Strength |
 |-------|--------|----------|

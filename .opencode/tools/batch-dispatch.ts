@@ -91,21 +91,21 @@ interface ModelResult {
 // 5-Tier Cost-Optimized Model Cascade (mirrors dispatch.ts)
 
 const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
-  // === T1: Implementation (FREE — bailian-coding-plan) ===
-  "boilerplate": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
-  "simple-fix": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
-  "quick-check": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
-  "general-opinion": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
-  "test-scaffolding": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  "logic-verification": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  "api-analysis": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  "complex-codegen": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  "complex-fix": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  "research": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  "architecture": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  "library-comparison": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  "docs-lookup": { provider: "bailian-coding-plan", model: "kimi-k2.5" },
-  "docs-generation": { provider: "bailian-coding-plan", model: "minimax-m2.5" },
+  // === T1: Implementation (FREE — bailian-coding-plan-test) ===
+  "boilerplate": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+  "simple-fix": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+  "quick-check": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+  "general-opinion": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+  "test-scaffolding": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  "logic-verification": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  "api-analysis": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  "complex-codegen": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  "complex-fix": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  "research": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  "architecture": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  "library-comparison": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  "docs-lookup": { provider: "bailian-coding-plan-test", model: "kimi-k2.5" },
+  "docs-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
   // === T2: First Validation (FREE — zai-coding-plan GLM thinking) ===
   "thinking-review": { provider: "zai-coding-plan", model: "glm-5" },
   "first-validation": { provider: "zai-coding-plan", model: "glm-5" },
@@ -131,8 +131,8 @@ export default tool({
     "Use this for multi-model consensus (code review, research cross-referencing, model quality comparison). " +
     "Requires `opencode serve` running. Returns all responses in a structured comparison format. " +
     "Each model runs in its own session with independent timeout. " +
-    "Provider/model examples: anthropic/claude-sonnet-4-20250514, bailian-coding-plan/qwen3.5-plus, " +
-    "bailian-coding-plan/qwen3-coder-plus, openai/gpt-4.1",
+    "Provider/model examples: anthropic/claude-sonnet-4-20250514, bailian-coding-plan-test/qwen3.5-plus, " +
+    "bailian-coding-plan-test/qwen3-coder-plus, openai/gpt-4.1",
   args: {
     models: tool.schema
       .string()
@@ -140,8 +140,8 @@ export default tool({
       .describe(
         'JSON array of model targets. Each target has "provider" and "model" fields. Minimum 2 models. ' +
           "Required unless taskType is provided (which resolves to a single default model). " +
-          'Example: \'[{"provider":"bailian-coding-plan","model":"qwen3-coder-plus"},' +
-          '{"provider":"bailian-coding-plan","model":"qwen3.5-plus"}]\'',
+          'Example: \'[{"provider":"bailian-coding-plan-test","model":"qwen3-coder-plus"},' +
+          '{"provider":"bailian-coding-plan-test","model":"qwen3.5-plus"}]\'',
       ),
     prompt: tool.schema
       .string()
@@ -242,11 +242,11 @@ export default tool({
         })
       }
     } catch (parseErr: unknown) {
-      return (
-        `[batch-dispatch error] Invalid models JSON: ${getErrorMessage(parseErr)}\n` +
-        'Example: \'[{"provider":"bailian-coding-plan","model":"qwen3-coder-plus"},' +
-        '{"provider":"anthropic","model":"claude-sonnet-4-20250514"}]\''
-      )
+        return (
+          `[batch-dispatch error] Invalid models JSON: ${getErrorMessage(parseErr)}\n` +
+          'Example: \'[{"provider":"bailian-coding-plan-test","model":"qwen3-coder-plus"},' +
+          '{"provider":"anthropic","model":"claude-sonnet-4-20250514"}]\''
+        )
     }
 
     if (targets.length < 2) {

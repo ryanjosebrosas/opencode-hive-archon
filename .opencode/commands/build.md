@@ -156,14 +156,14 @@ On approval, implement using the 5-tier cascade:
 3. If issues: fix and retry (max 3x)
 
 ### For standard specs:
-1. Dispatch implementation to T1 (bailian-coding-plan/qwen3.5-plus)
+1. Dispatch implementation to T1 (bailian-coding-plan-test/qwen3.5-plus)
 2. Run T2 review (zai-coding-plan/glm-5)
 3. Run actual tests: `ruff check`, `mypy`, `pytest`
 4. If T2 finds issues: T1 fixes, loop max 3x
 5. T4 gate (openai/gpt-5.3-codex) before commit
 
 ### For heavy specs:
-1. Dispatch implementation to T1 (bailian-coding-plan/qwen3.5-plus)
+1. Dispatch implementation to T1 (bailian-coding-plan-test/qwen3.5-plus)
 2. Run T2 review (zai-coding-plan/glm-5)
 3. Run T3 second opinion (ollama-cloud/deepseek-v3.2)
 4. Run actual tests: `ruff check`, `mypy`, `pytest`

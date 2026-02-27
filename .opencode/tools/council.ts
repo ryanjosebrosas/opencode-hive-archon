@@ -103,7 +103,7 @@ const PREFERRED_COUNCIL_MEMBERS: ModelTarget[] = [
   { provider: "zai-coding-plan", model: "glm-4.5-flash", label: "GLM" },
   { provider: "openai", model: "gpt-5-codex", label: "GPT" },
   { provider: "opencode", model: "minimax-m2.5-free", label: "MiniMax" },
-  { provider: "bailian-coding-plan", model: "qwen3.5-plus", label: "Qwen-Plus" },
+  { provider: "bailian-coding-plan-test", model: "qwen3.5-plus", label: "Qwen-Plus" },
 ]
 
 const getDefaultCouncilModels = async (baseUrl: string): Promise<ModelTarget[]> => {

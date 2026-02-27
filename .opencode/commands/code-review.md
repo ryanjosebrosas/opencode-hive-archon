@@ -99,8 +99,8 @@ For security-sensitive or architecturally complex changes, use the dispatch tool
 | Concern | taskType | Model (FREE) |
 |---------|----------|--------------|
 | Security review | `security-review` | zai-coding-plan/glm-5 |
-| Architecture | `research` | bailian-coding-plan/qwen3.5-plus |
-| Logic verification | `logic-verification` | bailian-coding-plan/qwen3-coder-plus |
+| Architecture | `research` | bailian-coding-plan-test/qwen3.5-plus |
+| Logic verification | `logic-verification` | bailian-coding-plan-test/qwen3-coder-plus |
 
 If `opencode serve` is not running, skip dispatch and proceed with your own review.
 

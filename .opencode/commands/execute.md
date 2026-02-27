@@ -133,16 +133,16 @@ Use it to accelerate execution by delegating appropriate subtasks or gathering p
 **Model routing for execution tasks (5-Tier Cascade — maximize free models):**
 | Task Type | Tier | Provider/Model | Cost |
 |-----------|------|----------------|------|
-| Boilerplate / simple fixes | T1a | `bailian-coding-plan/qwen3-coder-next` | FREE |
-| Test scaffolding / code-heavy | T1b | `bailian-coding-plan/qwen3-coder-plus` | FREE |
-| Complex codegen / research | T1c | `bailian-coding-plan/qwen3.5-plus` | FREE |
-| Documentation | T1e | `bailian-coding-plan/minimax-m2.5` | FREE |
+| Boilerplate / simple fixes | T1a | `bailian-coding-plan-test/qwen3-coder-next` | FREE |
+| Test scaffolding / code-heavy | T1b | `bailian-coding-plan-test/qwen3-coder-plus` | FREE |
+| Complex codegen / research | T1c | `bailian-coding-plan-test/qwen3.5-plus` | FREE |
+| Documentation | T1e | `bailian-coding-plan-test/minimax-m2.5` | FREE |
 | First validation / thinking review | T2 | `zai-coding-plan/glm-5` | FREE |
 | Second validation / independent | T3 | `ollama-cloud/deepseek-v3.2` | FREE |
 | Code review gate | T4 | `openai/gpt-5.3-codex` | PAID (cheap) |
 | Final review (last resort only) | T5 | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
-**Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7` for T1 tasks.
+**Fallback**: If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7` for T1 tasks.
 
 **How to dispatch implementation (agent mode):**
 ```
