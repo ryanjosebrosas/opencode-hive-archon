@@ -5,115 +5,115 @@ license: MIT
 compatibility: opencode
 ---
 
-# Planning Methodology — 6-Phase Feature Planning
+# Planning Methodology — Interactive Discovery + Structured Output
 
-This skill provides the methodology for transforming feature requests into comprehensive implementation plans. It complements the `/planning` command — the command provides the execution workflow, this skill provides the knowledge framework.
+This skill provides the knowledge framework for transforming feature requests into comprehensive implementation plans. It complements the `/planning` command — the command provides the interactive discovery workflow, this skill provides the structured output methodology.
 
 ## When This Skill Applies
 
 - User asks to "plan a feature", "create an implementation plan", or "structure development work"
 - A feature request needs to be broken down before implementation
 - Moving from vibe planning (unstructured) to structured planning (Layer 2)
+- Inside `/build` when generating standard or heavy plans
 
-## The 6 Phases (Overview)
+## The Discovery-to-Plan Flow
 
-Pre-Phase: Options Exploration (Mandatory when stack is not locked)
-**Goal**: Avoid premature stack commitment.
-- Compare at least 2 options plus current/default approach
-- Use user-provided repos/docs as primary evidence
-- Evaluate integration effort, maintenance, performance, cost/licensing, and lock-in
-- Get explicit user lock on selected option (or hybrid)
+The `/planning` command drives an interactive conversation with the user. This skill defines what the plan artifact should contain and how to produce it.
 
-### Phase 1: Feature Understanding & Scoping
-**Goal**: Define WHAT we're building and WHY.
-- Parse requirements, create user story, define problem/solution
-- Fill: Feature Description, User Story, Problem Statement, Solution Statement, Feature Metadata
-- Check memory.md (if it exists) for past decisions about this feature area
+### Phase 1: Understand (Interactive)
+**Goal**: Define WHAT we're building and WHY — through conversation, not automation.
+- Ask questions, confirm intent, discuss tradeoffs with the user
+- Check `memory.md` for past decisions about this feature area
+- Check `specs/build-state.json` for context from prior specs
+- Output: Clear shared understanding of scope and approach
 
-### Phase 2: Codebase Intelligence (Direct Exploration)
-**Goal**: Understand the existing codebase patterns.
-- **Local exploration**: Use Glob and Grep tools directly to explore the codebase
-- **Archon MCP** (if available):
-  - `rag_search_code_examples` - find similar code patterns with 2-5 keyword queries
-  - Use RAG results to supplement direct file exploration
-- Find similar implementations, map integration points, extract project patterns
-- Fill: Relevant Codebase Files (with line numbers), New Files to Create, Patterns to Follow
+### Phase 2: Explore (Codebase Intelligence)
+**Goal**: Ground the plan in reality by exploring the codebase.
+- **Local exploration**: Use Glob, Grep, Read to find patterns and integration points
+- **Archon MCP** (if available): `rag_search_code_examples` for similar implementations
+- **Dispatch** (optional): Send targeted research queries to free models
+- Share findings with the user as you discover them
+- Output: File references with line numbers, patterns to follow, gotchas identified
 
-### Phase 3: External Research (Direct Lookup)
-**Goal**: Gather external documentation and best practices.
-- **Archon MCP FIRST** (if available):
-  - `rag_get_available_sources` - see what curated sources exist
-  - `rag_search_knowledge_base` - search with 2-5 keyword queries
-  - `rag_search_code_examples` - find relevant code patterns
-  - `rag_read_full_page` - retrieve full documentation pages
-- **WebFetch** - fetch specific documentation URLs (library docs, API references)
-- **Web search** - find official docs, best practices, version compatibility
-- Fill: Relevant Documentation, Related Memories
+### Phase 3: Design (Strategic Decisions)
+**Goal**: Lock in the implementation approach.
+- Propose approach with alternatives and tradeoffs
+- For non-trivial decisions, suggest `/council` for multi-model input
+- Get explicit user confirmation before proceeding
+- Output: Locked approach, key decisions documented
 
-### Phase 3b: Research Validation
-**Goal**: Verify all research before building the plan on it.
-- Cross-check code patterns still exist, library versions are current, file references are accurate
-- Flag contradictions between research sources
-- No plan section should be built on unverified research
+### Phase 4: Preview + Approval
+**Goal**: Validate direction before writing the full plan.
+- Show a 1-page preview: what, approach, files, key decision, risks, tests
+- Get explicit approval before writing the plan file
+- Output: User approval to proceed
 
-### Phase 4: Strategic Design & Synthesis
-**Goal**: Design the implementation approach.
-- Synthesize validated research from Phases 2, 3, and 3b
-- Design implementation phases: Foundation → Core → Integration → Testing
-- Plan testing strategy (unit, integration, edge cases)
-- Define measurable acceptance criteria
-- Fill: Implementation Plan, Testing Strategy, Acceptance Criteria
+### Phase 5: Write Plan
+**Goal**: Generate the structured plan document at the appropriate depth.
+- **Light (~100 lines)**: What, Files, Tasks with validation, Acceptance criteria
+- **Standard (~300 lines)**: + Feature Description, Solution Statement, Patterns, Code Samples, Testing, Edge Cases
+- **Heavy (~700 lines)**: + Alternatives Considered, Risk Analysis, Integration Tests, detailed Phase breakdown
 
-### Phase 5: Step-by-Step Task Generation
-**Goal**: Create atomic, executable tasks.
-- Break Phase 4 design into atomic tasks ordered by dependency
-- Every task MUST include all 7 fields:
-  - **ACTION**: CREATE / UPDATE / ADD / REMOVE / REFACTOR / MIRROR
-  - **TARGET**: Specific file path
-  - **IMPLEMENT**: Code-level detail
-  - **PATTERN**: Reference to codebase pattern (file:line)
-  - **IMPORTS**: Exact imports needed
-  - **GOTCHA**: Known pitfalls
-  - **VALIDATE**: Executable verification command
-- Fill: STEP-BY-STEP TASKS section
+## Plan Quality Requirements
 
-### Phase 6: Quality Validation & Confidence Score
-**Goal**: Compile validation commands and assess confidence.
-- 5-level validation commands (syntax, types, unit tests, integration tests, manual)
-- Completion checklist
-- Confidence score (X/10) with strengths, uncertainties, mitigations
-- Fill: Validation Commands, Completion Checklist, Notes
+1. **Template-driven**: All plans fill sections of `templates/STRUCTURED-PLAN-TEMPLATE.md`
+2. **Evidence-backed**: Every file reference has line numbers; every pattern has a code example from THIS project
+3. **Executable tasks**: Each task includes ACTION, TARGET, IMPLEMENT, and VALIDATE at minimum
+4. **No-prior-knowledge test**: Another session can execute the plan without additional context
+5. **Approval gate**: Preview shown and approved before writing the final plan file
+
+### The 7-Field Task Format (for heavy plans)
+
+Every task in a heavy plan MUST include ALL fields:
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| **ACTION** | What operation | CREATE / UPDATE / ADD / REMOVE / REFACTOR |
+| **TARGET** | Specific file path | `app/services/auth_service.py` |
+| **IMPLEMENT** | Code-level detail | "Class AuthService with methods: login(), logout()" |
+| **PATTERN** | Reference pattern | "Follow pattern in `app/services/user_service.py:45-62`" |
+| **IMPORTS** | Exact imports | Copy-paste ready import statements |
+| **GOTCHA** | Known pitfalls | "Must use async/await — the database client is async-only" |
+| **VALIDATE** | Verification command | `pytest tests/services/test_auth.py -v` |
+
+Light and standard plans use a reduced format (ACTION, TARGET, IMPLEMENT, VALIDATE minimum).
+
+## Archon RAG Integration
+
+If Archon MCP is available, search curated knowledge FIRST:
+1. `rag_get_available_sources()` — find indexed documentation
+2. `rag_search_knowledge_base(query="2-5 keywords")` — search docs
+3. `rag_search_code_examples(query="2-5 keywords")` — find code patterns
+4. **Critical**: Keep queries SHORT — 2-5 keywords maximum for best vector search results
+
+If Archon unavailable, proceed with local exploration and web search.
 
 ## Key Rules
 
-1. **Template is the control mechanism**: All research fills specific sections of `templates/STRUCTURED-PLAN-TEMPLATE.md`. Nothing is missed because the template specifies exactly what's needed.
-2. **700-1000 lines**: The completed plan must be 700-1000 lines. Comprehensive with feature-specific content in every section.
-3. **Sequential research**: Explore codebase and external docs directly using Glob, Grep, WebSearch. No parallel agent spawning.
-4. **No code in planning**: We do NOT write code in this phase. Goal is a context-rich plan for one-pass implementation.
-5. **Agent-to-agent optimization**: The plan is consumed by `/execute` in a fresh conversation. It must contain ALL information needed.
-6. **Research validation**: Validate vibe planning research before building the structured plan on it.
-7. **Archon RAG first**: If available, search Archon curated knowledge before generic web search. Keep queries SHORT (2-5 keywords).
-8. **Recommended model**: Use a smart model (claude-sonnet or opus) for deeper reasoning.
-9. **Spec Lock is mandatory**: Before finalizing a plan, explicitly lock implementation mode, target repo, stack/framework, maturity target, and artifact type.
-10. **Approval gate is mandatory**: Provide a preview and get explicit approval before writing the final plan file.
-11. **Alternatives are mandatory when needed**: If stack/architecture is not locked, include options matrix and explicit decision checkpoint.
+1. **Discovery first, plan second.** Do NOT auto-generate. Work WITH the user.
+2. **Plan depth scales with complexity.** Light for scaffolding, heavy for core logic.
+3. **No code in planning.** Plans produce documents, not implementations.
+4. **Research validation.** Verify all findings before building the plan on them.
+5. **Agent-to-agent optimization.** The plan is consumed by `/execute` in a fresh session — it must be self-contained.
 
 ## Output
 
-Save to: `requests/{feature-name}-plan.md`
+Save to: `requests/{spec-number}-{spec-name}-plan.md`
+(or `requests/{descriptive-name}-plan.md` for standalone planning)
 
-Use template: `templates/STRUCTURED-PLAN-TEMPLATE.md` — every section must be filled with feature-specific content, not generic placeholders.
+Use template: `templates/STRUCTURED-PLAN-TEMPLATE.md` — every section filled with feature-specific content.
 
 ## Detailed References
-
-For detailed phase-by-phase instructions:
-@references/6-phase-process.md
 
 For template section-filling guide:
 @references/template-guide.md
 
+For detailed phase-by-phase research methodology:
+@references/6-phase-process.md
+
 ## Related Commands
 
-- `/planning [feature]` — The execution workflow that uses this methodology
+- `/planning [feature]` — The interactive discovery workflow that uses this methodology
 - `/execute [plan-path]` — Implements the plan this methodology produces
+- `/build [spec]` — Wraps planning + execution in an automated loop
 - `/prime` — Load context before starting planning

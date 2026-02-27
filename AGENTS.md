@@ -27,9 +27,9 @@ Every feature follows the same cycle: **Plan**, **Implement**, **Validate**, the
 3. **The handoff.** The plan is the bridge between thinking and building: 700-1000 lines capturing architecture decisions, file paths, code patterns, gotchas, and atomic tasks.
 
 **Workflow:**
-- `/planning` — Creates structured plan in `requests/{feature}-plan.md`
+- `/planning` — Interactive discovery → structured plan in `requests/{feature}-plan.md`
 - `/execute` — Fresh session with plan file only
-- `/code-review` — 4 parallel review agents
+- `/code-review` — Generalist review (single agent with optional dispatch for second opinions)
 - `/commit` — Conventional commit with lessons to memory
 
 ---
@@ -92,6 +92,8 @@ All guides in `reference/`. Load when the task requires it.
 | `archon-workflow` | Archon tasks / RAG |
 | `implementation-discipline` | Execution best practices |
 | `global-rules-optimization` | AGENTS.md optimization patterns |
+| `plan-quality-assessment` | Plan scoring rubric |
+| `system-review-integration` | System review deep workflow |
 
 ---
 
@@ -199,7 +201,6 @@ These are used internally by `/build` or available for manual use:
 ### Utility Agents
 | Agent | Purpose |
 |-------|---------|
-| `plan-validator` | Validates plan structure before execution |
 | `memory-curator` | Suggests what to save to memory.md after features |
 
 ### Swarm Workers (SwarmTools)
@@ -222,7 +223,7 @@ These are used internally by `/build` or available for manual use:
 - `@research-ai-patterns` — AI feature planning (RAG, agents, prompts)
 - `@memory-curator` — End of session, suggest lessons for memory.md
 
-**Integration**: Research agents auto-called by `/planning` command (Phase 2-3).
+**Integration**: Research agents available during `/planning` discovery for targeted exploration.
 
 ---
 
@@ -230,20 +231,86 @@ These are used internally by `/build` or available for manual use:
 
 | Skill | Purpose |
 |-------|---------|
-| `planning-methodology` | 6-phase systematic planning with parallel research |
+| `planning-methodology` | Systematic planning with template-driven output and confidence scoring |
+
+---
+
+## MCP Servers (External Capabilities)
+
+Two MCP servers provide external capabilities beyond the local codebase:
+
+### Swarm (Local — Multi-Agent Coordination)
+
+SwarmTools MCP for coordinating parallel agent work. Required by swarm-worker agents.
+
+| Tool | Purpose |
+|------|---------|
+| `swarmmail_reserve` | Reserve files before editing (prevents conflicts) |
+| `swarm_progress` | Report progress at 25/50/75% milestones |
+| `swarm_complete` | Mark work complete, release file reservations |
+| `swarmmail_send` / `swarmmail_inbox` | Inter-agent messaging |
+| `semantic-memory_find` | Shared semantic memory across agents |
+| `skills_use` | Load and apply shared skills |
+
+**Requires**: `swarm mcp-server` running locally.
+
+### Archon (Remote — RAG + Task Management)
+
+[Archon MCP](https://github.com/coleam00/archon) provides curated knowledge base and task tracking.
+
+| Tool | Purpose |
+|------|---------|
+| `rag_search_knowledge_base` | Search curated documentation (2-5 keyword queries) |
+| `rag_search_code_examples` | Find reference code implementations |
+| `rag_read_full_page` | Read full documentation pages |
+| `rag_get_available_sources` | List indexed documentation sources |
+| `manage_task` / `find_tasks` | Persistent task tracking across sessions |
+| `manage_project` / `find_projects` | Project and version management |
+
+**Endpoint**: `http://159.195.45.47:8051/mcp`
+**Status**: Optional — all commands degrade gracefully if unavailable.
+
+---
+
+## Custom Tools (Multi-Model Dispatch)
+
+Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration via `opencode serve`:
+
+| Tool | Purpose | Key Feature |
+|------|---------|-------------|
+| `dispatch` | Send a prompt to any single AI model | 27 taskType auto-routes across 5 tiers; auto-prepends project primer |
+| `batch-dispatch` | Same prompt to multiple models in parallel | Min 2 models; comparison output with wall-time reporting |
+| `council` | Multi-model discussion (models see each other's responses) | Shared session; structured or freeform modes; auto-selects 4 diverse models |
+
+**Requires**: `opencode serve` running (server at `http://127.0.0.1:4096`).
+**Primer**: `_dispatch-primer.md` auto-prepended to every dispatch — ensures all models have project context.
+
+### Task Type Routing (dispatch / batch-dispatch)
+
+| Tier | TaskTypes | Routes To | Cost |
+|------|-----------|-----------|------|
+| T1a (fast) | boilerplate, simple-fix, quick-check | qwen3-coder-next | FREE |
+| T1b (code) | test-scaffolding, logic-verification, api-analysis | qwen3-coder-plus | FREE |
+| T1c (complex) | complex-codegen, research, architecture | qwen3.5-plus | FREE |
+| T1d (long-ctx) | docs-lookup | kimi-k2.5 | FREE |
+| T1e (prose) | docs-generation | minimax-m2.5 | FREE |
+| T2 | thinking-review, code-review, security-review | glm-5 | FREE |
+| T3 | second-validation, deep-research | deepseek-v3.2 | FREE |
+| T4 | codex-review, codex-validation | gpt-5.3-codex | PAID |
+| T5 | final-review, critical-review | claude-sonnet-4-6 | PAID |
 
 ---
 
 ## Project Structure
 
 ```
-opencode-coding-system/
+Claude-coding-system/
 ├── AGENTS.md                    # Primary rules file (this file)
 ├── CLAUDE.md                    # Claude Code compatibility (references AGENTS.md)
 ├── memory.md                    # Cross-session memory (gitignored)
 ├── mvp.md                       # Product vision and scope (Ultima Second Brain)
 │
-├── sections/                    # Core methodology (loaded via opencode.json instructions)
+├── sections/                    # Core methodology (loaded via Claude.json instructions)
 │   ├── 01_core_principles.md    # YAGNI, KISS, DRY, Limit AI Assumptions, ABP
 │   ├── 02_piv_loop.md           # Plan → Implement → Validate methodology
 │   ├── 03_context_engineering.md# 4 Pillars: Memory, RAG, Prompts, Tasks
@@ -261,21 +328,21 @@ opencode-coding-system/
 │   ├── implementation-discipline.md
 │   ├── global-rules-optimization.md
 │   ├── layer1-guide.md
-│   └── sustainable-agent-architecture.md
+│   ├── plan-quality-assessment.md
+│   └── system-review-integration.md
 │
 ├── specs/                       # Build order and state (created by /decompose)
 │   ├── BUILD_ORDER.md           # Dependency-sorted spec list (single source of truth)
 │   └── build-state.json         # Cross-session context (patterns, decisions, progress)
 │
-├── templates/                   # Reusable templates (9 files)
+├── templates/                   # Reusable templates (8 files)
 │   ├── BUILD-ORDER-TEMPLATE.md  # Template for /decompose output
 │   ├── STRUCTURED-PLAN-TEMPLATE.md
 │   ├── PRD-TEMPLATE.md
-│   ├── SUB-PLAN-TEMPLATE.md
 │   ├── VIBE-PLANNING-GUIDE.md
-│   ├── PLAN-OVERVIEW-TEMPLATE.md
+│   ├── PLAN-QUALITY-ASSESSMENT.md
 │   ├── MEMORY-TEMPLATE.md
-│   ├── COMMAND-TEMPLATE.md
+│   ├── MEMORY-SUGGESTION-TEMPLATE.md
 │   └── AGENT-TEMPLATE.md
 │
 ├── requests/                    # Feature plans (gitignored)
@@ -305,9 +372,10 @@ opencode-coding-system/
 │   └── ...
 │
 ├── .opencode/                   # OpenCode configuration
-│   ├── commands/                # Slash commands
-│   ├── agents/                  # Custom subagents
-│   └── skills/                  # Agent skills
+│   ├── commands/                # Slash commands (17 commands)
+│   ├── agents/                  # Custom subagents (9 agents)
+│   ├── tools/                   # Custom tools (dispatch, batch-dispatch, council)
+│   └── skills/                  # Agent skills (planning-methodology)
 │
 └── .claude/                     # Claude Code compatibility (symlinks to .opencode)
 ```
@@ -342,20 +410,13 @@ opencode-coding-system/
 5. **Sync** (`/sync`) → Checkpoint: validate state between sessions or before heavy specs
 6. **Ship** (`/ship`) → Full validation pyramid + T5 review + PR when all specs done
 
-## Optional: Archon MCP
-
-[Archon MCP](https://github.com/coleam00/archon) provides task management and RAG search. **Completely optional.** When available, adds:
-- Persistent task tracking across sessions
-- RAG search over curated documentation
-- Project and version management
-
 ---
 
 ## Quick Start
 
-1. **Start OpenCode** and prime the system:
+1. **Start Claude Code** and prime the system:
    ```
-   opencode
+   Claude
    > /prime
    ```
 
@@ -364,17 +425,22 @@ opencode-coding-system/
    > /mvp
    ```
 
-3. **Decompose into specs** (once, re-runnable):
+3. **Write detailed requirements** (once per project):
+   ```
+   > /prd
+   ```
+
+4. **Decompose into specs** (once, re-runnable):
    ```
    > /decompose
    ```
 
-4. **Build specs** (the main loop — repeat until done):
+5. **Build specs** (the main loop — repeat until done):
    ```
    > /build next
    ```
 
-5. **Ship when complete**:
+6. **Ship when complete**:
    ```
    > /ship
    ```
