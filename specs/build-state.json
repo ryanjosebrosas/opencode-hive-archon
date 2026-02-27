@@ -1,9 +1,15 @@
 {
-  "lastSpec": "P1-01",
-  "completed": ["P1-01"],
+  "lastSpec": "P1-02",
+  "completed": ["P1-01", "P1-02"],
   "currentPillar": 1,
   "totalSpecs": 83,
-  "patternsEstablished": ["dict[str, Any] for all unparameterized dicts", "type: ignore[attr-defined] for SDK imports without __all__"],
+  "patternsEstablished": [
+    "dict[str, Any] for all unparameterized dicts",
+    "type: ignore[attr-defined] for SDK imports without __all__",
+    "pydantic_settings.BaseSettings for centralized config",
+    "@lru_cache(maxsize=1) + get_settings() for config singleton",
+    "get_settings.cache_clear() in tests for isolation"
+  ],
   "decisionsLog": [
     {
       "spec": "P1-01",
@@ -14,6 +20,16 @@
       "spec": "P1-01",
       "decision": "type: ignore[attr-defined] for voyageai.Client, not a type stub",
       "reason": "Minimal maintenance burden, voyageai may publish stubs later"
+    },
+    {
+      "spec": "P1-02",
+      "decision": "All Settings fields optional with defaults, no eager validation at module level",
+      "reason": "Tests run without .env file; lru_cache singleton validates on first get_settings() call"
+    },
+    {
+      "spec": "P1-02",
+      "decision": "Scope config.py to deps.py only, service files keep os.getenv fallback",
+      "reason": "Service files have direct instantiation paths for testing; centralizing everything in one spec increases risk"
     }
   ]
 }

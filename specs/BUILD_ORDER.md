@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 1/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 2/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -11,7 +11,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 1/83 complete
   - touches: schemas.py, orchestration/retrieval_router.py, services/voyage.py
   - acceptance: `mypy --strict backend/src/second_brain` = 0 errors. All 293 existing tests pass.
 
-- [ ] `P1-02` **pydantic-settings-config** (standard) — Replace scattered os.getenv() in deps.py with a single Pydantic Settings class. Validate on startup. Bad config = immediate structured error with field name + expected type.
+- [x] `P1-02` **pydantic-settings-config** (standard) — Replace scattered os.getenv() in deps.py with a single Pydantic Settings class. Validate on startup. Bad config = immediate structured error with field name + expected type.
   - depends: P1-01
   - touches: deps.py (refactor), config.py (new), tests/test_config.py (new)
   - acceptance: All env vars read from one Settings class. Missing required var raises ValidationError with field name. Existing tests pass with env vars set.
