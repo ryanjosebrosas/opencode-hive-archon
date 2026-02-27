@@ -1,3 +1,8 @@
 tests/
 requests/code-loops/
 requests/code-reviews/
+.opencode/.tmp/
+.opencode/.tmp
+.opencode/tools/_test-*
+.opencode/tools/_dispatch-*
+.opencode/tools/_validate-*
