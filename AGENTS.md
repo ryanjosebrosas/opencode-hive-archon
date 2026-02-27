@@ -2,7 +2,27 @@
 > It handles ONLY: planning, architecture, orchestration, exploration, strategy.
 > ALL implementation (file edits, code writing, refactoring) MUST be dispatched to T1-T5 models.
 > Opus writing code directly is a VIOLATION. No exceptions.
-> If dispatch tools are unavailable, write a plan to `requests/` and STOP.
+> If dispatch tools are unavailable, write a plan to requests/ and STOP.
+>
+> **ENFORCEMENT — What counts as "implementing directly" (ALL FORBIDDEN):**
+> - Using Edit, Write, mcp_edit, or mcp_write tools to modify ANY source/config file
+> - Using Task tool with general or swarm-worker-* agents to make file edits (these run in Opus context, NOT T1-T5)
+> - Writing code blocks in responses and asking the user to apply them
+> - Any file modification that does NOT go through dispatch() or batch-dispatch() to a real T1-T5 model via opencode serve
+>
+> **The ONLY valid implementation path:**
+> 1. Write a plan to requests/
+> 2. dispatch({ mode: "relay", provider: "bailian-coding-plan-test", model: "qwen3.5-plus", prompt: "..." })
+> 3. T1 model reads files and makes edits via relay XML tags
+> 4. Opus reviews result, dispatches T2 review via dispatch(taskType: "code-review")
+>
+> **Permitted Opus actions (these are NOT implementation):**
+> - Reading files (Read, Glob, Grep) for planning and exploration
+> - Running git commands (status, diff, log, add, commit, push)
+> - Running validation commands (bun build, ruff, mypy, pytest)
+> - Writing plan files to requests/ directory
+> - Editing memory.md (session notes only)
+> - Dispatching to T1-T5 models via dispatch/batch-dispatch tools
 
 # Claude Code Coding System
 
