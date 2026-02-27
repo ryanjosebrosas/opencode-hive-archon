@@ -129,10 +129,14 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
 export default tool({
   description:
     "Dispatch a prompt to any connected AI model via the OpenCode server. " +
+    "Two modes: 'text' (default) for prompt-response, 'agent' for full tool access " +
+    "(file read/write, bash, glob, grep — model works autonomously). " +
     "5-tier cost-optimized cascade: T1 Implementation (FREE: bailian qwen3), " +
     "T2 First Validation (FREE: zai glm-5), T3 Second Validation (FREE: ollama deepseek), " +
     "T4 Code Review (PAID cheap: openai codex), T5 Final Review (PAID: anthropic, last resort). " +
     "Auto-routes via taskType or explicit provider/model. " +
+    "Use mode:'agent' for T1 implementation tasks so the model can read code, make edits, " +
+    "and run validation. Use mode:'text' (default) for reviews and opinions. " +
     "taskType examples: boilerplate, complex-codegen, code-review, thinking-review, " +
     "second-validation, codex-review, final-review. " +
     "Provider/model examples: bailian-coding-plan/qwen3.5-plus, zai-coding-plan/glm-5, " +
@@ -156,6 +160,24 @@ export default tool({
       .string()
       .min(1, "prompt is required")
       .describe("The full prompt to send to the target model"),
+    mode: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Dispatch mode: 'text' (default) for prompt-response only, " +
+          "'agent' for full tool access (file read/write, bash, glob, grep). " +
+          "Agent mode lets the model read code, make edits, and run validation autonomously. " +
+          "Use 'agent' for implementation tasks, 'text' for reviews/opinions.",
+      ),
+    steps: tool.schema
+      .number()
+      .optional()
+      .describe(
+        "Max agentic iterations in agent mode (default: 25). " +
+          "Each step is one tool call + response cycle. " +
+          "Higher values let the model do more work autonomously. " +
+          "Ignored in text mode.",
+      ),
     sessionId: tool.schema
       .string()
       .optional()
@@ -171,13 +193,14 @@ export default tool({
       .boolean()
       .optional()
       .describe(
-        "Delete the session after dispatch (default: true for new sessions, false for reused sessions)",
+        "Delete the session after dispatch (default: true for text mode new sessions, " +
+          "false for agent mode and reused sessions)",
       ),
     timeout: tool.schema
       .number()
       .optional()
       .describe(
-        "Timeout in seconds for the dispatch call (default: 120s). " +
+        "Timeout in seconds for the dispatch call (default: 120s for text, 300s for agent). " +
           "If the target model doesn't respond within this time, the dispatch aborts.",
       ),
     systemPrompt: tool.schema
@@ -212,6 +235,11 @@ export default tool({
       ),
   },
   async execute(args, _context) {
+    // 0. Resolve mode and routing
+    const isAgentMode = args.mode === "agent"
+    const DEFAULT_AGENT_TIMEOUT = 300 // 5 minutes for agent mode (multi-step)
+    const DEFAULT_AGENT_STEPS = 25
+
     // 0. Resolve routing: taskType → provider/model (explicit args override)
     let resolvedProvider = args.provider
     let resolvedModel = args.model
@@ -238,6 +266,21 @@ export default tool({
         "[dispatch error] Either provide both 'provider' and 'model', or provide 'taskType' for auto-routing.\n" +
         `Available task types: ${Object.keys(TASK_ROUTING).join(", ")}`
       )
+    }
+
+    // Validate mode arg
+    if (args.mode && args.mode !== "text" && args.mode !== "agent") {
+      return `[dispatch error] Invalid mode: "${args.mode}". Must be "text" or "agent".`
+    }
+
+    // Validate steps arg
+    if (args.steps !== undefined) {
+      if (!Number.isInteger(args.steps) || args.steps < 1 || args.steps > 100) {
+        return "[dispatch error] steps must be an integer between 1 and 100"
+      }
+      if (!isAgentMode) {
+        return "[dispatch error] 'steps' is only valid in agent mode (mode: 'agent')"
+      }
     }
 
     const serverPort = args.port ?? 4096
@@ -281,8 +324,8 @@ export default tool({
       )
     }
 
-    // 2.5. Set up timeout (mandatory — default 120s to prevent indefinite hangs)
-    const effectiveTimeout = args.timeout ?? DEFAULT_TIMEOUT_SECONDS
+    // 2.5. Set up timeout (mandatory — agent mode gets longer default)
+    const effectiveTimeout = args.timeout ?? (isAgentMode ? DEFAULT_AGENT_TIMEOUT : DEFAULT_TIMEOUT_SECONDS)
     if (!Number.isFinite(effectiveTimeout) || effectiveTimeout <= 0) {
       return "[dispatch error] timeout must be a positive number of seconds"
     }
@@ -320,14 +363,39 @@ export default tool({
 
     // 3. Session — reuse or create
     const isReusedSession = !!args.sessionId
-    const shouldCleanup = args.cleanup ?? !isReusedSession
+    // Agent mode: default to preserving session (for multi-turn). Text mode: cleanup by default.
+    const shouldCleanup = args.cleanup ?? (isAgentMode ? false : !isReusedSession)
     let sessionId = args.sessionId
 
     if (!sessionId) {
       try {
-        const session = await client.session.create({
-          title: `dispatch → ${resolvedProvider}/${resolvedModel}`,
-        })
+        // Agent mode: create session with tool permissions so the model can
+        // read files, edit code, run bash (ruff/mypy/pytest), and search the codebase
+        const sessionParams: Record<string, unknown> = {
+          title: isAgentMode
+            ? `agent → ${resolvedProvider}/${resolvedModel}`
+            : `dispatch → ${resolvedProvider}/${resolvedModel}`,
+        }
+
+        if (isAgentMode) {
+          sessionParams.permission = [
+            { permission: "read", pattern: "*", action: "allow" },
+            { permission: "edit", pattern: "*", action: "allow" },
+            { permission: "bash", pattern: "*", action: "allow" },
+            { permission: "glob", pattern: "*", action: "allow" },
+            { permission: "grep", pattern: "*", action: "allow" },
+            { permission: "list", pattern: "*", action: "allow" },
+            { permission: "todoread", pattern: "*", action: "allow" },
+            { permission: "todowrite", pattern: "*", action: "allow" },
+            // Deny recursive dispatch and external access
+            { permission: "task", pattern: "*", action: "deny" },
+            { permission: "external_directory", pattern: "*", action: "deny" },
+            { permission: "webfetch", pattern: "*", action: "deny" },
+            { permission: "websearch", pattern: "*", action: "deny" },
+          ]
+        }
+
+        const session = await client.session.create(sessionParams as any)
         sessionId = session.data?.id
         if (!sessionId) {
           clearTimeout(timeoutId)
@@ -347,17 +415,25 @@ export default tool({
     // 4.1. Send prompt to target model
     let result: unknown
     try {
-      result = await client.session.prompt(
-        {
-          sessionID: sessionId,
-          model: {
-            providerID: resolvedProvider,
-            modelID: resolvedModel,
-          },
-          system: args.systemPrompt,
-          format: parsedFormat,
-          parts: [{ type: "text" as const, text: promptText }],
+      // Agent mode: set agent to "general" for tool access, pass steps limit
+      const promptParams: Record<string, unknown> = {
+        sessionID: sessionId,
+        model: {
+          providerID: resolvedProvider,
+          modelID: resolvedModel,
         },
+        system: args.systemPrompt,
+        format: parsedFormat,
+        parts: [{ type: "text" as const, text: promptText }],
+      }
+
+      if (isAgentMode) {
+        // "general" agent has full tool access in OpenCode
+        promptParams.agent = "general"
+      }
+
+      result = await client.session.prompt(
+        promptParams as any,
         { signal: controller.signal },
       )
     } catch (err: unknown) {
@@ -502,11 +578,13 @@ export default tool({
 
     // 7. Return response with metadata header
     const modifiers: string[] = []
+    if (isAgentMode) modifiers.push("agent-mode")
     if (_primerContent) modifiers.push("primer")
     if (routedVia) modifiers.push(`routed: ${routedVia}`)
     if (args.systemPrompt) modifiers.push("custom-system")
     if (parsedFormat) modifiers.push("structured-json")
     if (args.timeout !== undefined) modifiers.push(`timeout-${effectiveTimeout}s`)
+    if (isAgentMode && args.steps) modifiers.push(`steps-${args.steps}`)
     const modifierStr =
       modifiers.length > 0 ? ` [${modifiers.join(", ")}]` : ""
     const header = `--- dispatch response from ${resolvedProvider}/${resolvedModel}${modifierStr} ---\n`

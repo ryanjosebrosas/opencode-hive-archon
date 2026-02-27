@@ -109,25 +109,23 @@ If no gaps are encountered, record "No RAG recovery needed — plan was self-con
 The `dispatch` tool sends prompts to other connected AI models via the OpenCode server.
 Use it to accelerate execution by delegating appropriate subtasks or gathering pre-implementation research.
 
-**Default behavior**: Execute tasks yourself. Dispatch is an optional optimization, not a requirement.
+**Two dispatch modes:**
+- **Text mode** (default): prompt-response only. Model receives text, returns text. Good for reviews, opinions, research.
+- **Agent mode** (`mode: "agent"`): full tool access. Model can read files, edit code, run bash (ruff/mypy/pytest), search the codebase. Good for implementation tasks.
 
-**When to consider dispatching:**
+**When to use agent mode:**
+- Implementation tasks where the model needs to read existing code and make edits
+- Tasks that require running validation (ruff, mypy, pytest) after changes
+- Multi-file changes where the model needs to navigate the codebase
+- Any T1 implementation work — the model works autonomously with tool access
 
-1. **Subtask delegation** — delegate simple/repetitive tasks to faster, cheaper models:
-   - Boilerplate code generation (CRUD, schemas, type definitions)
-   - Test file scaffolding (fixtures, basic test cases)
-   - Configuration file generation
-   - Documentation generation
-   - Repetitive pattern application across multiple files
+**When to use text mode (default):**
+- Code reviews and opinions (T2-T5 tiers)
+- Pre-implementation research questions
+- Quick boilerplate generation where you'll paste the result yourself
+- When `opencode serve` is not running (text mode also errors — do it yourself)
 
-2. **Pre-implementation research** — ask another model for context before implementing:
-   - "How does library X handle Y?" — when the plan doesn't cover a specific API
-   - "What's the recommended pattern for Z?" — when facing an unfamiliar integration
-   - "Review this approach before I implement it" — sanity check on complex logic
-
-**When NOT to dispatch:**
-- Core business logic that requires understanding the full plan context
-- Tasks that require reading many project files (the dispatched model has no file access)
+**When NOT to dispatch at all:**
 - Quick, simple changes (dispatch overhead > doing it yourself)
 - When the plan explicitly specifies how to implement something (trust the plan)
 - When `opencode serve` is not running (dispatch will error — that's fine, do it yourself)
@@ -146,15 +144,24 @@ Use it to accelerate execution by delegating appropriate subtasks or gathering p
 
 **Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7` for T1 tasks.
 
-**How to dispatch a subtask:**
+**How to dispatch implementation (agent mode):**
 ```
 dispatch({
-   taskType: "boilerplate",
-   prompt: "Generate a Python {type} that:\n- {requirement 1}\n- {requirement 2}\n\nFollow this pattern:\n```python\n{paste example from plan}\n```\n\nReturn only the code, no explanations."
+   taskType: "complex-codegen",
+   mode: "agent",
+   prompt: "Implement the auth service as specified in the plan:\n- {requirement 1}\n- {requirement 2}\n\nRead the existing code in backend/src/second_brain/services/ first.\nFollow the lazy-init pattern from existing services.\nRun ruff check and mypy after your changes.\nReturn a summary of files changed and validation results."
 })
 ```
 
-**How to dispatch research:**
+**How to dispatch a review (text mode):**
+```
+dispatch({
+   taskType: "code-review",
+   prompt: "Review this implementation for bugs and security issues:\n```python\n{paste code}\n```"
+})
+```
+
+**How to dispatch research (text mode):**
 ```
 dispatch({
    taskType: "research",
@@ -163,10 +170,10 @@ dispatch({
 ```
 
 **Using dispatch results:**
-- Review dispatched code before using it — never blindly paste
-- Adapt generated code to match project patterns (imports, naming, style)
+- Agent mode: the model edits files directly — review the changes via git diff after
+- Text mode: review dispatched code before using it — never blindly paste
 - If dispatch fails or returns unhelpful results, implement the task yourself
-- Note in the execution report if dispatch was used: "Task N: delegated boilerplate to {model}, reviewed and integrated"
+- Note in the execution report if dispatch was used: "Task N: delegated to {model} (agent mode), reviewed changes"
 
 **If dispatch fails:** Implement the task yourself. Dispatch is optional. Never block execution because dispatch is unavailable.
 

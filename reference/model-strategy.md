@@ -58,12 +58,26 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 | Tool | Purpose | Key Feature |
 |------|---------|-------------|
-| `dispatch` | Send a prompt to any single AI model | 27 taskType auto-routes across 5 tiers; auto-prepends project primer |
+| `dispatch` | Send a prompt to any single AI model | Two modes: `text` (prompt-response) and `agent` (full tool access). 27 taskType auto-routes across 5 tiers |
 | `batch-dispatch` | Same prompt to multiple models in parallel | Min 2 models; comparison output with wall-time reporting |
 | `council` | Multi-model discussion (models see each other's responses) | Shared session; structured or freeform modes; auto-selects 4 diverse models |
 
 **Requires**: `opencode serve` running (server at `http://127.0.0.1:4096`).
-**Primer**: `_dispatch-primer.md` auto-prepended to every dispatch — ensures all models have project context.
+**Primer**: `_dispatch-primer.md` auto-prepended to every dispatch and council — ensures all models have project context, core principles, and methodology.
+
+### Dispatch Modes
+
+| Mode | Tool Access | Use Case | Default Timeout |
+|------|-------------|----------|-----------------|
+| `text` (default) | None — prompt in, text out | Reviews, opinions, research, boilerplate generation | 120s |
+| `agent` | Full — file read/write, bash, glob, grep | Implementation tasks where model needs to navigate codebase, edit code, run validation | 300s |
+
+**Agent mode permissions**: read, edit, bash, glob, grep, list, todoread, todowrite. Denies: task (no recursive dispatch), external_directory, webfetch, websearch.
+
+**Agent mode example:**
+```
+dispatch({ taskType: "complex-codegen", mode: "agent", prompt: "Implement X. Read existing code first. Run ruff/mypy after." })
+```
 
 ---
 

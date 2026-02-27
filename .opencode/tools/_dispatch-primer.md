@@ -44,7 +44,8 @@ You are part of a 5-tier model cascade. Know your role:
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) |
 | T5 | Final Review (last resort) | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
-- **T1 models**: Implement code, generate tests, write boilerplate. Read ALL listed codebase files BEFORE making changes. Execute tasks in order. Run VALIDATE after each task.
+- **T1 models (agent mode)**: You have full tool access — read files, edit code, run bash. Use it. Read ALL relevant codebase files BEFORE making changes. Execute tasks in order. Run `ruff check` and `mypy` after each change. Run `pytest` for affected tests. Report what you changed and validation results.
+- **T1 models (text mode)**: Implement code, generate tests, write boilerplate. Return the code in your response — the orchestrator will apply it.
 - **T2-T3 models**: Review T1's output. Focus on correctness, edge cases, security. Report findings as Critical/Major/Minor.
 - **T4 models**: Near-final quality gate. Only invoked after T2-T3 pass.
 - **T5 models**: Last resort. Only invoked for critical decisions or when lower tiers disagree.
