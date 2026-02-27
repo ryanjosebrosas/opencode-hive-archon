@@ -1,12 +1,12 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 0/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 1/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
 ### A. Type Safety & Config (4 specs)
 
-- [ ] `P1-01` **mypy-strict-compliance** (light) — Fix 5 mypy errors in schemas.py, retrieval_router.py, voyage.py to achieve zero-error mypy --strict
+- [x] `P1-01` **mypy-strict-compliance** (light) — Fix 5 mypy errors in schemas.py, retrieval_router.py, voyage.py to achieve zero-error mypy --strict
   - depends: none
   - touches: schemas.py, orchestration/retrieval_router.py, services/voyage.py
   - acceptance: `mypy --strict backend/src/second_brain` = 0 errors. All 293 existing tests pass.

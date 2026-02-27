@@ -1,0 +1,19 @@
+{
+  "lastSpec": "P1-01",
+  "completed": ["P1-01"],
+  "currentPillar": 1,
+  "totalSpecs": 83,
+  "patternsEstablished": ["dict[str, Any] for all unparameterized dicts", "type: ignore[attr-defined] for SDK imports without __all__"],
+  "decisionsLog": [
+    {
+      "spec": "P1-01",
+      "decision": "Use dict[str, Any] not TypedDict for model_dump() outputs and metadata dicts",
+      "reason": "Accurate typing without premature TypedDict definitions — stronger typing deferred to dedicated specs"
+    },
+    {
+      "spec": "P1-01",
+      "decision": "type: ignore[attr-defined] for voyageai.Client, not a type stub",
+      "reason": "Minimal maintenance burden, voyageai may publish stubs later"
+    }
+  ]
+}
