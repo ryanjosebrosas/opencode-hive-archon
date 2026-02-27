@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 5/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 6/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -33,7 +33,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 5/83 complete
   - touches: contracts/knowledge.py, migrations/ (002_extend_source_origin.sql)
   - acceptance: KnowledgeChunk instantiates with source_origin="zoom". Metadata field accepts nested dicts. Existing tests pass.
 
-- [ ] `P1-06` **schema-versioning** (standard) — Add schema_versions table tracking migration checksums. Drift detection: compare expected vs actual schema on startup. Alert on mismatch.
+- [x] `P1-06` **schema-versioning** (standard) — Add schema_versions table tracking migration checksums. Drift detection: compare expected vs actual schema on startup. Alert on mismatch.
   - depends: P1-05
   - touches: migrations/003_schema_versions.sql (new), services/schema_manager.py (new), tests/test_schema_manager.py (new)
   - acceptance: schema_versions table tracks all applied migrations with SHA-256 checksums. Startup check detects drift (modified migration file). Drift = structured error with details.

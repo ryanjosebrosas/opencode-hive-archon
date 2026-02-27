@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-05",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05"],
+  "lastSpec": "P1-06",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -18,7 +18,10 @@
     "Defensive dict copy in error context attributes",
     "raise TypedError(...) from e for exception chaining in recall.py",
     "get_args(Literal) to derive validation sets from type definitions",
-    "DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT for migration pattern"
+    "DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT for migration pattern",
+    "Pure comparison functions for drift detection (no DB dependency)",
+    "Strict regex for migration filename parsing",
+    "SchemaError with structured context for drift reporting"
   ],
   "decisionsLog": [
     {
@@ -70,6 +73,11 @@
       "spec": "P1-05",
       "decision": "Derive _VALID_SOURCE_ORIGINS via get_args(SourceOriginValue) instead of hardcoded set",
       "reason": "Eliminates triple-definition drift risk — single source of truth in Literal type"
+    },
+    {
+      "spec": "P1-06",
+      "decision": "SchemaManager uses pure functions: scan_migrations (filesystem), detect_drift (comparison), validate_schema_integrity (orchestrator)",
+      "reason": "Testable without DB. Core logic is pure Python comparison. DB integration deferred to migration-runner spec (P1-07)."
     }
   ]
 }
