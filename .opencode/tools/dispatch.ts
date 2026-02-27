@@ -1,5 +1,21 @@
 import { tool } from "@opencode-ai/plugin"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client"
+import { readFileSync } from "node:fs"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+// Load project primer once at module scope — prepended to every dispatched prompt
+const PRIMER_FILENAME = "_dispatch-primer.md"
+let _primerContent: string | null = null
+try {
+  const toolDir = typeof import.meta.dirname === "string"
+    ? import.meta.dirname
+    : dirname(fileURLToPath(import.meta.url))
+  _primerContent = readFileSync(join(toolDir, PRIMER_FILENAME), "utf-8")
+} catch {
+  // Non-fatal: primer file missing or unreadable — dispatches proceed without it
+  _primerContent = null
+}
 
 const getErrorMessage = (err: unknown): string => {
   if (err instanceof Error) {
@@ -62,42 +78,65 @@ const getConnectedProviders = async (baseUrl: string): Promise<string[]> => {
   }
 }
 
+// 5-Tier Cost-Optimized Model Cascade
+// T1: Implementation (FREE) — bailian-coding-plan / zai-coding-plan fallback
+// T2: First Validation (FREE) — zai-coding-plan GLM thinking models
+// T3: Second Validation (FREE) — ollama-cloud independent model family
+// T4: Code Review (PAID cheap) — openai Codex
+// T5: Final Review (PAID expensive) — anthropic Claude (last resort only)
 const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
-  // Tier 1: Fast / Simple
+  // === T1: Implementation (FREE — bailian-coding-plan) ===
+  // T1a: Fast / Simple tasks → qwen3-coder-next
   "boilerplate": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
   "simple-fix": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
   "quick-check": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
   "general-opinion": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
-  // Tier 2: Code-Specialized
+  // T1b: Code-heavy tasks → qwen3-coder-plus
   "test-scaffolding": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
   "logic-verification": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  "code-review": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
   "api-analysis": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  // Tier 3: Reasoning / Architecture
+  // T1c: Complex implementation / reasoning → qwen3.5-plus
+  "complex-codegen": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
+  "complex-fix": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
   "research": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
   "architecture": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
   "library-comparison": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  // Tier 4: Long Context / Factual
+  // T1d: Long context / factual → kimi-k2.5
   "docs-lookup": { provider: "bailian-coding-plan", model: "kimi-k2.5" },
-  // Tier 5: Prose / Documentation
+  // T1e: Prose / documentation → minimax-m2.5
   "docs-generation": { provider: "bailian-coding-plan", model: "minimax-m2.5" },
-  // Tier 6: Strongest Reasoning
-  "security-review": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
-  "complex-codegen": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
-  "complex-fix": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
-  "deep-research": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
+
+  // === T2: First Validation (FREE — zai-coding-plan GLM thinking) ===
+  "thinking-review": { provider: "zai-coding-plan", model: "glm-5" },
+  "first-validation": { provider: "zai-coding-plan", model: "glm-5" },
+  "code-review": { provider: "zai-coding-plan", model: "glm-5" },
+  "security-review": { provider: "zai-coding-plan", model: "glm-5" },
+
+  // === T3: Second Validation (FREE — ollama-cloud independent family) ===
+  "second-validation": { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  "deep-research": { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  "independent-review": { provider: "ollama-cloud", model: "deepseek-v3.2" },
+
+  // === T4: Code Review gate (PAID cheap — openai Codex) ===
+  "codex-review": { provider: "openai", model: "gpt-5.3-codex" },
+  "codex-validation": { provider: "openai", model: "gpt-5.3-codex" },
+
+  // === T5: Final Review (PAID expensive — anthropic, last resort only) ===
+  "final-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
+  "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
 }
 
 export default tool({
   description:
     "Dispatch a prompt to any connected AI model via the OpenCode server. " +
-    "Use this to delegate tasks (code generation, review, research, analysis) to other models " +
-    "and receive their response inline. Requires `opencode serve` running. " +
-    "Supports: auto-routing via taskType (e.g., 'security-review', 'boilerplate', 'research'), " +
-    "custom system prompts, structured JSON output (via jsonSchema), and timeouts. " +
-    "Either provide taskType for auto-routing, or explicit provider/model. " +
-    "Provider/model examples: anthropic/claude-sonnet-4-20250514, openai/gpt-4.1, " +
-    "bailian-coding-plan/qwen3.5-plus, bailian-coding-plan/qwen3-coder-plus",
+    "5-tier cost-optimized cascade: T1 Implementation (FREE: bailian qwen3), " +
+    "T2 First Validation (FREE: zai glm-5), T3 Second Validation (FREE: ollama deepseek), " +
+    "T4 Code Review (PAID cheap: openai codex), T5 Final Review (PAID: anthropic, last resort). " +
+    "Auto-routes via taskType or explicit provider/model. " +
+    "taskType examples: boilerplate, complex-codegen, code-review, thinking-review, " +
+    "second-validation, codex-review, final-review. " +
+    "Provider/model examples: bailian-coding-plan/qwen3.5-plus, zai-coding-plan/glm-5, " +
+    "ollama-cloud/deepseek-v3.2, openai/gpt-5.3-codex, anthropic/claude-sonnet-4-6",
   args: {
     provider: tool.schema
       .string()
@@ -163,10 +202,13 @@ export default tool({
         "Optional: auto-route to the best model for this task type. " +
           "When provided, provider/model are resolved automatically. " +
           "Explicit provider/model args override taskType if both are given. " +
-          "Values: boilerplate, simple-fix, quick-check, general-opinion, " +
-          "test-scaffolding, logic-verification, code-review, api-analysis, " +
-          "research, architecture, library-comparison, docs-lookup, " +
-          "docs-generation, security-review, complex-codegen, complex-fix, deep-research",
+          "T1 Implementation (FREE): boilerplate, simple-fix, quick-check, general-opinion, " +
+          "test-scaffolding, logic-verification, api-analysis, complex-codegen, complex-fix, " +
+          "research, architecture, library-comparison, docs-lookup, docs-generation. " +
+          "T2 First Validation (FREE): thinking-review, first-validation, code-review, security-review. " +
+          "T3 Second Validation (FREE): second-validation, deep-research, independent-review. " +
+          "T4 Code Review (PAID cheap): codex-review, codex-validation. " +
+          "T5 Final Review (PAID expensive): final-review, critical-review.",
       ),
   },
   async execute(args, _context) {
@@ -297,7 +339,12 @@ export default tool({
       }
     }
 
-    // 4. Send prompt to target model
+    // 4. Build prompt with optional primer prefix
+    const promptText = _primerContent
+      ? `${_primerContent}\n\n---\n\n${args.prompt}`
+      : args.prompt
+
+    // 4.1. Send prompt to target model
     let result: unknown
     try {
       result = await client.session.prompt(
@@ -309,7 +356,7 @@ export default tool({
           },
           system: args.systemPrompt,
           format: parsedFormat,
-          parts: [{ type: "text" as const, text: args.prompt }],
+          parts: [{ type: "text" as const, text: promptText }],
         },
         { signal: controller.signal },
       )
@@ -455,6 +502,7 @@ export default tool({
 
     // 7. Return response with metadata header
     const modifiers: string[] = []
+    if (_primerContent) modifiers.push("primer")
     if (routedVia) modifiers.push(`routed: ${routedVia}`)
     if (args.systemPrompt) modifiers.push("custom-system")
     if (parsedFormat) modifiers.push("structured-json")

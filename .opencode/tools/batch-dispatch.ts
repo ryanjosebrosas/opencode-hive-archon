@@ -1,5 +1,20 @@
 import { tool } from "@opencode-ai/plugin"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client"
+import { readFileSync } from "node:fs"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+// Load project primer once at module scope — prepended to every dispatched prompt
+const PRIMER_FILENAME = "_dispatch-primer.md"
+let _primerContent: string | null = null
+try {
+  const toolDir = typeof import.meta.dirname === "string"
+    ? import.meta.dirname
+    : dirname(fileURLToPath(import.meta.url))
+  _primerContent = readFileSync(join(toolDir, PRIMER_FILENAME), "utf-8")
+} catch {
+  _primerContent = null
+}
 
 // --- Utility functions (duplicated from dispatch.ts for tool independence) ---
 
@@ -73,31 +88,39 @@ interface ModelResult {
 }
 
 // --- Task routing (duplicated from dispatch.ts — tools must be self-contained) ---
+// 5-Tier Cost-Optimized Model Cascade (mirrors dispatch.ts)
 
 const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
-  // Tier 1: Fast / Simple
+  // === T1: Implementation (FREE — bailian-coding-plan) ===
   "boilerplate": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
   "simple-fix": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
   "quick-check": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
   "general-opinion": { provider: "bailian-coding-plan", model: "qwen3-coder-next" },
-  // Tier 2: Code-Specialized
   "test-scaffolding": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
   "logic-verification": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  "code-review": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
   "api-analysis": { provider: "bailian-coding-plan", model: "qwen3-coder-plus" },
-  // Tier 3: Reasoning / Architecture
+  "complex-codegen": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
+  "complex-fix": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
   "research": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
   "architecture": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
   "library-comparison": { provider: "bailian-coding-plan", model: "qwen3.5-plus" },
-  // Tier 4: Long Context / Factual
   "docs-lookup": { provider: "bailian-coding-plan", model: "kimi-k2.5" },
-  // Tier 5: Prose / Documentation
   "docs-generation": { provider: "bailian-coding-plan", model: "minimax-m2.5" },
-  // Tier 6: Strongest Reasoning
-  "security-review": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
-  "complex-codegen": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
-  "complex-fix": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
-  "deep-research": { provider: "anthropic", model: "claude-sonnet-4-20250514" },
+  // === T2: First Validation (FREE — zai-coding-plan GLM thinking) ===
+  "thinking-review": { provider: "zai-coding-plan", model: "glm-5" },
+  "first-validation": { provider: "zai-coding-plan", model: "glm-5" },
+  "code-review": { provider: "zai-coding-plan", model: "glm-5" },
+  "security-review": { provider: "zai-coding-plan", model: "glm-5" },
+  // === T3: Second Validation (FREE — ollama-cloud) ===
+  "second-validation": { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  "deep-research": { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  "independent-review": { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  // === T4: Code Review (PAID cheap — openai Codex) ===
+  "codex-review": { provider: "openai", model: "gpt-5.3-codex" },
+  "codex-validation": { provider: "openai", model: "gpt-5.3-codex" },
+  // === T5: Final Review (PAID expensive — anthropic) ===
+  "final-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
+  "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
 }
 
 // --- Main tool ---
@@ -340,6 +363,11 @@ export default tool({
           }
         }
 
+        // Build prompt with optional primer prefix
+        const promptText = _primerContent
+          ? `${_primerContent}\n\n---\n\n${args.prompt}`
+          : args.prompt
+
         // Send prompt
         const result = await client.session.prompt(
           {
@@ -350,7 +378,7 @@ export default tool({
             },
             system: args.systemPrompt,
             format: parsedFormat,
-            parts: [{ type: "text" as const, text: args.prompt }],
+            parts: [{ type: "text" as const, text: promptText }],
           },
           { signal: controller.signal },
         )
@@ -466,6 +494,7 @@ export default tool({
 
     // Build modifiers string
     const modifiers: string[] = []
+    if (_primerContent) modifiers.push("primer")
     if (args.systemPrompt) modifiers.push("custom-system")
     if (parsedFormat) modifiers.push("structured-json")
     if (args.timeout) modifiers.push(`timeout-${args.timeout}s`)

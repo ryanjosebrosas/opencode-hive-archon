@@ -91,8 +91,7 @@ After the primary `/code-review` runs, consider dispatching the changed code to 
 **How to dispatch a review:**
 ```
 dispatch({
-  provider: "bailian-coding-plan",
-  model: "qwen3-coder-plus",
+  taskType: "code-review",
   prompt: "Review this code change for bugs, security issues, and quality problems:\n\n{paste git diff or relevant code snippets}\n\nContext: {what was changed and why}\n\nReport findings as:\n- Critical: {description}\n- Major: {description}\n- Minor: {description}\n\nIf no issues found, say 'No issues found.'"
 })
 ```
@@ -112,8 +111,7 @@ Additionally, if you have simple, isolated fixes (e.g., "add missing null check 
 **How to dispatch a simple fix:**
 ```
 dispatch({
-  provider: "bailian-coding-plan",
-  model: "qwen3-coder-next",
+  taskType: "simple-fix",
   prompt: "Fix this code issue:\n\nFile: {filename}\nIssue: {description from review}\nCurrent code:\n```\n{paste current code}\n```\n\nReturn the fixed code only, no explanations."
 })
 ```
@@ -124,14 +122,17 @@ dispatch({
 - If the dispatched fix looks wrong, implement it yourself
 - Track dispatched fixes in the loop report: "Fix dispatched to {model}: {description}"
 
-### Model Routing for Loop Tasks
+### Model Routing for Loop Tasks (5-Tier Cascade)
 
-| Task | Recommended Provider/Model | Why |
-|------|---------------------------|-----|
-| Second review opinion | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized review |
-| Security-focused review | `anthropic/claude-sonnet-4-20250514` | Strong security analysis |
-| Simple fix generation | `bailian-coding-plan/qwen3-coder-next` | Fast, accurate for small fixes |
-| Complex fix generation | `anthropic/claude-sonnet-4-20250514` | Best reasoning for complex logic |
+| Task | Tier | taskType | Provider/Model | Cost |
+|------|------|----------|----------------|------|
+| First code review | T2 | `code-review` | `zai-coding-plan/glm-5` | FREE |
+| Second review opinion | T3 | `second-validation` | `ollama-cloud/deepseek-v3.2` | FREE |
+| Simple fix generation | T1a | `simple-fix` | `bailian-coding-plan/qwen3-coder-next` | FREE |
+| Complex fix generation | T1c | `complex-fix` | `bailian-coding-plan/qwen3.5-plus` | FREE |
+| Security-focused review | T2 | `security-review` | `zai-coding-plan/glm-5` | FREE |
+| Near-final code review | T4 | `codex-review` | `openai/gpt-5.3-codex` | PAID (cheap) |
+| Final critical review | T5 | `final-review` | `anthropic/claude-sonnet-4-6` | PAID (last resort) |
 
 ---
 

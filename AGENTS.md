@@ -95,16 +95,21 @@ All guides in `reference/`. Load when the task requires it.
 
 ---
 
-## Model Strategy
+## Model Strategy — 5-Tier Cost-Optimized Cascade
 
-Separate thinking from doing. Use the right model for each phase:
+Maximize free/cheap models. Anthropic is last resort only.
 
-| Phase | Recommended Model | Why |
-|-------|-------------------|-----|
-| `/planning` | Smart model (e.g., claude-sonnet, opencode/opus) | Deep reasoning produces better plans |
-| `/execute` | Fast model (default) | Follows plans well at lower cost |
-| `/code-review` | Fast model (via subagents) | 4 parallel agents |
-| `/commit`, `/prime` | Fast model | General-purpose tasks |
+| Tier | Role | Provider/Model | Cost | Used By |
+|------|------|----------------|------|---------|
+| T1 | Implementation | `bailian-coding-plan/qwen3.5-plus` (+ coder-next, coder-plus) | FREE | `/execute` dispatch |
+| T2 | First Validation | `zai-coding-plan/glm-5` | FREE | `/code-review`, `/code-loop` |
+| T3 | Second Validation | `ollama-cloud/deepseek-v3.2` | FREE | `/code-loop` second opinion |
+| T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) | `/code-loop` near-final |
+| T5 | Final Review | `anthropic/claude-sonnet-4-6` | PAID (expensive) | `/final-review` last resort |
+
+**Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
+**Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7`.
+**Council**: Multi-model debates via `council.ts` (4 models across tiers).
 
 ---
 

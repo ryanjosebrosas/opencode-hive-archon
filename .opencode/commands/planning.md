@@ -257,8 +257,7 @@ If requirements are still ambiguous, ask targeted clarification before continuin
    **How to dispatch a research query:**
    ```
    dispatch({
-     provider: "bailian-coding-plan",
-     model: "qwen3.5-plus",
+     taskType: "research",
      prompt: "I am planning a {feature type} feature using {stack}.\nQuestion: {specific question}\nContext: {relevant context from codebase exploration}\nBe concise — 2-3 paragraphs max.",
      timeout: 30,
      systemPrompt: "You are a technical research assistant. Answer concisely with concrete details. Include code examples when relevant. Do not ask follow-up questions."
@@ -309,8 +308,7 @@ After local docs and Archon retrieval, if specific documentation gaps remain, us
 **How to dispatch a documentation query:**
 ```
 dispatch({
-  provider: "bailian-coding-plan",
-  model: "qwen3.5-plus",
+  taskType: "docs-lookup",
   prompt: "Documentation research for planning:\n\nTopic: {library/API/pattern}\nSpecific question: {what you need to know}\nContext: {how it will be used in the planned feature}\n\nProvide: exact API signatures, required imports, configuration, and common gotchas.",
   timeout: 30,
   systemPrompt: "You are a documentation research assistant. Provide precise, factual API documentation. Include exact function signatures, parameter types, and return types. If uncertain, say so."
@@ -323,17 +321,20 @@ dispatch({
 - If dispatch provides code examples, verify they compile/match current library versions before including in the plan
 - Note in plan: "Dispatch-sourced ({model}): {documentation reference}"
 
-**Model routing for planning research dispatch:**
+**Model routing for planning research dispatch (5-Tier Cascade):**
 
-| Research Type | Recommended Provider/Model | Why |
-|---------------|---------------------------|-----|
-| Library comparison / architecture questions | `bailian-coding-plan/qwen3.5-plus` | Strong reasoning, broad knowledge |
-| API surface / code pattern questions | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized with thinking |
-| Documentation lookups / version compatibility | `bailian-coding-plan/kimi-k2.5` | Long context, good at factual recall |
-| Quick factual checks | `bailian-coding-plan/qwen3-coder-next` | Fast response, good enough for simple lookups |
-| Deep research / complex tradeoff analysis | `anthropic/claude-sonnet-4-20250514` | Strongest reasoning when accuracy is critical |
+| Research Type | Tier | taskType | Provider/Model | Cost |
+|---------------|------|----------|----------------|------|
+| Quick factual checks | T1a | `quick-check` | `bailian-coding-plan/qwen3-coder-next` | FREE |
+| API surface / code patterns | T1b | `api-analysis` | `bailian-coding-plan/qwen3-coder-plus` | FREE |
+| Library comparison / architecture | T1c | `research` | `bailian-coding-plan/qwen3.5-plus` | FREE |
+| Documentation / version compat | T1d | `docs-lookup` | `bailian-coding-plan/kimi-k2.5` | FREE |
+| Thinking review / validation | T2 | `thinking-review` | `zai-coding-plan/glm-5` | FREE |
+| Independent second opinion | T3 | `deep-research` | `ollama-cloud/deepseek-v3.2` | FREE |
+| Deep research (if free fails) | T4 | `codex-review` | `openai/gpt-5.3-codex` | PAID (cheap) |
+| Critical accuracy (last resort) | T5 | `final-review` | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
-These are recommendations. Use any connected model that fits the query. If unsure, default to `qwen3.5-plus`.
+Default to FREE tiers. Only escalate to T4/T5 when free models give conflicting or uncertain results.
 
 ### Phase 4: Strategic Design and Synthesis
 

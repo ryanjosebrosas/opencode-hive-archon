@@ -132,30 +132,33 @@ Use it to accelerate execution by delegating appropriate subtasks or gathering p
 - When the plan explicitly specifies how to implement something (trust the plan)
 - When `opencode serve` is not running (dispatch will error — that's fine, do it yourself)
 
-**Model routing for execution tasks:**
-| Task Type | Recommended Provider/Model | Why |
-|-----------|---------------------------|-----|
-| Boilerplate generation | `bailian-coding-plan/qwen3-coder-next` | Fast, good at patterns |
-| Test scaffolding | `bailian-coding-plan/qwen3-coder-plus` | Code-specialized |
-| Research / API lookup | `bailian-coding-plan/qwen3.5-plus` | Strong reasoning |
-| Documentation | `bailian-coding-plan/minimax-m2.5` | Good prose generation |
-| Complex code generation | `anthropic/claude-sonnet-4-20250514` | Strongest reasoning |
+**Model routing for execution tasks (5-Tier Cascade — maximize free models):**
+| Task Type | Tier | Provider/Model | Cost |
+|-----------|------|----------------|------|
+| Boilerplate / simple fixes | T1a | `bailian-coding-plan/qwen3-coder-next` | FREE |
+| Test scaffolding / code-heavy | T1b | `bailian-coding-plan/qwen3-coder-plus` | FREE |
+| Complex codegen / research | T1c | `bailian-coding-plan/qwen3.5-plus` | FREE |
+| Documentation | T1e | `bailian-coding-plan/minimax-m2.5` | FREE |
+| First validation / thinking review | T2 | `zai-coding-plan/glm-5` | FREE |
+| Second validation / independent | T3 | `ollama-cloud/deepseek-v3.2` | FREE |
+| Code review gate | T4 | `openai/gpt-5.3-codex` | PAID (cheap) |
+| Final review (last resort only) | T5 | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
+
+**Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7` for T1 tasks.
 
 **How to dispatch a subtask:**
 ```
 dispatch({
-  provider: "bailian-coding-plan",
-  model: "qwen3-coder-next",
-  prompt: "Generate a Python {type} that:\n- {requirement 1}\n- {requirement 2}\n\nFollow this pattern:\n```python\n{paste example from plan}\n```\n\nReturn only the code, no explanations."
+   taskType: "boilerplate",
+   prompt: "Generate a Python {type} that:\n- {requirement 1}\n- {requirement 2}\n\nFollow this pattern:\n```python\n{paste example from plan}\n```\n\nReturn only the code, no explanations."
 })
 ```
 
 **How to dispatch research:**
 ```
 dispatch({
-  provider: "bailian-coding-plan",
-  model: "qwen3.5-plus",
-  prompt: "I need to implement {task description}.\nQuestion: {specific question about API/pattern/approach}\nContext: {relevant context from the plan}"
+   taskType: "research",
+   prompt: "I need to implement {task description}.\nQuestion: {specific question about API/pattern/approach}\nContext: {relevant context from the plan}"
 })
 ```
 
