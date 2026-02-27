@@ -58,12 +58,41 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 | Tool | Purpose | Key Feature |
 |------|---------|-------------|
-| `dispatch` | Send a prompt to any single AI model | Two modes: `text` (prompt-response) and `agent` (full tool access). 27 taskType auto-routes across 5 tiers |
+| `dispatch` | Send a prompt to any single AI model | Three modes: `text` (prompt-response), `agent` (full tool access), `relay` (XML tag tool access for free providers). 27 taskType auto-routes across 5 tiers |
 | `batch-dispatch` | Same prompt to multiple models in parallel | Min 2 models; comparison output with wall-time reporting |
 | `council` | Multi-model discussion (models see each other's responses) | Shared session; structured or freeform modes; auto-selects 4 diverse models |
 
 **Requires**: `opencode serve` running (server at `http://127.0.0.1:4096`).
 **Primer**: `_dispatch-primer.md` auto-prepended to every dispatch and council — ensures all models have project context, core principles, and methodology.
+
+### Shared Relay Utilities
+
+File: `.opencode/tools/_relay-utils.ts`
+
+Shared module extracted from dispatch.ts. Both dispatch.ts and council.ts import from it.
+
+| Export | Purpose |
+|--------|---------|
+| `RELAY_INSTRUCTIONS` | Full relay mode instructions (for T1-T3 text-based tool access) |
+| `ARCHON_RELAY_INSTRUCTIONS` | Archon-only instructions (for T4-T5 agent mode with Archon access) |
+| `parseToolCalls()` | Parse XML `<tool>` tags from model response text |
+| `executeTool()` | Execute a parsed tool call (read, glob, grep, bash, edit, archon_search, archon_sources) |
+| `relayLoop()` | Full relay loop: send prompt → parse tools → execute → send results → repeat (max 5 turns) |
+| `initArchonSession()` | Initialize Archon MCP session (required before tool calls) |
+| `callArchonTool()` | Call an Archon MCP tool with JSON-RPC |
+
+**Relay mode flow:**
+1. Prepend RELAY_INSTRUCTIONS to prompt (teaches model XML tag format)
+2. Send to model via text mode (no native tool-use API needed)
+3. Parse `<tool>` tags from response
+4. Execute tools locally (file read, grep, Archon MCP, etc.)
+5. Send results back as `<tool_result>` blocks
+6. Repeat until model responds with no tool tags (max 5 turns)
+
+**Agent mode Archon access:**
+- T4/T5 agent mode sessions get native file tools from OpenCode
+- ARCHON_RELAY_INSTRUCTIONS is prepended so they can also query Archon via XML tags
+- Post-response loop checks for archon_search/archon_sources tags and executes them
 
 ### Dispatch Modes
 

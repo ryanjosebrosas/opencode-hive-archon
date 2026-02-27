@@ -100,13 +100,14 @@ Each level gates the next:
 The main development loop for building from empty project to working MVP:
 
 ```
-/mvp → /prd → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /pillars → /decompose → /build next (repeat) → /ship
 ```
 
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
 | `/mvp` | Define or refine product vision → `mvp.md` | Start of a new project or major pivot |
 | `/prd` | Full product requirements document → `PRD.md` | After `/mvp`, detailed what + why + user stories |
+| `/pillars` | Analyze PRD → infrastructure pillar definitions → `specs/PILLARS.md` | After `/prd`, define infrastructure layers and gate criteria |
 | `/decompose` | Break PRD into dependency-sorted spec list → `specs/BUILD_ORDER.md` | After `/prd`, or when re-planning |
 | `/build [next\|spec]` | Semi-auto: plan spec → approve → implement → validate → commit | The main loop — repeat until all specs done |
 | `/ship` | Full validation pyramid + T5 review + PR | When all specs complete |
@@ -196,10 +197,11 @@ These are used internally by `/build` or available for manual use:
 
 1. **Vision** (`/mvp`) → Defines `mvp.md` (what to build, who for, success signals)
 2. **Requirements** (`/prd`) → Produces `PRD.md` (detailed product requirements, user stories, success criteria)
-3. **Decompose** (`/decompose`) → Creates `specs/BUILD_ORDER.md` (dependency-sorted spec list from PRD)
-4. **Build** (`/build next`) → Plan + approve + implement + validate + commit (one spec per loop)
-5. **Sync** (`/sync`) → Checkpoint: validate state between sessions or before heavy specs
-6. **Ship** (`/ship`) → Full validation pyramid + T5 review + PR when all specs done
+3. **Pillars** (`/pillars`) → Produces `specs/PILLARS.md` (infrastructure layers with gate criteria)
+4. **Decompose** (`/decompose`) → Creates `specs/BUILD_ORDER.md` (pillar-grouped spec list)
+5. **Build** (`/build next`) → Plan + approve + implement + validate + commit (one spec per loop)
+6. **Sync** (`/sync`) → Checkpoint: validate state between sessions or before heavy specs
+7. **Ship** (`/ship`) → Full validation pyramid + T5 review + PR when all specs done
 
 ---
 
@@ -221,19 +223,24 @@ These are used internally by `/build` or available for manual use:
    > /prd
    ```
 
-4. **Decompose into specs** (once, re-runnable):
+4. **Define infrastructure pillars** (once, re-runnable):
+   ```
+   > /pillars
+   ```
+
+5. **Decompose into specs** (once, re-runnable):
    ```
    > /decompose
    ```
 
-5. **Build specs** (the main loop — repeat until done):
+6. **Build specs** (the main loop — repeat until done):
    ```
    > /build next
    ```
 
-6. **Ship when complete**:
+7. **Ship when complete**:
    ```
    > /ship
    ```
 
-**Full pipeline**: `/prime` → `/mvp` → `/prd` → `/decompose` → `/build next` (repeat) → `/ship`
+**Full pipeline**: `/prime` → `/mvp` → `/prd` → `/pillars` → `/decompose` → `/build next` (repeat) → `/ship`
