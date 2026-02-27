@@ -77,6 +77,18 @@ You are part of a 5-tier model cascade. Know your role:
 - All real-provider flags default to `false` — existing tests run without env vars
 - If `bailian-coding-plan` returns 404, fall back to `zai-coding-plan/glm-4.7`
 
+## Archon MCP Tools (Available in agent mode)
+
+If you have MCP access, these Archon tools are available for RAG search and task management:
+- `rag_search_knowledge_base` — Search curated documentation (use 2-5 keyword queries)
+- `rag_search_code_examples` — Find reference code implementations
+- `rag_read_full_page` — Read full documentation pages
+- `rag_get_available_sources` — List indexed documentation sources
+- `manage_task` / `find_tasks` — Track tasks across sessions
+- `manage_project` / `find_projects` — Project management
+
+Endpoint: http://159.195.45.47:8051/mcp
+
 ## Validation Requirements
 
 Every change must pass all 5 levels:

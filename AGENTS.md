@@ -1,3 +1,9 @@
+> **THIS MODEL (Claude Opus) IS THE ORCHESTRATOR.**
+> It handles ONLY: planning, architecture, orchestration, exploration, strategy.
+> ALL implementation (file edits, code writing, refactoring) MUST be dispatched to T1-T5 models.
+> Opus writing code directly is a VIOLATION. No exceptions.
+> If dispatch tools are unavailable, write a plan to `requests/` and STOP.
+
 # Claude Code Coding System
 
 A comprehensive AI-assisted development methodology combining systematic planning, implementation discipline, and validation strategies. Optimized for [Claude Code](https://Claude.ai).
