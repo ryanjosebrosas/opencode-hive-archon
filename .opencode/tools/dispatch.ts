@@ -100,8 +100,8 @@ const getConnectedProviders = async (baseUrl: string): Promise<string[]> => {
 }
 
 // 5-Tier Cost-Optimized Model Cascade — 51 free models across 3 providers
-// T1: Implementation (FREE) — bailian-coding-plan-test (8 models: qwen3, kimi, minimax, glm)
-// T2: First Validation (FREE) — zai-coding-plan (10 GLM models: thinking, flash, standard)
+// T1: Implementation (FREE) — bailian-coding-plan-test (6 models: qwen3-coder-next, qwen3-coder-plus, qwen3.5-plus, qwen3-max, kimi-k2.5, minimax-m2.5)
+// T2: First Validation (FREE) — zai-coding-plan (5 GLM models: glm-5, glm-4.5, glm-4.7, glm-4.7-flash, glm-4.7-flashx)
 // T3: Second Validation (FREE) — ollama-cloud (33 models: deepseek, kimi, gemini, mistral, qwen, devstral)
 // T4: Code Review (PAID cheap) — openai Codex
 // T5: Final Review (PAID expensive) — anthropic Claude (last resort only)
@@ -130,6 +130,15 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   // T1e: Prose / documentation → minimax-m2.5
   "docs-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
   "docstring-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
+  // T1f: Complex reasoning / plan review → qwen3-max
+  "deep-plan-review": { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+  "complex-reasoning": { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+  // T1b expanded: code quality review
+  "code-quality-review": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  // T1d expanded: long context review
+  "long-context-review": { provider: "bailian-coding-plan-test", model: "kimi-k2.5" },
+  // T1e expanded: changelog
+  "changelog-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
 
   // === T2: First Validation (FREE — zai-coding-plan GLM family) ===
   "thinking-review": { provider: "zai-coding-plan", model: "glm-5" },
@@ -140,6 +149,16 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   "fast-review": { provider: "zai-coding-plan", model: "glm-4.7-flashx" },
   "style-review": { provider: "zai-coding-plan", model: "glm-4.7-flash" },
   "regression-check": { provider: "zai-coding-plan", model: "glm-4.7" },
+  // T2b: Architecture / design → glm-4.5 (ZAI flagship)
+  "architecture-audit": { provider: "zai-coding-plan", model: "glm-4.5" },
+  "design-review": { provider: "zai-coding-plan", model: "glm-4.5" },
+  // T2a expanded: logic review (separate from code-review)
+  "logic-review": { provider: "zai-coding-plan", model: "glm-5" },
+  // T2c expanded: compatibility check
+  "compatibility-check": { provider: "zai-coding-plan", model: "glm-4.7" },
+  // T2d/e expanded: more fast check roles
+  "ultra-fast-check": { provider: "zai-coding-plan", model: "glm-4.7-flashx" },
+  "quick-style-check": { provider: "zai-coding-plan", model: "glm-4.7-flash" },
 
   // === T3: Second Validation (FREE — ollama-cloud diverse models) ===
   "second-validation": { provider: "ollama-cloud", model: "deepseek-v3.2" },
@@ -321,7 +340,7 @@ export default tool({
     // Agent mode provider compatibility with auto-fallback to relay
     // Agent mode requires providers that support tool-use API (Anthropic, OpenAI).
     // Free providers (bailian-coding-plan-test, zai, ollama) return 404 on agent mode — they don't support tool calling.
-    const AGENT_COMPATIBLE_PROVIDERS = ["anthropic", "openai", "opencode"]
+    const AGENT_COMPATIBLE_PROVIDERS = ["anthropic", "openai"]
     let autoFallbackNote = ""
     
     if (isAgentMode && resolvedProvider && !AGENT_COMPATIBLE_PROVIDERS.includes(resolvedProvider)) {

@@ -28,14 +28,16 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 | Tier | TaskTypes | Routes To | Cost |
 |------|-----------|-----------|------|
 | T1a (fast) | boilerplate, simple-fix, quick-check, general-opinion, pre-commit-analysis | qwen3-coder-next | FREE |
-| T1b (code) | test-scaffolding, test-generation, logic-verification, api-analysis | qwen3-coder-plus | FREE |
+| T1b (code) | test-scaffolding, test-generation, logic-verification, api-analysis, code-quality-review | qwen3-coder-plus | FREE |
 | T1c (complex) | complex-codegen, complex-fix, research, architecture, library-comparison, pattern-scan | qwen3.5-plus | FREE |
-| T1d (long-ctx) | docs-lookup | kimi-k2.5 | FREE |
-| T1e (prose) | docs-generation, docstring-generation | minimax-m2.5 | FREE |
-| T2 (thinking) | thinking-review, first-validation, code-review, security-review, plan-review | glm-5 | FREE |
-| T2 (flash) | fast-review | glm-4.7-flashx | FREE |
-| T2 (style) | style-review | glm-4.7-flash | FREE |
-| T2 (regression) | regression-check | glm-4.7 | FREE |
+| T1d (long-ctx) | docs-lookup, long-context-review | kimi-k2.5 | FREE |
+| T1e (prose) | docs-generation, docstring-generation, changelog-generation | minimax-m2.5 | FREE |
+| T1f (reasoning) | deep-plan-review, complex-reasoning | qwen3-max-2026-01-23 | FREE |
+| T2a (thinking) | thinking-review, first-validation, code-review, security-review, plan-review, logic-review | glm-5 | FREE |
+| T2b (flagship) | architecture-audit, design-review | glm-4.5 | FREE |
+| T2c (standard) | regression-check, compatibility-check | glm-4.7 | FREE |
+| T2d (flash) | style-review, quick-style-check | glm-4.7-flash | FREE |
+| T2e (ultrafast) | fast-review, ultra-fast-check | glm-4.7-flashx | FREE |
 | T3 (standard) | second-validation, deep-research, independent-review | deepseek-v3.2 | FREE |
 | T3 (architecture) | architecture-review | kimi-k2:1t | FREE |
 | T3 (deep-review) | deep-code-review | deepseek-v3.1:671b | FREE |
@@ -52,7 +54,7 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 
 ---
 
-## Council Models (13 preferred across 5 providers)
+## Council Models (18 preferred across 4 providers)
 
 Tool: `.opencode/tools/council.ts`, Command: `.opencode/commands/council.md`
 
@@ -60,9 +62,11 @@ Tool: `.opencode/tools/council.ts`, Command: `.opencode/commands/council.md`
 |----------|--------|------|
 | anthropic | claude-sonnet-4 | PAID |
 | openai | gpt-5-codex | PAID |
-| bailian-coding-plan-test | qwen3.5-plus, qwen3-coder-plus | FREE |
-| zai-coding-plan | glm-5, glm-4.7 | FREE |
+| bailian-coding-plan-test | qwen3.5-plus, qwen3-coder-plus, qwen3-max, kimi-k2.5, glm-5 | FREE |
+| zai-coding-plan | glm-5, glm-4.7, glm-4.5, glm-4.7-flash | FREE |
 | ollama-cloud | deepseek-v3.2, kimi-k2:1t, gemini-3-pro-preview, devstral-2:123b, mistral-large-3:675b, cogito-2.1:671b, kimi-k2-thinking | FREE |
+
+Default council size: 5 models (auto-selected for provider diversity).
 
 ---
 
@@ -161,26 +165,54 @@ Each tier reviews, and if issues found, T1 (FREE) fixes and the same tier re-rev
 T1 implement → T2 review ⟲ T1 fix → T3 review ⟲ T1 fix → T4 gate ⟲ T1 fix → T5 validate ⟲ T1 fix → commit
 ```
 
-## Batch Dispatch Patterns
+## Batch Dispatch Patterns (10 pre-defined workflows)
 
-Pre-defined multi-model workflows in `batch-dispatch.ts`:
+Pre-defined multi-model workflows in `batch-dispatch.ts`. Invoke via `batchPattern` arg.
 
 | Pattern | Models | Use Case |
 |---------|--------|----------|
-| `multi-review` | glm-5, deepseek-v3.2, kimi-k2-thinking | Multi-family code review (3 free models in parallel) |
-| `plan-review` | glm-5, qwen3.5:397b, deepseek-v3.2 | Plan critique before user approval |
-| `pre-impl-scan` | glm-4.7-flash, qwen3-coder-next, deepseek-v3.2 | Codebase pattern scan before implementation |
-| `heavy-architecture` | kimi-k2:1t, deepseek-v3.1:671b, cogito-2.1:671b | Architecture decisions using massive models (1T+ params) |
+| `free-review-gauntlet` | glm-5, glm-4.5, qwen3-coder-plus, glm-4.7-flash, deepseek-v3.2 | 5-model consensus review — core of smart escalation |
+| `free-heavy-architecture` | glm-4.5, qwen3-max, kimi-k2:1t, deepseek-v3.1:671b, cogito-2.1:671b | Architecture decisions with ZAI+Bailian+Ollama flagships |
+| `free-security-audit` | glm-4.7-flash, glm-5, qwen3-coder-plus | 3-model security-focused review |
+| `free-plan-review` | glm-5, glm-4.5, qwen3-max, deepseek-v3.2 | 4-model plan critique before approval |
+| `free-impl-validation` | glm-5, glm-4.7-flash, deepseek-v3.2 | Quick 3-model check after T1 implementation |
+| `free-regression-sweep` | glm-4.7, qwen3-coder-plus, devstral-2:123b | 3-model regression check |
+| `multi-review` | glm-5, glm-4.5, deepseek-v3.2, kimi-k2-thinking | Multi-family code review (4 free models) |
+| `plan-review` | glm-5, qwen3-max, qwen3.5:397b, deepseek-v3.2 | Plan critique with Bailian flagship |
+| `pre-impl-scan` | glm-4.7-flash, qwen3-coder-next, deepseek-v3.2 | Pre-implementation pattern scan |
+| `heavy-architecture` | glm-4.5, qwen3-max, kimi-k2:1t, deepseek-v3.1:671b, cogito-2.1:671b | Deep architecture with ZAI+Bailian+Ollama |
+
+## Smart Escalation (Free Gauntlet)
+
+Consensus-based escalation minimizes paid API usage by running free models first.
+
+### Consensus Rules
+
+After the Free Review Gauntlet runs (5 models in parallel), count Critical/Major findings:
+
+| Free Models Finding Issues | Action | Paid Cost |
+|---------------------------|--------|-----------|
+| 0-1 out of 5 | SKIP T4, commit directly | $0 |
+| 2 out of 5 | Run T4 gate only | Low |
+| 3+ out of 5 | T1 fix + re-gauntlet (max 3x), then T4 | Low |
+
+### Per Spec Depth
+
+| Depth | Free Validation | Paid Models | Estimated Savings |
+|-------|----------------|-------------|-------------------|
+| light | `free-impl-validation` (3 models) | None | 100% — zero paid |
+| standard | `free-review-gauntlet` (5 models) + consensus | T4 only if disagreement | ~70% fewer T4 calls |
+| heavy | `free-review-gauntlet` (5 models) | T4 always + T5 always | Full cascade, but free gauntlet catches issues early |
 
 ## `/build` Automation Levels by Spec Depth
 
-| Depth | Plan Size | T1 Impl (FREE) | T2 Review (FREE) | T3 Second (FREE) | T4 Gate (PAID) | T5 Final (PAID) | Tests |
-|-------|-----------|-----------------|-------------------|-------------------|----------------|-----------------|-------|
-| light | ~100 lines | T1 text mode | — | — | — | — | L1-L2 |
-| standard | ~300 lines | T1 text mode | T2 review ⟲ | — | T4 gate | T5 validates | L1-L3 |
-| heavy | ~700 lines | T1 text mode | T2 review ⟲ | T3 review ⟲ | T4 gate ⟲ | T5 validates ⟲ | L1-L4 |
+| Depth | Plan Size | T1 Impl (FREE) | Free Gauntlet (FREE) | T4 Gate (PAID) | T5 Final (PAID) | Tests |
+|-------|-----------|-----------------|----------------------|----------------|-----------------|-------|
+| light | ~100 lines | T1 text mode | 3-model impl-validation | — | — | L1-L2 |
+| standard | ~300 lines | T1 text mode | 5-model review-gauntlet | Consensus-gated | — | L1-L3 |
+| heavy | ~700 lines | T1 text mode | 5-model review-gauntlet | Always | Always (agent) | L1-L4 |
 
-⟲ = review-fix loop (max 3 iterations per tier)
+Gauntlet ⟲ = if issues found, T1 fixes (FREE) and gauntlet re-runs (max 3 iterations)
 
 ---
 

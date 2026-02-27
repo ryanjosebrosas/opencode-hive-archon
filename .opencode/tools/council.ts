@@ -106,12 +106,17 @@ const PREFERRED_COUNCIL_MEMBERS: ModelTarget[] = [
   // Paid (use sparingly — included for diversity)
   { provider: "anthropic", model: "claude-sonnet-4-20250514", label: "Claude" },
   { provider: "openai", model: "gpt-5-codex", label: "GPT" },
-  // FREE — bailian
+  // FREE — bailian (5 models — matches council.md)
   { provider: "bailian-coding-plan-test", model: "qwen3.5-plus", label: "Qwen-Plus" },
   { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus", label: "Qwen-Coder" },
-  // FREE — zai
+  { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "Qwen-Max" },
+  { provider: "bailian-coding-plan-test", model: "kimi-k2.5", label: "BL-Kimi" },
+  { provider: "bailian-coding-plan-test", model: "glm-5", label: "BL-GLM-5" },
+  // FREE — zai (4 models — matches council.md)
   { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
   { provider: "zai-coding-plan", model: "glm-4.7", label: "GLM-4.7" },
+  { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
+  { provider: "zai-coding-plan", model: "glm-4.7-flash", label: "GLM-Flash" },
   // FREE — ollama-cloud (diverse families)
   { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DeepSeek" },
   { provider: "ollama-cloud", model: "kimi-k2:1t", label: "Kimi-1T" },
@@ -131,7 +136,7 @@ const getDefaultCouncilModels = async (baseUrl: string): Promise<ModelTarget[]> 
 
   // Pick from preferred list first (diversity: one per provider)
   for (const member of PREFERRED_COUNCIL_MEMBERS) {
-    if (selected.length >= 4) break
+    if (selected.length >= 5) break
     if (connected.includes(member.provider) && !usedProviders.has(member.provider)) {
       selected.push(member)
       usedProviders.add(member.provider)
@@ -139,13 +144,13 @@ const getDefaultCouncilModels = async (baseUrl: string): Promise<ModelTarget[]> 
   }
 
   // Fill remaining slots from connected providers not yet picked
-  if (selected.length < 4) {
+  if (selected.length < 5) {
     try {
       const resp = await fetch(`${baseUrl}/provider`)
       if (resp.ok) {
         const data = (await resp.json()) as Record<string, unknown>
         for (const providerName of connected) {
-          if (selected.length >= 4) break
+          if (selected.length >= 5) break
           if (usedProviders.has(providerName)) continue
           const providerData = asRecord((data as any)[providerName])
           if (!providerData) continue

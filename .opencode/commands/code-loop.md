@@ -122,11 +122,16 @@ dispatch({
 - If the dispatched fix looks wrong, implement it yourself
 - Track dispatched fixes in the loop report: "Fix dispatched to {model}: {description}"
 
-### Model Routing for Loop Tasks (5-Tier Cascade)
+### Model Routing for Loop Tasks (5-Tier Cascade + Free Gauntlet)
 
-| Task | Tier | taskType | Provider/Model | Cost |
-|------|------|----------|----------------|------|
+| Task | Tier | taskType/pattern | Provider/Model | Cost |
+|------|------|------------------|----------------|------|
 | First code review | T2 | `code-review` | `zai-coding-plan/glm-5` | FREE |
+| Architecture audit | T2 | `architecture-audit` | `zai-coding-plan/glm-4.5` | FREE |
+| Logic review | T2 | `logic-review` | `zai-coding-plan/glm-5` | FREE |
+| Code quality review | T1b | `code-quality-review` | `bailian-coding-plan-test/qwen3-coder-plus` | FREE |
+| Security scan | T2 | `security-review` | `zai-coding-plan/glm-4.7-flash` | FREE |
+| Free Review Gauntlet | batch | `free-review-gauntlet` | 5 free models in parallel | FREE |
 | Second review opinion | T3 | `second-validation` | `ollama-cloud/deepseek-v3.2` | FREE |
 | Simple fix generation | T1a | `simple-fix` | `bailian-coding-plan-test/qwen3-coder-next` | FREE |
 | Complex fix generation | T1c | `complex-fix` | `bailian-coding-plan-test/qwen3.5-plus` | FREE |

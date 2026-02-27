@@ -89,8 +89,8 @@ interface ModelResult {
 
 // --- Task routing (duplicated from dispatch.ts — tools must be self-contained) ---
 // 5-Tier Cost-Optimized Model Cascade — 51 free models across 3 providers
-// T1: Implementation (FREE) — bailian-coding-plan-test (8 models: qwen3, kimi, minimax, glm)
-// T2: First Validation (FREE) — zai-coding-plan (10 GLM models: thinking, flash, standard)
+// T1: Implementation (FREE) — bailian-coding-plan-test (6 models: qwen3-coder-next, qwen3-coder-plus, qwen3.5-plus, qwen3-max, kimi-k2.5, minimax-m2.5)
+// T2: First Validation (FREE) — zai-coding-plan (5 GLM models: glm-5, glm-4.5, glm-4.7, glm-4.7-flash, glm-4.7-flashx)
 // T3: Second Validation (FREE) — ollama-cloud (33 models: deepseek, kimi, gemini, mistral, qwen, devstral)
 // T4: Code Review (PAID cheap) — openai Codex
 // T5: Final Review (PAID expensive) — anthropic Claude (last resort only)
@@ -120,6 +120,15 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   // T1e: Prose / documentation → minimax-m2.5
   "docs-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
   "docstring-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
+  // T1f: Complex reasoning / plan review → qwen3-max
+  "deep-plan-review": { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+  "complex-reasoning": { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+  // T1b expanded: code quality review
+  "code-quality-review": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  // T1d expanded: long context review
+  "long-context-review": { provider: "bailian-coding-plan-test", model: "kimi-k2.5" },
+  // T1e expanded: changelog
+  "changelog-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
 
   // === T2: First Validation (FREE — zai-coding-plan GLM family) ===
   "thinking-review": { provider: "zai-coding-plan", model: "glm-5" },
@@ -130,6 +139,16 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   "fast-review": { provider: "zai-coding-plan", model: "glm-4.7-flashx" },
   "style-review": { provider: "zai-coding-plan", model: "glm-4.7-flash" },
   "regression-check": { provider: "zai-coding-plan", model: "glm-4.7" },
+  // T2b: Architecture / design → glm-4.5 (ZAI flagship)
+  "architecture-audit": { provider: "zai-coding-plan", model: "glm-4.5" },
+  "design-review": { provider: "zai-coding-plan", model: "glm-4.5" },
+  // T2a expanded: logic review (separate from code-review)
+  "logic-review": { provider: "zai-coding-plan", model: "glm-5" },
+  // T2c expanded: compatibility check
+  "compatibility-check": { provider: "zai-coding-plan", model: "glm-4.7" },
+  // T2d/e expanded: more fast check roles
+  "ultra-fast-check": { provider: "zai-coding-plan", model: "glm-4.7-flashx" },
+  "quick-style-check": { provider: "zai-coding-plan", model: "glm-4.7-flash" },
 
   // === T3: Second Validation (FREE — ollama-cloud diverse models) ===
   "second-validation": { provider: "ollama-cloud", model: "deepseek-v3.2" },
@@ -155,28 +174,72 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
 }
 
-// Pre-defined batch dispatch patterns for common multi-model workflows
 const BATCH_PATTERNS: Record<string, Array<{ provider: string; model: string }>> = {
-  // Multi-model code review: 3 free models from different families
+  // === Free Review Gauntlet — 5 free models for consensus-based validation ===
+  "free-review-gauntlet": [
+    { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "zai-coding-plan", model: "glm-4.5" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+    { provider: "zai-coding-plan", model: "glm-4.7-flash" },
+    { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  ],
+  // === Free Heavy Architecture — ZAI+Bailian+Ollama flagship models ===
+  "free-heavy-architecture": [
+    { provider: "zai-coding-plan", model: "glm-4.5" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+    { provider: "ollama-cloud", model: "kimi-k2:1t" },
+    { provider: "ollama-cloud", model: "deepseek-v3.1:671b" },
+    { provider: "ollama-cloud", model: "cogito-2.1:671b" },
+  ],
+  // === Free Security Audit — 3-model security review ===
+  "free-security-audit": [
+    { provider: "zai-coding-plan", model: "glm-4.7-flash" },
+    { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  ],
+  // === Free Plan Review — 4-model plan critique before approval ===
+  "free-plan-review": [
+    { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "zai-coding-plan", model: "glm-4.5" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+    { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  ],
+  // === Free Implementation Validation — quick 3-model check after T1 ===
+  "free-impl-validation": [
+    { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "zai-coding-plan", model: "glm-4.7-flash" },
+    { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  ],
+  // === Free Regression Sweep — 3-model regression check ===
+  "free-regression-sweep": [
+    { provider: "zai-coding-plan", model: "glm-4.7" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+    { provider: "ollama-cloud", model: "devstral-2:123b" },
+  ],
+  // === Multi-model code review — 4 free models from different families ===
   "multi-review": [
     { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "zai-coding-plan", model: "glm-4.5" },
     { provider: "ollama-cloud", model: "deepseek-v3.2" },
     { provider: "ollama-cloud", model: "kimi-k2-thinking" },
   ],
-  // Plan review: 3 free models critique a plan before approval
+  // === Plan review — 4 free models critique a plan before approval ===
   "plan-review": [
     { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
     { provider: "ollama-cloud", model: "qwen3.5:397b" },
     { provider: "ollama-cloud", model: "deepseek-v3.2" },
   ],
-  // Pre-implementation scan: 3 fast models check patterns before coding
+  // === Pre-implementation scan — 3 fast models check patterns ===
   "pre-impl-scan": [
     { provider: "zai-coding-plan", model: "glm-4.7-flash" },
     { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
     { provider: "ollama-cloud", model: "deepseek-v3.2" },
   ],
-  // Heavy architecture: 3 massive models for deep thinking
+  // === Heavy architecture — 5 massive models for deep thinking ===
   "heavy-architecture": [
+    { provider: "zai-coding-plan", model: "glm-4.5" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
     { provider: "ollama-cloud", model: "kimi-k2:1t" },
     { provider: "ollama-cloud", model: "deepseek-v3.1:671b" },
     { provider: "ollama-cloud", model: "cogito-2.1:671b" },
@@ -245,10 +308,33 @@ export default tool({
           "research, architecture, library-comparison, docs-lookup, " +
           "docs-generation, security-review, complex-codegen, complex-fix, deep-research",
       ),
+    batchPattern: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Optional: use a pre-defined batch pattern instead of explicit models. " +
+          "Patterns are curated model groups for specific workflows. " +
+          "Values: free-review-gauntlet, free-heavy-architecture, free-security-audit, " +
+          "free-plan-review, free-impl-validation, free-regression-sweep, " +
+          "multi-review, plan-review, pre-impl-scan, heavy-architecture. " +
+          "When provided, 'models' arg is ignored.",
+      ),
   },
   async execute(args, _context) {
     // 0. Resolve routing: taskType → helpful redirect (batch requires explicit models)
     let modelsJson = args.models
+
+    // 0a. Resolve batchPattern → models if provided
+    if (args.batchPattern) {
+      const patternModels = BATCH_PATTERNS[args.batchPattern]
+      if (!patternModels) {
+        return (
+          `[batch-dispatch error] Unknown batchPattern: "${args.batchPattern}"\n` +
+          `Available patterns: ${Object.keys(BATCH_PATTERNS).join(", ")}`
+        )
+      }
+      modelsJson = JSON.stringify(patternModels)
+    }
 
     if (!modelsJson && args.taskType) {
       const route = TASK_ROUTING[args.taskType]

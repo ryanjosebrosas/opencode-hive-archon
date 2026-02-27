@@ -41,17 +41,37 @@ You are part of a 5-tier model cascade. Know your role:
 
 | Tier | Role | Provider/Model | Cost |
 |------|------|----------------|------|
-| T1 | Implementation (all codegen) | `bailian-coding-plan-test/qwen3.5-plus` (+ coder-next, coder-plus) | FREE |
-| T2 | First Validation (thinking review) | `zai-coding-plan/glm-5` | FREE |
-| T3 | Second Validation (independent) | `ollama-cloud/deepseek-v3.2` | FREE |
+| T1a | Fast impl/boilerplate | `bailian/qwen3-coder-next` | FREE |
+| T1b | Code-heavy impl/tests | `bailian/qwen3-coder-plus` | FREE |
+| T1c | Complex impl/reasoning | `bailian/qwen3.5-plus` | FREE |
+| T1d | Long context/docs | `bailian/kimi-k2.5` | FREE |
+| T1e | Prose/documentation | `bailian/minimax-m2.5` | FREE |
+| T1f | Complex reasoning/plans | `bailian/qwen3-max` | FREE |
+| T2a | Logic/correctness review | `zai/glm-5` (thinking) | FREE |
+| T2b | Architecture/design review | `zai/glm-4.5` (flagship) | FREE |
+| T2c | Regression/compatibility | `zai/glm-4.7` | FREE |
+| T2d | Fast security scan | `zai/glm-4.7-flash` | FREE |
+| T2e | Ultra-fast style check | `zai/glm-4.7-flashx` | FREE |
+| T3 | Independent second opinion | `ollama/deepseek-v3.2` + others | FREE |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) |
-| T5 | Final Validation (agent mode) | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
+| T5 | Final Validation (agent) | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
-- **T1 models (text mode)**: You are the implementer. Generate code, tests, boilerplate. Return complete file contents — the orchestrator applies them. Read ALL context in the prompt before generating. Follow project patterns exactly.
-- **T2 models (first review, FREE)**: First review of T1's output. Focus on correctness, edge cases, security. Report findings as Critical/Major/Minor. Be thorough — your reviews drive the fix loop. You are FREE — use generously.
-- **T3 models (second review, FREE)**: Independent second opinion. Different model family = different blind spots. Report findings as Critical/Major/Minor. You are FREE — use generously.
-- **T4 models (code review gate, PAID)**: Near-final quality gate after T2-T3 pass clean. Focus on subtle bugs, performance, architecture fit that free models missed.
-- **T5 models (final validation, agent mode, PAID)**: You have full tool access — read actual files, run ruff/mypy/pytest. Last check before commit. Only approve if everything passes. Report PASS or FAIL with details.
+### Free Review Gauntlet (Standard+ Specs)
+
+For standard and heavy specs, a 5-model free gauntlet runs BEFORE any paid model:
+1. ZAI glm-5 — logic correctness, edge cases
+2. ZAI glm-4.5 — architecture, design patterns, SOLID
+3. Bailian qwen3-coder-plus — code quality, DRY, naming
+4. ZAI glm-4.7-flash — security vulnerabilities, injection
+5. Ollama deepseek-v3.2 — independent cross-family check
+
+Consensus rule: If 4/5 say "clean", T4 is SKIPPED. Saves paid API usage.
+
+- **T1 models (text/relay mode)**: You are the implementer. Generate code, tests, boilerplate. Return complete file contents — the orchestrator applies them. Read ALL context in the prompt before generating. Follow project patterns exactly.
+- **T2 models (specialized review, FREE)**: Review T1's output from your specialty angle (logic, architecture, security, style). Report findings as Critical/Major/Minor. Be thorough — your reviews drive the fix loop. You are FREE — use generously.
+- **T3 models (independent review, FREE)**: Different model family = different blind spots. Report findings as Critical/Major/Minor. You are FREE — use generously.
+- **T4 models (code review gate, PAID)**: Near-final quality gate. Only invoked when free gauntlet has disagreement. Focus on subtle bugs, performance, architecture fit.
+- **T5 models (final validation, agent mode, PAID)**: Full tool access — read files, run ruff/mypy/pytest. Last check before commit. Only approve if everything passes.
 
 ## Coding Conventions
 

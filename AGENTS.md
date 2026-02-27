@@ -68,15 +68,15 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 | Tier | Role | Models | Cost |
 |------|------|--------|------|
-| T1 | Implementation | `bailian`: qwen3-coder-next, qwen3-coder-plus, qwen3.5-plus, kimi-k2.5, minimax-m2.5 | FREE |
-| T2 | First Validation | `zai`: glm-5, glm-4.7, glm-4.7-flash, glm-4.7-flashx | FREE |
+| T1 | Implementation | `bailian`: qwen3-coder-next, qwen3-coder-plus, qwen3.5-plus, qwen3-max, kimi-k2.5, minimax-m2.5 | FREE |
+| T2 | First Validation | `zai`: glm-5, glm-4.5, glm-4.7, glm-4.7-flash, glm-4.7-flashx | FREE |
 | T3 | Second Validation | `ollama`: deepseek-v3.2, kimi-k2:1t, cogito:671b, devstral-2:123b, gemini-3-pro, mistral-large:675b, qwen3-coder:480b | FREE |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) |
 | T5 | Final Review | `anthropic/claude-sonnet-4-6` | PAID (expensive) |
 
 **Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
 **Fallback**: If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
-**Council**: `/council` dispatches to 13 preferred models across 5 providers (51 free models available) for multi-model debates.
+**Council**: `/council` dispatches to 18 preferred models across 4 providers (51 free models available) for multi-model debates.
 **Full details**: Read `reference/model-strategy.md` for task routing, council models, MCP tools, and dispatch configuration.
 
 **Dispatch rule**: Always `/prime` before first dispatch in a session — ensures models have fresh project context.
@@ -134,13 +134,13 @@ These are used internally by `/build` or available for manual use:
 
 ### `/build` Automation Levels by Spec Depth
 
-| Depth | Plan Size | T1 (FREE) | T2 (FREE) | T3 (FREE) | T4 (PAID) | T5 (PAID) | Tests |
-|-------|-----------|-----------|-----------|-----------|-----------|-----------|-------|
-| light | ~100 lines | T1 text | — | — | — | — | L1-L2 |
-| standard | ~300 lines | T1 text | T2 ⟲ | — | T4 gate | T5 validates | L1-L3 |
-| heavy | ~700 lines | T1 text | T2 ⟲ | T3 ⟲ | T4 ⟲ | T5 ⟲ | L1-L4 |
+| Depth | Plan Size | T1 (FREE) | Free Gauntlet | T4 (PAID) | T5 (PAID) | Tests |
+|-------|-----------|-----------|---------------|-----------|-----------|-------|
+| light | ~100 lines | T1 text | 3-model validation | — | — | L1-L2 |
+| standard | ~300 lines | T1 text | 5-model gauntlet | Consensus-gated | — | L1-L3 |
+| heavy | ~700 lines | T1 text | 5-model gauntlet | Always | Always | L1-L4 |
 
-⟲ = review-fix loop with T1 (max 3 iterations). T5 uses agent mode (reads files, runs tests).
+Gauntlet = `free-review-gauntlet` batch pattern (5 free models in parallel). If 4/5 say clean, T4 is SKIPPED.
 
 ---
 

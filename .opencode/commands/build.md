@@ -152,23 +152,35 @@ On approval, implement using the 5-tier cascade:
 
 ### For light specs:
 1. Implement directly (or dispatch to T1 for simple work)
-2. Run validation: `ruff check`, `mypy`
-3. If issues: fix and retry (max 3x)
+2. Run **Free Impl Validation** via batch-dispatch `free-impl-validation` pattern:
+   - ZAI glm-5 + ZAI glm-4.7-flash + Ollama deepseek-v3.2 (3 free models)
+3. Run validation: `ruff check`, `mypy`
+4. If issues: fix and retry (max 3x)
+5. No paid models needed — zero T4/T5 cost for light specs
 
 ### For standard specs:
 1. Dispatch implementation to T1 (bailian-coding-plan-test/qwen3.5-plus)
-2. Run T2 review (zai-coding-plan/glm-5)
+2. Run **Free Review Gauntlet** via batch-dispatch `free-review-gauntlet` pattern:
+   - ZAI glm-5 (logic/correctness)
+   - ZAI glm-4.5 (architecture/design)
+   - Bailian qwen3-coder-plus (code quality)
+   - ZAI glm-4.7-flash (security scan)
+   - Ollama deepseek-v3.2 (independent audit)
 3. Run actual tests: `ruff check`, `mypy`, `pytest`
-4. If T2 finds issues: T1 fixes, loop max 3x
-5. T4 gate (openai/gpt-5.3-codex) before commit
+4. **Consensus check**: Count how many gauntlet reviewers found Critical/Major issues
+   - If 0-1 out of 5 found issues: SKIP T4, go straight to commit (zero paid usage)
+   - If 2 out of 5 found issues: T4 gate (openai/gpt-5.3-codex) only
+   - If 3+ out of 5 found issues: T1 fixes, re-run gauntlet (max 3x), then T4
+5. If T4 runs and finds issues: T1 fixes, loop max 3x
 
 ### For heavy specs:
 1. Dispatch implementation to T1 (bailian-coding-plan-test/qwen3.5-plus)
-2. Run T2 review (zai-coding-plan/glm-5)
-3. Run T3 second opinion (ollama-cloud/deepseek-v3.2)
-4. Run actual tests: `ruff check`, `mypy`, `pytest`
-5. If issues: T1 fixes, loop max 3x
-6. T4 gate (openai/gpt-5.3-codex) before commit
+2. Run **Free Review Gauntlet** via batch-dispatch `free-review-gauntlet` pattern
+3. Run actual tests: `ruff check`, `mypy`, `pytest`
+4. If gauntlet finds issues: T1 fixes, re-run gauntlet (max 3x)
+5. T4 gate (openai/gpt-5.3-codex) — always runs for heavy specs
+6. T5 final review (anthropic/claude-sonnet-4-6) — agent mode with file access
+7. If T4/T5 find issues: T1 fixes, loop max 3x
 
 ### Validation Pyramid by Depth
 
