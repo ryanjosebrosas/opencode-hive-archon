@@ -87,7 +87,7 @@ Plan Adherence = (File Adherence + Pattern Compliance) / 2
 
 ### Step 3: Read Execution Report
 
-**Read**: `requests/execution-reports/{feature}-report.md`
+**Read**: `requests/archive/execution-reports/{feature}-report.md`
 
 **Extract:**
 - Completed tasks (count / total)

@@ -40,8 +40,8 @@ git log -5 --oneline
 Also check for review artifacts:
 
 ```bash
-ls requests/code-reviews/ 2>/dev/null || echo "No code review artifacts"
-ls requests/code-loops/ 2>/dev/null || echo "No code loop artifacts"
+ls requests/archive/code-reviews/ 2>/dev/null || echo "No code review artifacts"
+ls requests/archive/code-loops/ 2>/dev/null || echo "No code loop artifacts"
 ```
 
 ---
@@ -100,7 +100,7 @@ Report the results as a table:
 
 ## Step 4: Review Findings Summary
 
-If code review artifacts exist in `requests/code-reviews/` or `requests/code-loops/`, summarize:
+If code review artifacts exist in `requests/archive/code-reviews/` or `requests/archive/code-loops/`, summarize:
 
 ### Review History
 

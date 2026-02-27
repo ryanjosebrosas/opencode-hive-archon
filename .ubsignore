@@ -1,6 +1,5 @@
 tests/
-requests/code-loops/
-requests/code-reviews/
+requests/archive/
 .opencode/.tmp/
 .opencode/.tmp
 .opencode/tools/_test-*

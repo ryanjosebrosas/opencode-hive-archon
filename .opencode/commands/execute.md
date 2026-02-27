@@ -26,7 +26,7 @@ Read plan file: `$ARGUMENTS`
 
 Lean mode (default):
 - Do not create extra documentation files during execution unless explicitly required by the plan.
-- Required artifact from execution is the report at `requests/execution-reports/{feature}-report.done.md`.
+- Required artifact from execution is the report at `requests/archive/execution-reports/{feature}-report.done.md`.
 - Archon notes/documents are allowed for handoff but should not duplicate large markdown outputs.
 - Archon is mandatory for `/execute`; do not run without Archon connectivity.
 
@@ -251,18 +251,18 @@ After successful execution, mark done status in filenames only:
 - Rename the executed input file (`$ARGUMENTS`) by appending `.done` before `.md`.
   - Example: `requests/my-feature-plan.md` -> `requests/my-feature-plan.done.md`
 - Save the execution report using a `.done.md` filename.
-  - Example: `requests/execution-reports/{feature}-report.done.md`
+  - Example: `requests/archive/execution-reports/{feature}-report.done.md`
 - Do not modify markdown H1/title text just to mark done status.
 
 Completion sweep (required):
-- Before finishing `/execute`, rename any same-feature artifacts in `requests/code-reviews/` and `requests/code-loops/` from `.md` to `.done.md` when they are no longer active.
+- Before finishing `/execute`, rename any same-feature artifacts in `requests/archive/code-reviews/` and `requests/archive/code-loops/` from `.md` to `.done.md` when they are no longer active.
 - Never leave a completed same-feature review/loop artifact as plain `.md`.
 
 ## Output Report
 
-Save this report to: `requests/execution-reports/{feature}-report.done.md`
+Save this report to: `requests/archive/execution-reports/{feature}-report.done.md`
 
-Use the feature name derived in Step 1. Create the `requests/execution-reports/` directory if it doesn't exist.
+Use the feature name derived in Step 1. Create the `requests/archive/execution-reports/` directory if it doesn't exist.
 
 **IMPORTANT**: Save the report to the file FIRST, then also display it inline for the user. The saved file is consumed by `/system-review`.
 

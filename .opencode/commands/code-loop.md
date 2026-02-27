@@ -153,7 +153,7 @@ At the start of EACH iteration, save progress checkpoint:
 ### Iteration 1-N
 
 1. **Run `/code-review`**
-   - Save to: `requests/code-reviews/{feature}-review #{N}.md`
+   - Save to: `requests/archive/code-reviews/{feature}-review #{N}.md`
 
 2. **Check findings:**
    - **If 0 issues:** → Exit loop, go to commit
@@ -161,7 +161,7 @@ At the start of EACH iteration, save progress checkpoint:
    - **If Critical/Major issues:** → Continue to fix step
 
 3. **Create fix plan via `/planning` (required)**
-    - Input: latest review artifact `requests/code-reviews/{feature}-review #{N}.md`
+    - Input: latest review artifact `requests/archive/code-reviews/{feature}-review #{N}.md`
     - Output: `requests/{feature}-review-fixes #<n>.md`
     - The fix plan must define a single bounded fix slice (Critical/Major first)
     - If the review includes RAG-informed findings, include the RAG source references in the fix plan so `/execute` has the documentation context
@@ -170,7 +170,7 @@ At the start of EACH iteration, save progress checkpoint:
    - Input: `requests/{feature}-review-fixes #<n>.md`
    - Never run `/execute` directly on raw review findings
    - After this fix pass succeeds, mark the source review file `.done.md`
-     - Example: `requests/code-reviews/{feature}-review #{N}.md` -> `requests/code-reviews/{feature}-review #{N}.done.md`
+      - Example: `requests/archive/code-reviews/{feature}-review #{N}.md` -> `requests/archive/code-reviews/{feature}-review #{N}.done.md`
 
 5. **Run full validation for this slice:**
    - Run lint/style checks
@@ -197,7 +197,7 @@ At the start of EACH iteration, save progress checkpoint:
 ### User Interruption Handling
 
 **If user presses Ctrl+C during iteration:**
-1. Save current checkpoint to `requests/code-loops/{feature}-interrupted #<n>.md`
+1. Save current checkpoint to `requests/archive/code-loops/{feature}-interrupted #<n>.md`
 2. Report:
    ```
    ⚠️  Loop interrupted at iteration {N}
@@ -205,7 +205,7 @@ At the start of EACH iteration, save progress checkpoint:
    Progress:
    - Issues fixed: X (Critical: Y, Major: Z)
    - Issues remaining: A (Critical: B, Major: C)
-   - Last checkpoint: requests/code-loops/{feature}-checkpoint #{N}.md
+    - Last checkpoint: requests/archive/code-loops/{feature}-checkpoint #{N}.md
 
    Resume: Run `/code-loop {feature}` again — will continue from checkpoint
    ```
@@ -236,7 +236,7 @@ At the start of EACH iteration, save progress checkpoint:
 
 ## Output Report
 
-Working filename: `requests/code-loops/{feature}-loop-report #<n>.md`
+Working filename: `requests/archive/code-loops/{feature}-loop-report #<n>.md`
 
 Write the loop report to the working filename as the loop progresses. Do NOT use `.done.md` until the completion sweep.
 
@@ -251,7 +251,7 @@ Done marker rule:
 
 Numbering rule:
 - Use hash numbering for loop outputs to match request artifact convention.
-- Final report filename after sweep: `requests/code-loops/{feature}-loop-report #1.done.md` (or next available number).
+- Final report filename after sweep: `requests/archive/code-loops/{feature}-loop-report #1.done.md` (or next available number).
 
 ### Loop Summary
 
@@ -271,10 +271,10 @@ Numbering rule:
 
 ### Checkpoints Saved
 
-- `requests/code-loops/{feature}-checkpoint #1.md` — Iteration 1 progress
-- `requests/code-loops/{feature}-checkpoint #2.md` — Iteration 2 progress
+- `requests/archive/code-loops/{feature}-checkpoint #1.md` — Iteration 1 progress
+- `requests/archive/code-loops/{feature}-checkpoint #2.md` — Iteration 2 progress
 - ...
-- **If interrupted:** `requests/code-loops/{feature}-interrupted #<n>.md` — Resume point
+- **If interrupted:** `requests/archive/code-loops/{feature}-interrupted #<n>.md` — Resume point
 
 ### Validation Results
 
