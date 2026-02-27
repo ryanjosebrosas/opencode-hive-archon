@@ -251,3 +251,17 @@ If the council is for an important decision, save to `requests/council-discussio
 - Simple factual questions (use dispatch instead)
 - Code review (use /code-loop cascade)
 - Trivial decisions where one model suffices
+
+---
+
+## Output Presentation Rule
+
+**MANDATORY: Present raw council output to the user FIRST.**
+
+1. After all models respond, display each model's full response with its label and timing
+2. Do NOT summarize, synthesize, or interpret results before showing them
+3. Do NOT claim consensus that you inferred — let the user read the actual responses
+4. Wait for the user to acknowledge they have read the output
+5. Only provide analysis/summary if the user explicitly asks for it after reading
+
+**Why this rule exists:** The orchestrator (Opus) has a tendency to fabricate consensus or prematurely summarize before the user sees the raw data. This undermines the entire purpose of running a multi-model council. The user must see the actual model outputs to make their own judgment.

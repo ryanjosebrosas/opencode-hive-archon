@@ -23,6 +23,14 @@
 > - Writing plan files to requests/ directory
 > - Editing memory.md (session notes only)
 > - Dispatching to T1-T5 models via dispatch/batch-dispatch tools
+>
+> **COUNCIL OUTPUT RULE — Never Pre-Summarize:**
+> - When running /council or batch-dispatch, present the RAW model outputs to the user FIRST
+> - Do NOT summarize, synthesize, or interpret council results before showing them
+> - Do NOT fabricate consensus — let the user read the actual responses
+> - Wait for the user to acknowledge they have read the output before offering analysis
+> - If the user asks for a summary AFTER reading, then and only then provide one
+> - Running parallel single-shot prompts is NOT the same as running the actual council tool (shared sessions, rebuttals, synthesis rounds)
 
 # Claude Code Coding System
 
