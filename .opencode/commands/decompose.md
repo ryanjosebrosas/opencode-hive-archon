@@ -20,10 +20,10 @@ Break the MVP vision into concrete, dependency-sorted specs. Produces `specs/BUI
 ## Pipeline Position
 
 ```
-/mvp → /prd → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /pillars → /decompose → /build next (repeat) → /ship
 ```
 
-This is Step 3. Requires a PRD document to exist (produced by `/prd`). Falls back to `mvp.md` if no PRD found.
+This is Step 4. Requires a PRD document to exist (produced by `/prd`). Falls back to `mvp.md` if no PRD found. `/pillars` (Step 3) is optional but recommended — if run, its output guides spec grouping.
 
 ---
 
@@ -32,6 +32,7 @@ This is Step 3. Requires a PRD document to exist (produced by `/prd`). Falls bac
 1. Look for a PRD file (e.g., `PRD.md`, `docs/PRD.md`, or any file matching `*-prd.md`). This is the primary input — it contains detailed product requirements, user stories, and success criteria.
 2. If no PRD found, fall back to `mvp.md`. If neither exists, report: "No PRD or mvp.md found. Run `/prd` first (or `/mvp` for a quick vision doc)." and stop.
 3. Also read `mvp.md` if it exists alongside the PRD — it provides high-level vision context.
+4. Read `specs/PILLARS.md` if it exists (produced by `/pillars`). When present, this is the primary structural guide — specs should be grouped by pillar rather than generic layers.
 
 Extract the Core Capabilities / Feature Requirements — these become the high-level groupings for specs.
 
@@ -56,6 +57,8 @@ Think in layers:
 | 4 | Integration | Cross-cutting: auth wiring, error handling, logging |
 
 **Cross-cutting concerns** (auth, logging, error handling) should be explicit specs in Layer 0 or 1, not spread across other specs.
+
+**If `specs/PILLARS.md` exists:** Use the pillar definitions as the primary grouping structure instead of generic layers. Each pillar becomes a section in BUILD_ORDER.md. The layers table above is the fallback when no PILLARS.md is available.
 
 ---
 
@@ -142,6 +145,49 @@ Status: 0/{total} complete
   - acceptance: curl test returns valid response
 ```
 
+### Pillar-Aware Format (when specs/PILLARS.md exists)
+
+When `PILLARS.md` is available, use pillar headers instead of layer headers:
+
+```markdown
+# Build Order — {Project Name}
+
+Generated: {date} | Pillars: {N} | Status: 0/{total} complete
+
+## Pillar 1: {Name from PILLARS.md}
+
+- [ ] `01` **{spec-name}** ({depth}) — {description}
+  - depends: none
+  - touches: {files}
+  - acceptance: {test}
+
+- [ ] `02` **{spec-name}** ({depth}) — {description}
+  - depends: 01
+  - touches: {files}
+  - acceptance: {test}
+
+- [ ] `P1-GATE` **pillar-1-gate** (light) — Run Pillar 1 gate criteria from PILLARS.md
+  - depends: 01, 02
+  - acceptance: All gate criteria from PILLARS.md Pillar 1 pass
+
+## Pillar 2: {Name from PILLARS.md}
+
+- [ ] `03` **{spec-name}** ({depth}) — {description}
+  - depends: 01, 02
+  - touches: {files}
+  - acceptance: {test}
+
+- [ ] `P2-GATE` **pillar-2-gate** (light) — Run Pillar 2 gate criteria
+  - depends: 03
+  - acceptance: All gate criteria from PILLARS.md Pillar 2 pass
+```
+
+**Gate specs:** Automatically append a gate spec (P{N}-GATE) at the end of each pillar. Gate specs:
+- Are tagged `light` (they run validation, not implementation)
+- Depend on all specs in their pillar
+- Their acceptance criteria come directly from PILLARS.md gate criteria
+- Must pass before any spec from the next pillar can start
+
 ---
 
 ## Step 7: Human Validation
@@ -159,6 +205,18 @@ Layer 3 (Interface):   {count} specs — {names}
 Estimated effort: {light}L + {standard}S + {heavy}H specs
 
 Review the dependency graph. Any specs to add, remove, reorder, or re-tag?
+```
+
+When pillars are available, present the pillar-grouped summary instead:
+
+```
+Build Order: {N} specs across {P} pillars
+
+Pillar 1 ({Name}):  {count} specs + gate — {spec names}
+Pillar 2 ({Name}):  {count} specs + gate — {spec names}
+...
+
+Estimated effort: {light}L + {standard}S + {heavy}H specs + {P} gates
 ```
 
 Wait for approval. Adjust if requested.

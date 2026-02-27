@@ -22,10 +22,10 @@ Semi-automated builder that takes the next spec from BUILD_ORDER.md, auto-genera
 ## Pipeline Position
 
 ```
-/mvp → /prd → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /pillars → /decompose → /build next (repeat) → /ship
 ```
 
-This is Step 4 (the main loop). Repeat until all specs are done.
+This is Step 5 (the main loop). Repeat until all specs are done.
 
 ---
 
@@ -210,6 +210,36 @@ If implementing spec N reveals that completed spec M needs changes:
 2. Ask human: "Allow patch to spec {M}? [y/n]"
 3. On yes: plan + execute patch, re-validate spec M, continue spec N
 4. On no: work around the issue in spec N
+
+---
+
+## Step 7b: Pillar Tracking (when specs/PILLARS.md exists)
+
+When PILLARS.md is available, `/build` adds pillar-awareness:
+
+1. **Pillar enforcement**: `build next` only picks specs from the current pillar. If the next available spec belongs to a later pillar, check if the current pillar's gate has passed first.
+
+2. **Gate execution**: When a `P{N}-GATE` spec is reached:
+   - Read the gate criteria from PILLARS.md for that pillar
+   - Run each gate criterion (integration tests, validation commands, ruff + mypy + pytest)
+   - Report pass/fail for each criterion
+   - On pass: mark pillar as `[x] complete` in PILLARS.md, advance to next pillar
+   - On fail: list failures, suggest fixes, stay in current pillar
+
+3. **Progress dashboard**: When pillars exist, show pillar-level progress:
+   ```
+   === Build Progress ===
+   Pillar 1: Data Infrastructure    [####----] 4/7 specs (57%)
+   Pillar 2: API Skeleton           [--------] 0/5 specs (blocked by P1)
+   Pillar 3: AI Agent Layer         [--------] 0/6 specs (blocked by P2)
+   
+   Current: Pillar 1, Spec 05/07 — database-indexes (standard)
+   Next gate: P1-GATE (after specs 06, 07)
+   ```
+
+4. **Skip gate override**: Users can run `build next --skip-gate` to bypass a failed gate with a warning. This is for unblocking development when a gate failure is non-critical.
+
+**Backward compatible**: If no PILLARS.md exists, /build works exactly as before — flat spec list, no pillar enforcement.
 
 ---
 

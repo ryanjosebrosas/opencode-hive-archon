@@ -17,7 +17,12 @@ Re-validate build state against actual code. Run this when returning after a bre
 
 ## Pipeline Position
 
-Use between `/build` iterations:
+Use between `/build` iterations within the main pipeline:
+```
+/mvp → /prd → /pillars → /decompose → /build next → /sync → /build next → ... → /ship
+```
+
+Shorthand:
 ```
 /build next → /sync → /build next → ...
 ```
@@ -85,6 +90,25 @@ PYTHONPATH=backend/src pytest tests/ -q
 ```
 
 Report results. If anything fails, surface it — don't let broken state propagate.
+
+---
+
+## Step 4b: Pillar Health (when specs/PILLARS.md exists)
+
+When PILLARS.md is available, add a pillar-level health section to the sync output:
+
+```
+=== Pillar Health ===
+P1 Data Infrastructure: 7/7 specs [x] | Gate: PASS
+P2 API Skeleton:        3/5 specs [~] | Gate: PENDING
+P3 AI Agent Layer:      0/6 specs [ ] | Blocked by P2
+```
+
+**Cross-pillar validation**: For completed pillars, re-run their gate criteria to check for regression. If a previously passing gate now fails, report it prominently.
+
+**Consistency check**: Verify that PILLARS.md status markers match BUILD_ORDER.md completion markers and build-state.json. Flag mismatches.
+
+**Backward compatible**: If no PILLARS.md exists, skip this section entirely.
 
 ---
 
