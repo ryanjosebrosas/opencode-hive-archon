@@ -94,13 +94,20 @@ Print progress dashboard:
    - If there are real tradeoffs, ambiguity, or decisions NOT covered in existing artifacts: ask the user before writing the plan.
    - Default: most specs should NOT need user interaction — the BUILD_ORDER was already approved.
 
-3. **Dispatch plan writing to T1 (FREE):**
+3. **Detect plan mode:**
+   - **Single Plan Mode** (DEFAULT — 90%+ of specs): Use when spec has <10 estimated tasks OR touches <5 files OR is marked "light"/"standard"
+   - **Master + Sub-Plan Mode** (EXCEPTION — rare, heavy specs): Use when spec has >=10 estimated tasks OR touches >=5 files OR is marked "heavy"
+   - When in doubt: default to Single Plan Mode
+
+#### Single Plan Mode (Default)
+
+4. **Dispatch plan writing to T1 (FREE):**
    ```
    dispatch({
      mode: "agent",
      provider: "bailian-coding-plan-test",
      model: "qwen3.5-plus",
-     prompt: "{full context + spec details + template}"
+     prompt: "{full context + spec details + templates/STRUCTURED-PLAN-TEMPLATE.md}"
    })
    ```
    - The T1 model writes the plan following `templates/STRUCTURED-PLAN-TEMPLATE.md`
@@ -110,9 +117,44 @@ Print progress dashboard:
    - Plan MUST include validation commands for every task
    - Save to: `requests/{spec-id}-{spec-name}-plan.md`
 
-4. **Validate plan size:**
+5. **Validate plan size:**
    - Count lines. If under 700: reject, re-dispatch with explicit "plan is too short, expand code samples and task detail"
    - If over 1000: acceptable but flag if significantly over
+
+#### Master + Sub-Plan Mode (Exception)
+
+4. **Dispatch master plan writing to T1 (FREE):**
+   ```
+   dispatch({
+     mode: "agent",
+     provider: "bailian-coding-plan-test",
+     model: "qwen3.5-plus",
+     prompt: "{full context + spec details + templates/MASTER-PLAN-TEMPLATE.md}"
+   })
+   ```
+   - The T1 model writes the master plan following `templates/MASTER-PLAN-TEMPLATE.md`
+   - Master plan MUST be ~400-600 lines — defines phases, task groupings, phase gates
+   - Save to: `requests/{spec-id}-{spec-name}-master-plan.md`
+
+5. **Validate master plan size:**
+   - Count lines. If under 400 or over 600: reject, re-dispatch with size adjustment guidance
+
+6. **For each phase in master plan, dispatch sub-plan writing:**
+   ```
+   dispatch({
+     mode: "agent",
+     provider: "bailian-coding-plan-test",
+     model: "qwen3.5-plus",
+     prompt: "{full context + master plan + this phase details + templates/SUB-PLAN-TEMPLATE.md + prior phase handoff notes (if phase > 1)}"
+   })
+   ```
+   - Each sub-plan follows `templates/SUB-PLAN-TEMPLATE.md`
+   - Each sub-plan MUST be 700-1000 lines
+   - Phase 2+ sub-plans include handoff notes from prior phase as context
+   - Save to: `requests/{spec-id}-{spec-name}-phase-{N}.md`
+
+7. **Validate each sub-plan size:**
+   - Same as single plan: 700-1000 lines required
 
 **Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
 **If agent mode times out:** Increase timeout or split plan writing into sections...
@@ -120,6 +162,8 @@ Print progress dashboard:
 ---
 
 ### Step 3: Review Plan (T4 — Codex)
+
+#### Single Plan Mode (Default)
 
 Dispatch the completed plan to T4 for quality review:
 
@@ -142,14 +186,36 @@ dispatch({
 
 If Codex rejects twice: STOP and surface the issue to the user.
 
+#### Master + Sub-Plan Mode (Exception)
+
+1. **Review master plan first:**
+   - Dispatch master plan to T4 using the same prompt format as above
+   - Handle result (APPROVE → proceed, IMPROVE → apply changes, REJECT → re-dispatch)
+   
+2. **Then review each sub-plan sequentially:**
+   - For each sub-plan: dispatch to T4 with sub-plan content
+   - Include master plan context in the prompt
+   - Handle each result the same way (APPROVE/IMPROVE/REJECT)
+   - Max 2 review loops per sub-plan
+
+3. **All artifacts must be approved** before proceeding to Step 4
+
 ---
 
 ### Step 4: Commit Plan
 
 Git save point:
+
+#### Single Plan Mode (Default)
 ```bash
-git add requests/{spec}-plan.md
+git add requests/{spec-id}-{spec-name}-plan.md
 git commit -m "plan({spec-name}): structured implementation plan"
+```
+
+#### Master + Sub-Plan Mode (Exception)
+```bash
+git add requests/{spec-id}-{spec-name}-master-plan.md requests/{spec-id}-{spec-name}-phase-*.md
+git commit -m "plan({spec-name}): master plan + {N} sub-plans"
 ```
 
 This is the rollback point. If implementation fails, `git stash` to here and retry.
@@ -157,6 +223,8 @@ This is the rollback point. If implementation fails, `git stash` to here and ret
 ---
 
 ### Step 5: Execute (T1 — FREE)
+
+#### Single Plan Mode (Default)
 
 Dispatch implementation to T1:
 
@@ -171,6 +239,31 @@ dispatch({
 
 **Fallback:** If agent mode can't handle large file writes, split into multiple dispatch calls per phase/task group.
 **If T1 fails completely:** Try `zai-coding-plan/glm-4.7` as fallback T1.
+
+#### Master + Sub-Plan Mode (Exception)
+
+Execute sub-plans SEQUENTIALLY — one phase at a time:
+
+1. **For each sub-plan in order (phase 1, then phase 2, etc.):**
+   ```
+   dispatch({
+     mode: "agent",
+     provider: "bailian-coding-plan-test",
+     model: "qwen3.5-plus",
+     prompt: "Implement the following sub-plan exactly as specified:\n\n{sub-plan content}\n\nPrior phase handoff notes: {handoff notes from phase N-1, if applicable}\n\nRead all files listed in CONTEXT REFERENCES.\nFollow patterns from prior phases.\nExecute tasks in order.\nRun validation commands after each task.\nReturn handoff notes for next phase + summary of files changed and validation results."
+   })
+   ```
+
+2. **After each phase completes:**
+   - Run validation (Step 6)
+   - If validation PASSES: continue to next phase
+   - If validation FAILS: STOP — do not continue to next phase
+   - Extract handoff notes from phase output and include in next phase dispatch
+
+3. **If a phase fails:**
+   - The failed state propagates — pipeline stops
+   - Report which phase failed and why
+   - Do NOT continue to subsequent phases
 
 ---
 

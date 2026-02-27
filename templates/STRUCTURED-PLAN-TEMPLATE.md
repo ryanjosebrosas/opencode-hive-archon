@@ -15,6 +15,13 @@
 > **For the execution agent**: Validate documentation and codebase patterns before
 > implementing. Pay special attention to naming of existing utils, types, and models.
 > Import from the right files.
+>
+> **When to use this template vs. Master + Sub-Plan:**
+> - **This template** (single plan): Features with <10 tasks that fit in one 700-1000 line plan
+> - **Master + Sub-Plan**: Complex features with 10+ tasks or multiple distinct phases
+>   - Use `MASTER-PLAN-TEMPLATE.md` for the overview (~500 lines)
+>   - Use `SUB-PLAN-TEMPLATE.md` for each phase (700-1000 lines each)
+>   - `/planning` auto-detects which approach to use based on task count
 
 ---
 

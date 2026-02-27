@@ -77,13 +77,13 @@ For each spec, determine:
 
 ## Step 4: Assign Complexity Tags
 
-Each spec gets a depth tag that controls plan size in `/build`:
+Each spec gets a depth tag that controls review depth in `/build`:
 
-| Tag | Plan Size | When |
-|-----|-----------|------|
-| `light` | ~100 lines | Scaffolding, config, simple CRUD, well-known patterns |
-| `standard` | ~300 lines | Services, integrations, moderate business logic |
-| `heavy` | ~700 lines | Core algorithms, AI/ML, complex orchestration |
+| Tag | Review Tier | When |
+|-----|------------|------|
+| `light` | 3-model free validation | Scaffolding, config, simple CRUD, well-known patterns |
+| `standard` | 5-model free gauntlet + consensus T4 | Services, integrations, moderate business logic |
+| `heavy` | 5-model free + T4 always + T5 | Core algorithms, AI/ML, complex orchestration |
 
 Heuristic: if the spec touches >3 files or has >2 dependencies, bump up one level.
 

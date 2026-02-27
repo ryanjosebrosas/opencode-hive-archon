@@ -97,7 +97,7 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 **Agent mode works with ALL providers.** OpenCode's native infrastructure gives all providers (free and paid) the same capabilities: file read/write, grep, glob, bash, Archon MCP access. No fallback required.
 
-**Three dispatch modes:**
+**Two dispatch modes:**
 | Mode | Tool Access | Providers | Use For |
 |------|------------|-----------|---------|
 | `text` (default) | None | All | Reviews, opinions, analysis |
@@ -164,11 +164,11 @@ After the Free Review Gauntlet runs (5 models in parallel), count Critical/Major
 
 ## `/build` Automation Levels by Spec Depth
 
-| Depth | Plan Size | T1 Impl (FREE) | Free Gauntlet (FREE) | T4 Gate (PAID) | T5 Final (PAID) | Tests |
-|-------|-----------|-----------------|----------------------|----------------|-----------------|-------|
-| light | ~100 lines | T1 text mode | 3-model impl-validation | — | — | L1-L2 |
-| standard | ~300 lines | T1 text mode | 5-model review-gauntlet | Consensus-gated | — | L1-L3 |
-| heavy | ~700 lines | T1 text mode | 5-model review-gauntlet | Always | Always (agent) | L1-L4 |
+| Depth | Plan Format | T1 Impl (FREE) | Free Gauntlet (FREE) | T4 Gate (PAID) | T5 Final (PAID) | Tests |
+|-------|-------------|-----------------|----------------------|----------------|-----------------|-------|
+| light | Single plan (700-1000 lines) | T1 agent mode | 3-model impl-validation | — | — | L1-L3 |
+| standard | Single plan (700-1000 lines) | T1 agent mode | 5-model review-gauntlet | Consensus-gated | — | L1-L4 |
+| heavy | Master + sub-plans (500 + 700-1000 each) | T1 agent mode | 5-model review-gauntlet | Always | Always | L1-L4 |
 
 Gauntlet ⟲ = if issues found, T1 fixes (FREE) and gauntlet re-runs (max 3 iterations)
 

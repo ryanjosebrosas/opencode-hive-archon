@@ -117,6 +117,7 @@ Key decision: {the main architectural choice and why}
 Risks:     {top 1-2 risks}
 Tests:     {testing approach}
 Estimated tasks: {N tasks}
+Mode:      {Single Plan | Master + Sub-Plans (N phases)}
 
 Approve this direction to write the full plan? [y/n/adjust]
 ```
@@ -126,6 +127,20 @@ Only write the plan file after explicit approval.
 ---
 
 ## Phase 5: Write Plan
+
+### Auto-Detect Complexity
+
+After Phases 1-4 (discovery/design), assess complexity:
+- **Single Plan Mode**: Estimated tasks < 10, no distinct phases
+- **Master + Sub-Plan Mode**: Estimated tasks >= 10 OR multiple distinct phases identified
+
+Announce the mode transparently:
+- Single: "This looks like ~8 tasks in one phase — I'll write a single structured plan."
+- Multi: "I count ~15 tasks across 3 phases — I'll use the master + sub-plan approach."
+
+---
+
+### Single Plan Mode (unchanged)
 
 Generate the structured plan using `templates/STRUCTURED-PLAN-TEMPLATE.md`.
 
@@ -147,10 +162,44 @@ Generate the structured plan using `templates/STRUCTURED-PLAN-TEMPLATE.md`.
 
 ---
 
+### Master + Sub-Plan Mode (NEW)
+
+For complex features with 10+ tasks or multiple distinct phases:
+
+**Step 1: Write Master Plan**
+- Use `templates/MASTER-PLAN-TEMPLATE.md` (~500 lines)
+- Save to `requests/{spec-number}-{spec-name}-master-plan.md`
+- Contains: overview, phases, dependencies, cross-phase decisions, risk register
+
+**Step 2: Write Sub-Plans (sequential)**
+- Use `templates/SUB-PLAN-TEMPLATE.md` (700-1000 lines each)
+- Save to `requests/{spec-number}-{spec-name}-phase-{N}.md`
+- Phase count heuristic: 1 phase per 3-5 tasks, 2-4 phases typical
+- Each sub-plan references handoff notes from prior phases
+- Later sub-plans include "Handoff Received" section with context from earlier phases
+
+**Phase naming:**
+- Phase 1: Foundation/Setup tasks
+- Phase 2: Core implementation
+- Phase 3: Integration/Testing
+- (Adjust based on actual feature structure)
+
+---
+
 ## Output
 
-Save to: `requests/{spec-number}-{spec-name}-plan.md`
-(or `requests/{descriptive-name}-plan.md` for standalone planning)
+**Single Plan Mode:**
+```
+requests/{spec-number}-{spec-name}-plan.md
+```
+
+**Master + Sub-Plan Mode:**
+```
+requests/{spec-number}-{spec-name}-master-plan.md
+requests/{spec-number}-{spec-name}-phase-1.md
+requests/{spec-number}-{spec-name}-phase-2.md
+...
+```
 
 Numbering: increment `#<n>` if same name exists.
 
@@ -158,7 +207,7 @@ Numbering: increment `#<n>` if same name exists.
 
 ## After Writing
 
-Report:
+**Single Plan Mode (unchanged):**
 ```
 Plan written: requests/{filename}
 Tasks: {N} tasks across {phases} phases
@@ -166,6 +215,19 @@ Confidence: {X}/10 for one-pass success
 Key risk: {top risk}
 
 Next: /build to implement, or review the plan first.
+```
+
+**Master + Sub-Plan Mode:**
+```
+Master plan: requests/{spec-name}-master-plan.md
+Sub-plans:   requests/{spec-name}-phase-1.md
+             requests/{spec-name}-phase-2.md
+             requests/{spec-name}-phase-3.md
+Total:       {N} tasks across {M} phases
+Confidence:  {X}/10 for one-pass success
+Key risk:    {top risk}
+
+Next: /build to implement phase 1, or review plans first.
 ```
 
 ---

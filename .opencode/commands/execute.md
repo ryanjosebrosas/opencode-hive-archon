@@ -43,6 +43,10 @@ Incremental execution guardrails (required):
 
 Read the plan file.
 
+**If file path contains `-master-plan.md`**: Extract phase sub-plan paths from the SUB-PLAN INDEX table at the bottom of the master plan. Report: "Detected master plan with N phases." Proceed to Series Mode (Step 2.5).
+
+**If file path is a single phase file (`-phase-{N}.md`)**: Execute as a single sub-plan (normal mode, but note it's part of a larger feature).
+
 **If file contains `<!-- PLAN-SERIES -->`**: Extract sub-plan paths from PLAN INDEX. Report: "Detected plan series with N sub-plans." Proceed to Series Mode (Step 2.5).
 
 **If no marker**: Standard single plan — proceed normally, skip series-specific steps.
@@ -193,13 +197,14 @@ For EACH task in "Step by Step Tasks":
 
 ### 2.5. Series Mode Execution (if plan series detected)
 
-For each sub-plan in PLAN INDEX order:
+For each sub-plan in PLAN INDEX order (or SUB-PLAN INDEX for master plans):
 
-1. Read sub-plan file and shared context from overview
-2. Execute tasks using Step 2 process (a → e)
-3. Run sub-plan's validation commands
-4. Read HANDOFF NOTES for state to carry forward
-5. Report: "Sub-plan {N}/{total} complete."
+1. Read sub-plan file
+2. Read shared context from master plan's SHARED CONTEXT REFERENCES section
+3. Execute tasks using Step 2 process (a → e)
+4. Run sub-plan's validation commands
+5. Read HANDOFF NOTES and include them as context for the next sub-plan
+6. Report: "Phase {N}/{total} complete."
 
 **If a sub-plan fails**: Stop, report which sub-plan/task failed. Don't continue — failed state propagates.
 
