@@ -146,7 +146,7 @@ The main development loop for building from empty project to working MVP:
 | `/prd` | Full product requirements document → `PRD.md` | After `/mvp`, detailed what + why + user stories |
 | `/pillars` | Analyze PRD → infrastructure pillar definitions → `specs/PILLARS.md` | After `/prd`, define infrastructure layers and gate criteria |
 | `/decompose` | Break PRD into dependency-sorted spec list → `specs/BUILD_ORDER.md` | After `/prd`, or when re-planning |
-| `/build [next\|spec]` | Semi-auto: plan spec → approve → implement → validate → commit | The main loop — repeat until all specs done |
+| `/build [next\|spec]` | Fully autonomous: plan → Codex review → execute → validate → code review loop → commit → next spec | Run once, builds until pillar done or blocked |
 | `/ship` | Full validation pyramid + T5 review + PR | When all specs complete |
 | `/sync` | Validate build state, re-sync context between sessions | After breaks, before heavy specs, every 3rd spec |
 | `/council [topic]` | Dispatch to 13 real AI models for multi-model debate | Architecture decisions, process design, validation |
@@ -158,7 +158,7 @@ These are used internally by `/build` or available for manual use:
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
 | `/prime` | Load project context from memory + codebase | Start of every session |
-| `/planning [feature]` | Interactive discovery → structured plan | Used internally by `/build` for standard/heavy specs |
+| `/planning [feature]` | Interactive discovery → 700-1000 line structured plan | Used internally by `/build` for ALL specs |
 | `/execute [plan]` | Implement from plan, or fix code review issues | Used internally by `/build` |
 | `/code-loop` | Automated review → fix → review loop | Used internally by `/build` |
 | `/commit` | Conventional-format git commit | Used internally by `/build`, or manual |
@@ -167,14 +167,20 @@ These are used internally by `/build` or available for manual use:
 | `/code-review` | Generalist review — bugs, security, quality | Manual code review |
 | `/system-review` | Plan vs. reality analysis | After complex features |
 
-### `/build` Automation Levels by Spec Depth
+### `/build` Autonomous Pipeline
 
-| Depth | Plan Size | T1 (FREE) | Free Gauntlet | T4 (PAID) | T5 (PAID) | Tests |
-|-------|-----------|-----------|---------------|-----------|-----------|-------|
-| light | ~100 lines | T1 text | 3-model validation | — | — | L1-L2 |
-| standard | ~300 lines | T1 text | 5-model gauntlet | Consensus-gated | — | L1-L3 |
-| heavy | ~700 lines | T1 text | 5-model gauntlet | Always | Always | L1-L4 |
+Every spec gets the same planning quality. Depth label only affects review tier:
 
+| Step | What | Cost |
+|------|------|------|
+| Plan | T1 writes 700-1000 line plan (always) | FREE |
+| Review Plan | T4 (Codex) reviews/improves plan | PAID (cheap) |
+| Execute | T1 implements from reviewed plan | FREE |
+| Validate | mypy + ruff + pytest locally | FREE |
+| Code Review | Depth-based: 3-model (light), 5-model (standard), 5+T4+T5 (heavy) | FREE-PAID |
+| Fix Loop | T1 fixes review findings, re-review (max 3x) | FREE |
+
+Pipeline is fully autonomous — loops through specs until pillar gate or error. Zero interaction between specs.
 Gauntlet = `free-review-gauntlet` batch pattern (5 free models in parallel). If 4/5 say clean, T4 is SKIPPED.
 
 ---

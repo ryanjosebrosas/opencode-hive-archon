@@ -127,47 +127,23 @@ Only write the plan file after explicit approval.
 
 ## Phase 5: Write Plan
 
-Generate the structured plan. Depth scales with the spec's complexity tag:
+Generate the structured plan using `templates/STRUCTURED-PLAN-TEMPLATE.md`.
 
-### Light Plan (~100 lines)
+**Every plan is 700-1000 lines. No exceptions.** The depth label (light/standard/heavy) does NOT affect planning quality — it only affects the validation tier during `/build`. All plans get the full treatment:
 
-```markdown
-# Spec: {name}
+- Feature Description, User Story, Problem Statement, Solution Statement
+- Feature Metadata with Slice Guardrails
+- Context References (codebase files with line numbers, related memories, relevant docs)
+- Patterns to Follow (with actual code snippets from the project)
+- Implementation Plan (Foundation → Core → Integration → Testing phases)
+- Step-by-Step Tasks (every task has ACTION, TARGET, IMPLEMENT, PATTERN, IMPORTS, GOTCHA, VALIDATE)
+- Testing Strategy (unit, integration, edge cases)
+- Validation Commands (all 5 levels of the validation pyramid)
+- Acceptance Criteria (Implementation + Runtime, with checkboxes)
+- Completion Checklist
+- Notes (key decisions, risks, confidence score)
 
-## What
-{purpose}
-
-## Approach
-{locked-in approach from discussion}
-
-## Files
-- Create: {list}
-- Modify: {list}
-
-## Tasks
-1. **{ACTION}** `{target_file}`
-   - IMPLEMENT: {detail}
-   - VALIDATE: `{command}`
-
-2. **{ACTION}** `{target_file}`
-   - IMPLEMENT: {detail}
-   - VALIDATE: `{command}`
-
-## Acceptance
-- {criteria from BUILD_ORDER.md}
-- {additional criteria from discovery}
-
-## Validate
-{validation commands}
-```
-
-### Standard Plan (~300 lines)
-
-Adds: Feature Description, Solution Statement, Patterns to Follow, Code Samples, Testing Strategy, Edge Cases
-
-### Heavy Plan (~700 lines)
-
-Full treatment: all standard fields plus Alternatives Considered, Risk Analysis, Integration Test Strategy, detailed Phase breakdown
+**Hard requirement:** If the plan is under 700 lines, it is REJECTED. Expand code samples, add more task detail, include more pattern references. Code samples must be copy-pasteable, not summaries.
 
 ---
 
