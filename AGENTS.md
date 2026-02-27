@@ -109,7 +109,7 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 **Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
 **Fallback**: If `bailian-coding-plan` 404s, use `zai-coding-plan/glm-4.7`.
-**Council**: Multi-model debates via `council.ts` (4 models across tiers).
+**Council**: `/council` dispatches to 13 real models across 4 providers for multi-model debates.
 
 ---
 
@@ -127,23 +127,55 @@ Each level gates the next:
 
 ## Available Commands
 
+### MVP Build Pipeline (Primary Workflow)
+
+The main development loop for building from empty project to working MVP:
+
+```
+/mvp → /decompose → /build next (repeat) → /ship
+```
+
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
-| `/prime` | Dispatches 2 parallel agents for context | Start of every session |
-| `/planning [feature]` | 6-phase analysis with conditional research, mvp.md workflow | Before building any feature |
-| `/execute [plan]` | Implements plan OR fixes code review issues | After planning, or after code review |
-| `/code-loop` | Automated review → fix → review loop until clean | After implementation (replaces manual fix loop) |
-| `/commit` | Creates conventional-format git commit | After final review approval |
-| `/pr` | Pushes branch, creates PR, requests @codex review | After `/commit`, when ready to merge |
-| `/code-review` | 1 generalist agent + UBS pre-scan | After implementation (or use `/code-loop`) |
-| `/final-review` | Summarizes all changes, verifies acceptance criteria, asks for human approval | After `/code-loop`, before `/commit` |
-| `/system-review` | Plan vs. reality analysis, memory suggestions | After complex features, periodic audits |
+| `/mvp` | Define or refine product vision → `mvp.md` | Start of a new project or major pivot |
+| `/decompose` | Break MVP into dependency-sorted spec list → `specs/BUILD_ORDER.md` | After `/mvp`, or when re-planning |
+| `/build [next\|spec]` | Semi-auto: plan spec → approve → implement → validate → commit | The main loop — repeat until all specs done |
+| `/ship` | Full validation pyramid + T5 review + PR | When all specs complete |
+| `/sync` | Validate build state, re-sync context between sessions | After breaks, before heavy specs, every 3rd spec |
+| `/council [topic]` | Dispatch to 13 real AI models for multi-model debate | Architecture decisions, process design, validation |
 
-**Note:** `/execute` handles both plan execution and code review fixes (fix mode auto-detected).
+### Supporting Commands
 
-**Solo Developer Mode**: Focus on `/prime` → `/planning` → `/execute` → `/code-loop` → `/final-review` → `/commit` → `/pr`.
+These are used internally by `/build` or available for manual use:
 
-**Manual Fix Loop** (alternative to `/code-loop`): `/code-review` → `/execute` (fix mode) → `/code-review` until clean → `/final-review` → `/commit`.
+| Command | What It Does | When to Use |
+|---------|-------------|-------------|
+| `/prime` | Load project context from memory + codebase | Start of every session |
+| `/planning [feature]` | 6-phase analysis → structured plan | Used internally by `/build` for heavy specs |
+| `/execute [plan]` | Implement from plan, or fix code review issues | Used internally by `/build` |
+| `/code-loop` | Automated review → fix → review loop | Used internally by `/build` |
+| `/commit` | Conventional-format git commit | Used internally by `/build`, or manual |
+| `/pr` | Push branch, create PR | Used by `/ship`, or manual |
+| `/final-review` | Pre-commit approval gate | Used by `/ship` |
+| `/code-review` | Generalist review + UBS pre-scan | Manual code review |
+| `/system-review` | Plan vs. reality analysis | After complex features |
+
+### `/build` Automation Levels by Spec Depth
+
+| Depth | Plan Size | T1 Impl | T2 Review | T3 Second | T4 Gate | Tests Required |
+|-------|-----------|---------|-----------|-----------|---------|----------------|
+| light | ~100 lines | Direct or T1 | — | — | — | L1-L2 (syntax, types) |
+| standard | ~300 lines | T1 dispatch | T2 review | — | T4 gate | L1-L3 (+ unit tests) |
+| heavy | ~700 lines | T1 dispatch | T2 review | T3 opinion | T4 gate | L1-L4 (+ integration) |
+
+### Council Models (13 across 4 providers)
+
+| Provider | Models | Cost |
+|----------|--------|------|
+| bailian-coding-plan | qwen3.5-plus, qwen3-coder-plus, qwen3-max, glm-5, kimi-k2.5 | FREE |
+| ollama-cloud | deepseek-v3.2, qwen3.5:397b, kimi-k2-thinking | FREE |
+| zai-coding-plan | glm-5, glm-4.7, glm-4.5, glm-4.7-flash | FREE |
+| openai | gpt-5.3-codex | PAID (cheap) |
 
 ---
 
@@ -230,7 +262,12 @@ opencode-coding-system/
 │   ├── layer1-guide.md
 │   └── sustainable-agent-architecture.md
 │
-├── templates/                   # Reusable templates (8 files)
+├── specs/                       # Build order and state (created by /decompose)
+│   ├── BUILD_ORDER.md           # Dependency-sorted spec list (single source of truth)
+│   └── build-state.json         # Cross-session context (patterns, decisions, progress)
+│
+├── templates/                   # Reusable templates (9 files)
+│   ├── BUILD-ORDER-TEMPLATE.md  # Template for /decompose output
 │   ├── STRUCTURED-PLAN-TEMPLATE.md
 │   ├── PRD-TEMPLATE.md
 │   ├── SUB-PLAN-TEMPLATE.md
@@ -297,11 +334,11 @@ opencode-coding-system/
 
 ### Workflow Pattern
 
-1. **Plan** (`/planning`) → Creates `requests/{feature}-plan.md`
-2. **Execute** (`/execute`) → Implements from plan, creates backend structure
-3. **Validate** → Lint, typecheck, test (5-level pyramid)
-4. **Report** → Saves execution report to `requests/execution-reports/`
-5. **Commit** (`/commit`) → Conventional commit with lessons to memory.md
+1. **Vision** (`/mvp`) → Defines `mvp.md` (what to build, who for, success signals)
+2. **Decompose** (`/decompose`) → Creates `specs/BUILD_ORDER.md` (dependency-sorted spec list)
+3. **Build** (`/build next`) → Plan + approve + implement + validate + commit (one spec per loop)
+4. **Sync** (`/sync`) → Checkpoint: validate state between sessions or before heavy specs
+5. **Ship** (`/ship`) → Full validation pyramid + T5 review + PR when all specs done
 
 ## Optional: Archon MCP
 
@@ -320,21 +357,24 @@ opencode-coding-system/
    > /prime
    ```
 
-2. **Plan your first feature**:
+2. **Define your MVP** (once per project):
    ```
-   > /planning my-feature
-   ```
-
-3. **Execute the plan** (fresh session for clean context):
-   ```
-   > /execute requests/my-feature-plan.md
+   > /mvp
    ```
 
-4. **Review and commit**:
+3. **Decompose into specs** (once, re-runnable):
    ```
-   > /code-review
-   > /commit
+   > /decompose
    ```
 
-**Workflow**: `/prime` → `/planning` → `/execute` → `/code-review` → `/system-review` (optional) → `/commit`
+4. **Build specs** (the main loop — repeat until done):
    ```
+   > /build next
+   ```
+
+5. **Ship when complete**:
+   ```
+   > /ship
+   ```
+
+**Full pipeline**: `/prime` → `/mvp` → `/decompose` → `/build next` (repeat) → `/ship`
