@@ -30,7 +30,14 @@
 > - Do NOT fabricate consensus — let the user read the actual responses
 > - Wait for the user to acknowledge they have read the output before offering analysis
 > - If the user asks for a summary AFTER reading, then and only then provide one
-> - Running parallel single-shot prompts is NOT the same as running the actual council tool (shared sessions, rebuttals, synthesis rounds)
+> - Running parallel single-shot prompts is NOT the running the actual council tool (shared sessions, rebuttals, synthesis rounds)
+>
+> **COUNCIL DISCIPLINE — No Spam:**
+> - Max 1 council dispatch per user question — never re-run unless user explicitly says "run again"
+> - Cap at 10 models per dispatch (4-5 for brainstorming, up to 10 for architecture decisions)
+> - Write dispatch script to .opencode/.tmp/, run once, read output, done
+> - Do NOT fire multiple council runs hoping for better answers
+> - Clean up sessions after each run
 
 # Claude Code Coding System
 

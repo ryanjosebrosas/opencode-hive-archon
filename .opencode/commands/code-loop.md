@@ -139,6 +139,19 @@ dispatch({
 | Near-final code review | T4 | `codex-review` | `openai/gpt-5.3-codex` | PAID (cheap) |
 | Final critical review | T5 | `final-review` | `anthropic/claude-sonnet-4-6` | PAID (last resort) |
 
+### Consensus-Gating Rule
+
+When the Free Review Gauntlet runs (5 models in parallel), apply these consensus rules:
+
+| Gauntlet Result | Action | Paid Cost |
+|----------------|--------|-----------|
+| 4-5/5 say clean | SKIP T4, commit directly | Zero |
+| 3/5 say clean | SKIP T4 for standard specs, T4 for heavy | Low |
+| 2/5 say clean | T4 gate required | Medium |
+| 0-1/5 say clean | T1 fix + re-run gauntlet (max 3x), then T4+T5 | Full |
+
+**Hard rule**: Security-critical code (auth, crypto, payments) ALWAYS goes through T4+T5 regardless of free consensus.
+
 ---
 
 ## Fix Loop

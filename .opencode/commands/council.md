@@ -265,3 +265,19 @@ If the council is for an important decision, save to `requests/council-discussio
 5. Only provide analysis/summary if the user explicitly asks for it after reading
 
 **Why this rule exists:** The orchestrator (Opus) has a tendency to fabricate consensus or prematurely summarize before the user sees the raw data. This undermines the entire purpose of running a multi-model council. The user must see the actual model outputs to make their own judgment.
+
+---
+
+## Council Discipline
+
+**MANDATORY: One dispatch per question. No spam.**
+
+1. Max 1 council dispatch per user question
+2. Cap at 10 models per dispatch
+3. For brainstorming: 4-5 models is sufficient
+4. For architecture decisions: up to 10 models
+5. Never re-run unless user explicitly says "run again"
+6. Write dispatch script to .opencode/.tmp/, run once, read output
+7. Clean up sessions after each run
+
+**Why this rule exists:** The orchestrator (Opus) has a tendency to fire unlimited parallel sessions, creating 15+ model calls per question. This wastes resources and produces so much output that nobody can read it all.

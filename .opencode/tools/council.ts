@@ -69,7 +69,8 @@ const safeStringify = (value: unknown, maxChars = 2000): string => {
 
 const DEFAULT_TIMEOUT_PER_TURN = 90
 const DEFAULT_ROUND_COUNT = 3
-const MAX_TURN_TEXT_CHARS = 500
+const MAX_TURN_TEXT_CHARS = 4000
+const MAX_COUNCIL_MODELS = 10
 const ROUND_LABELS = ["Proposals", "Rebuttals", "Synthesis"]
 
 // --- Types ---
@@ -605,9 +606,12 @@ export default tool({
     let models: ModelTarget[]
     if (args.models) {
       try {
-        const parsed = JSON.parse(args.models)
+        let parsed = JSON.parse(args.models)
         if (!Array.isArray(parsed) || parsed.length < 2) {
           return "[council error] models must be a JSON array with at least 2 entries"
+        }
+        if (parsed.length > MAX_COUNCIL_MODELS) {
+          parsed = parsed.slice(0, MAX_COUNCIL_MODELS)
         }
         models = parsed.map((m: any, i: number) => ({
           provider: m.provider,
@@ -625,6 +629,11 @@ export default tool({
           "Connect more providers in OpenCode, or provide explicit models via the 'models' arg."
         )
       }
+    }
+
+    // COUNCIL DISCIPLINE: Hard cap at 10 models to prevent spam
+    if (models.length > MAX_COUNCIL_MODELS) {
+      models = models.slice(0, MAX_COUNCIL_MODELS)
     }
 
     // 4. Provider pre-flight — verify all model providers are connected

@@ -10,6 +10,8 @@
 
 **COUNCIL OUTPUT RULE — Never Pre-Summarize** — When running /council or any multi-model dispatch, present RAW model outputs to the user FIRST. Do NOT summarize, synthesize, or fabricate consensus before the user has read the actual responses. Wait for user acknowledgment before offering analysis. Running parallel single-shot prompts is NOT the same as the actual council tool (which uses shared sessions with rebuttals and synthesis rounds).
 
+**COUNCIL DISCIPLINE — No Spam** — Max 1 council dispatch per user question. Cap at 10 models. Never re-run unless user explicitly requests. For brainstorming use 4-5 models; for architecture decisions up to 10. Write dispatch script once, run once, read output.
+
 **YAGNI** — Only implement what's needed. No premature optimization.
 **KISS** — Prefer simple, readable solutions over clever abstractions.
 **DRY** — Extract common patterns; balance with YAGNI.

@@ -67,6 +67,22 @@ For standard and heavy specs, a 5-model free gauntlet runs BEFORE any paid model
 
 Consensus rule: If 4/5 say "clean", T4 is SKIPPED. Saves paid API usage.
 
+### Default Specialization (Council-Agreed)
+
+By default, route tasks according to provider specialty:
+- **Bailian/Qwen = Implementation** (code generation, tests, docs, boilerplate)
+- **ZAI/GLM = Review & Validation** (code review, architecture audit, logic check, security scan)
+- **Ollama = Independent Audit** (cross-family blind-spot check, second opinion)
+
+Cross-specialization is allowed when profiling data shows better outcomes, but the default split is: Bailian builds, ZAI reviews.
+
+### Consensus-Gating Rule
+
+At least 3 free models from different providers must agree before bypassing paid T4 review:
+- 3/5 gauntlet models say "clean" with no Critical/Major issues = skip T4
+- Fewer than 3 agree = escalate to T4
+- For security-critical code: ALWAYS use T4 regardless of free consensus
+
 - **T1 models (text/relay mode)**: You are the implementer. Generate code, tests, boilerplate. Return complete file contents — the orchestrator applies them. Read ALL context in the prompt before generating. Follow project patterns exactly.
 - **T2 models (specialized review, FREE)**: Review T1's output from your specialty angle (logic, architecture, security, style). Report findings as Critical/Major/Minor. Be thorough — your reviews drive the fix loop. You are FREE — use generously.
 - **T3 models (independent review, FREE)**: Different model family = different blind spots. Report findings as Critical/Major/Minor. You are FREE — use generously.
