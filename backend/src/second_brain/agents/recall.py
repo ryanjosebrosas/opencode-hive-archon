@@ -22,6 +22,7 @@ from second_brain.deps import (
     get_default_config,
     create_memory_service,
 )
+from second_brain.errors import RetrievalError
 
 
 class RecallOrchestrator:
@@ -225,7 +226,16 @@ class RecallOrchestrator:
                     error_message=str(e)[:200],
                 )
                 self.trace_collector.record(trace)
-            raise
+            raise RetrievalError(
+                f"Retrieval failed: {str(e)}",
+                code="RETRIEVAL_ERROR",
+                context={
+                    "original_error_type": type(e).__name__,
+                    "provider": getattr(request, 'provider_override', 'unknown'),
+                    "query_length": len(str(request.query)),
+                },
+                retry_hint=True
+            ) from e
 
     def _resolve_memory_service_for_provider(
         self,

@@ -149,7 +149,8 @@ class TestPlannerActionInterpretation:
 
         class FailingRecall:
             def run(self, _request):
-                raise RuntimeError("provider timeout")
+                from second_brain.errors import RetrievalError
+                raise RetrievalError("provider timeout")
 
         planner = Planner(
             recall_orchestrator=FailingRecall(),
@@ -160,14 +161,15 @@ class TestPlannerActionInterpretation:
 
         assert response.action_taken == "fallback"
         assert response.branch_code == "RETRIEVAL_ERROR"
-        assert response.retrieval_metadata["error_type"] == "RuntimeError"
+        assert response.retrieval_metadata["error_type"] == "RetrievalError"
 
     def test_chat_records_error_trace_when_collector_enabled(self):
         """Planner records retrieval error traces when collector is configured."""
 
         class FailingRecall:
             def run(self, _request):
-                raise RuntimeError("provider timeout")
+                from second_brain.errors import RetrievalError
+                raise RetrievalError("provider timeout")
 
         trace_collector = TraceCollector(max_traces=10)
         planner = Planner(

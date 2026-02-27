@@ -20,6 +20,7 @@ from second_brain.contracts.trace import RetrievalTrace
 from second_brain.agents.recall import RecallOrchestrator
 from second_brain.services.conversation import ConversationStore
 from second_brain.services.trace import TraceCollector
+from second_brain.errors import SecondBrainError
 
 logger = get_logger(__name__)
 
@@ -86,7 +87,7 @@ class Planner:
                 retrieval_response=retrieval_response,
                 session_id=state.session_id,
             )
-        except (ValidationError, RuntimeError, TimeoutError, ConnectionError, OSError) as exc:
+        except (SecondBrainError, ValidationError) as exc:
             self._record_retrieval_error_trace(
                 query=query,
                 mode=mode,
