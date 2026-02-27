@@ -109,6 +109,33 @@ class TestSupabaseProviderSearch:
         assert results[0].content == ""
         assert results[0].confidence == 0.8
 
+    def test_normalize_handles_new_source_origin(self):
+        """Normalization path handles new source_origin values like zoom."""
+        provider = SupabaseProvider()
+        rpc_results = [
+            {
+                "id": "zoom-123",
+                "content": "Zoom meeting transcription",
+                "similarity": 0.92,
+                "knowledge_type": "transcript",
+                "document_id": "doc-zoom",
+                "chunk_index": 1,
+                "source_origin": "zoom",  # New source origin value
+                "metadata": {"meeting_id": "abc123", "participants": 5},
+            }
+        ]
+        results = provider._normalize_results(rpc_results, top_k=5)
+        assert len(results) == 1
+        r = results[0]
+        assert r.id == "zoom-123"
+        assert r.content == "Zoom meeting transcription"
+        assert r.metadata["source_origin"] == "zoom"
+        assert r.metadata["meeting_id"] == "abc123"
+        assert r.metadata["knowledge_type"] == "transcript"
+        assert r.metadata["document_id"] == "doc-zoom"
+        assert r.metadata["chunk_index"] == 1
+        assert r.confidence == 0.92
+
     def test_search_respects_top_k(self):
         """Results are capped at top_k."""
         provider = SupabaseProvider()

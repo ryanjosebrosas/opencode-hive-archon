@@ -42,6 +42,10 @@ SourceOriginValue = Literal[
     "youtube",
     "web",
     "other",
+    "zoom",
+    "json",
+    "text",
+    "leadworks",
 ]
 
 

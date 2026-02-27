@@ -270,3 +270,45 @@ def test_memory_normalize_mem0_empty_metadata() -> None:
     assert len(results) == 1
     assert results[0].content == "Bare result"
     assert results[0].metadata.get("real_provider") is True
+
+
+def test_knowledge_source_new_origins() -> None:
+    """New source origins are accepted."""
+    for origin in ("zoom", "json", "text", "leadworks"):
+        src = KnowledgeSource(name=f"Test {origin}", origin=origin)
+        assert src.origin == origin
+
+
+def test_knowledge_chunk_new_origins() -> None:
+    """KnowledgeChunk accepts new source_origin values."""
+    for origin in ("zoom", "json", "text", "leadworks"):
+        chunk = KnowledgeChunk(content="test", source_origin=origin)
+        assert chunk.source_origin == origin
+
+
+def test_knowledge_document_new_origins() -> None:
+    """KnowledgeDocument accepts new source_origin values."""
+    for origin in ("zoom", "json", "text", "leadworks"):
+        doc = KnowledgeDocument(title="test", knowledge_type="document", source_origin=origin)
+        assert doc.source_origin == origin
+
+
+def test_knowledge_chunk_metadata_nested_dict() -> None:
+    """KnowledgeChunk.metadata accepts nested dicts."""
+    nested_meta = {
+        "source_specific": {
+            "zoom_meeting_id": "abc123",
+            "participants": ["alice", "bob"],
+            "nested": {"deep": {"value": 42}},
+        },
+        "tags": ["meeting", "q4"],
+    }
+    chunk = KnowledgeChunk(content="test", metadata=nested_meta)
+    assert chunk.metadata["source_specific"]["zoom_meeting_id"] == "abc123"
+    assert chunk.metadata["source_specific"]["nested"]["deep"]["value"] == 42
+
+
+def test_knowledge_chunk_invalid_origin_still_rejected() -> None:
+    """Invalid source_origin values are still rejected."""
+    with pytest.raises(ValidationError):
+        KnowledgeChunk(content="test", source_origin="twitter")  # type: ignore[arg-type]

@@ -1,34 +1,16 @@
 """Supabase pgvector memory provider."""
 
 import os
-from typing import Any, Optional
+from typing import Any, Optional, get_args
 
+from second_brain.contracts.knowledge import SourceOriginValue, KnowledgeTypeValue
 from second_brain.logging_config import get_logger
 from second_brain.services.memory import MemorySearchResult
 
 logger = get_logger(__name__)
 
-_VALID_KNOWLEDGE_TYPES = {
-    "note",
-    "document",
-    "decision",
-    "conversation",
-    "task",
-    "signal",
-    "playbook",
-    "case_study",
-    "transcript",
-}
-
-_VALID_SOURCE_ORIGINS = {
-    "notion",
-    "obsidian",
-    "email",
-    "manual",
-    "youtube",
-    "web",
-    "other",
-}
+_VALID_KNOWLEDGE_TYPES = set(get_args(KnowledgeTypeValue))
+_VALID_SOURCE_ORIGINS = set(get_args(SourceOriginValue))
 
 
 class SupabaseProvider:
