@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-03",
-  "completed": ["P1-01", "P1-02", "P1-03"],
+  "lastSpec": "P1-04",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -13,7 +13,10 @@
     "structlog.contextvars for correlation_id propagation",
     "ProcessorFormatter.wrap_for_formatter as final structlog processor",
     "try/finally with clear_correlation_id() at request boundaries",
-    "_CONFIGURED flag reset in conftest.py for test isolation"
+    "_CONFIGURED flag reset in conftest.py for test isolation",
+    "SecondBrainError base class with to_dict() serialization",
+    "Defensive dict copy in error context attributes",
+    "raise TypedError(...) from e for exception chaining in recall.py"
   ],
   "decisionsLog": [
     {
@@ -50,6 +53,16 @@
       "spec": "P1-03",
       "decision": "unbind_contextvars for cleanup, not clear_contextvars",
       "reason": "clear_contextvars wipes ALL structlog contextvars; unbind only removes correlation_id key"
+    },
+    {
+      "spec": "P1-04",
+      "decision": "Narrow scope: only errors.py, recall.py, planner.py modified. Services keep swallow+degrade pattern",
+      "reason": "Services intentionally catch exceptions internally for resilience. Adding typed raises would break graceful degradation."
+    },
+    {
+      "spec": "P1-04",
+      "decision": "Planner catches (SecondBrainError, ValidationError) instead of 5 manual exception types",
+      "reason": "SecondBrainError covers all typed errors from recall.py; ValidationError needed for Pydantic RetrievalRequest construction"
     }
   ]
 }

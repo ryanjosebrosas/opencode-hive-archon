@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 3/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 4/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -21,7 +21,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 3/83 complete
   - touches: logging_config.py (new), all service files (add correlation_id), deps.py
   - acceptance: All log output is valid JSON with timestamp, level, correlation_id, module. Log level changes via env var. No bare print() statements remain.
 
-- [ ] `P1-04` **error-taxonomy** (standard) — Define error hierarchy: SecondBrainError base, with ProviderError, ValidationError, SchemaError, IngestionError, RetrievalError subtypes. Each error has code + context dict + retry_hint bool.
+- [x] `P1-04` **error-taxonomy** (standard) — Define error hierarchy: SecondBrainError base, with ProviderError, ValidationError, SchemaError, IngestionError, RetrievalError subtypes. Each error has code + context dict + retry_hint bool.
   - depends: P1-02
   - touches: errors.py (new), all service files (replace generic exceptions), tests/test_errors.py (new)
   - acceptance: All service methods raise typed errors from taxonomy. Each error serializes to {code, message, context, retry_hint}. Generic Exception catches replaced.
