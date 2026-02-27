@@ -5,11 +5,14 @@
 memory.md
 memory-archive.md
 
-# User-generated plans (project-specific)
-!requests/.gitkeep
+# Request artifacts (plans, reviews, loops, reports — local working files)
+requests/
 
 # Worktrees
 worktrees/
+
+# Swarm hive data (removed)
+.hive/
 
 # Environment files
 .env

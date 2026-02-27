@@ -101,15 +101,6 @@
     }
   },
   "mcp": {
-    "swarm": {
-      "type": "local",
-      "command": ["swarm", "mcp-server"],
-      "enabled": true,
-      "environment": {
-        "HIVE_PATH": ".hive/",
-        "OLLAMA_HOST": "http://localhost:11434"
-      }
-    },
     "archon": {
       "type": "remote",
       "url": "http://159.195.45.47:8051/mcp",
