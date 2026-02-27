@@ -103,12 +103,23 @@ const getConnectedProviders = async (baseUrl: string): Promise<string[]> => {
 }
 
 const PREFERRED_COUNCIL_MEMBERS: ModelTarget[] = [
+  // Paid (use sparingly — included for diversity)
   { provider: "anthropic", model: "claude-sonnet-4-20250514", label: "Claude" },
-  { provider: "ollama-cloud", model: "qwen3-coder-next", label: "Qwen" },
-  { provider: "zai-coding-plan", model: "glm-4.5-flash", label: "GLM" },
   { provider: "openai", model: "gpt-5-codex", label: "GPT" },
-  { provider: "opencode", model: "minimax-m2.5-free", label: "MiniMax" },
+  // FREE — bailian
   { provider: "bailian-coding-plan-test", model: "qwen3.5-plus", label: "Qwen-Plus" },
+  { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus", label: "Qwen-Coder" },
+  // FREE — zai
+  { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
+  { provider: "zai-coding-plan", model: "glm-4.7", label: "GLM-4.7" },
+  // FREE — ollama-cloud (diverse families)
+  { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DeepSeek" },
+  { provider: "ollama-cloud", model: "kimi-k2:1t", label: "Kimi-1T" },
+  { provider: "ollama-cloud", model: "gemini-3-pro-preview", label: "Gemini" },
+  { provider: "ollama-cloud", model: "devstral-2:123b", label: "Devstral" },
+  { provider: "ollama-cloud", model: "mistral-large-3:675b", label: "Mistral" },
+  { provider: "ollama-cloud", model: "cogito-2.1:671b", label: "Cogito" },
+  { provider: "ollama-cloud", model: "kimi-k2-thinking", label: "Kimi-Think" },
 ]
 
 const getDefaultCouncilModels = async (baseUrl: string): Promise<ModelTarget[]> => {

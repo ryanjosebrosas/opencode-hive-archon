@@ -88,39 +88,99 @@ interface ModelResult {
 }
 
 // --- Task routing (duplicated from dispatch.ts — tools must be self-contained) ---
-// 5-Tier Cost-Optimized Model Cascade (mirrors dispatch.ts)
+// 5-Tier Cost-Optimized Model Cascade — 51 free models across 3 providers
+// T1: Implementation (FREE) — bailian-coding-plan-test (8 models: qwen3, kimi, minimax, glm)
+// T2: First Validation (FREE) — zai-coding-plan (10 GLM models: thinking, flash, standard)
+// T3: Second Validation (FREE) — ollama-cloud (33 models: deepseek, kimi, gemini, mistral, qwen, devstral)
+// T4: Code Review (PAID cheap) — openai Codex
+// T5: Final Review (PAID expensive) — anthropic Claude (last resort only)
 
 const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   // === T1: Implementation (FREE — bailian-coding-plan-test) ===
+  // T1a: Fast / Simple tasks → qwen3-coder-next
   "boilerplate": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
   "simple-fix": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
   "quick-check": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
   "general-opinion": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+  "pre-commit-analysis": { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+  // T1b: Code-heavy tasks → qwen3-coder-plus
   "test-scaffolding": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  "test-generation": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
   "logic-verification": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
   "api-analysis": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
+  // T1c: Complex implementation / reasoning → qwen3.5-plus
   "complex-codegen": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
   "complex-fix": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
   "research": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
   "architecture": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
   "library-comparison": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  "pattern-scan": { provider: "bailian-coding-plan-test", model: "qwen3.5-plus" },
+  // T1d: Long context / factual → kimi-k2.5
   "docs-lookup": { provider: "bailian-coding-plan-test", model: "kimi-k2.5" },
+  // T1e: Prose / documentation → minimax-m2.5
   "docs-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
-  // === T2: First Validation (FREE — zai-coding-plan GLM thinking) ===
+  "docstring-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5" },
+
+  // === T2: First Validation (FREE — zai-coding-plan GLM family) ===
   "thinking-review": { provider: "zai-coding-plan", model: "glm-5" },
   "first-validation": { provider: "zai-coding-plan", model: "glm-5" },
   "code-review": { provider: "zai-coding-plan", model: "glm-5" },
   "security-review": { provider: "zai-coding-plan", model: "glm-5" },
-  // === T3: Second Validation (FREE — ollama-cloud) ===
+  "plan-review": { provider: "zai-coding-plan", model: "glm-5" },
+  "fast-review": { provider: "zai-coding-plan", model: "glm-4.7-flashx" },
+  "style-review": { provider: "zai-coding-plan", model: "glm-4.7-flash" },
+  "regression-check": { provider: "zai-coding-plan", model: "glm-4.7" },
+
+  // === T3: Second Validation (FREE — ollama-cloud diverse models) ===
   "second-validation": { provider: "ollama-cloud", model: "deepseek-v3.2" },
   "deep-research": { provider: "ollama-cloud", model: "deepseek-v3.2" },
   "independent-review": { provider: "ollama-cloud", model: "deepseek-v3.2" },
-  // === T4: Code Review (PAID cheap — openai Codex) ===
+  "architecture-review": { provider: "ollama-cloud", model: "kimi-k2:1t" },
+  "deep-code-review": { provider: "ollama-cloud", model: "deepseek-v3.1:671b" },
+  "reasoning-review": { provider: "ollama-cloud", model: "cogito-2.1:671b" },
+  "test-review": { provider: "ollama-cloud", model: "devstral-2:123b" },
+  "multi-review": { provider: "ollama-cloud", model: "gemini-3-pro-preview" },
+  "fast-second-opinion": { provider: "ollama-cloud", model: "gemini-3-flash-preview" },
+  "heavy-codegen": { provider: "ollama-cloud", model: "mistral-large-3:675b" },
+  "big-code-review": { provider: "ollama-cloud", model: "qwen3-coder:480b" },
+  "thinking-second": { provider: "ollama-cloud", model: "kimi-k2-thinking" },
+  "plan-critique": { provider: "ollama-cloud", model: "qwen3.5:397b" },
+
+  // === T4: Code Review gate (PAID cheap — openai Codex) ===
   "codex-review": { provider: "openai", model: "gpt-5.3-codex" },
   "codex-validation": { provider: "openai", model: "gpt-5.3-codex" },
-  // === T5: Final Review (PAID expensive — anthropic) ===
+
+  // === T5: Final Review (PAID expensive — anthropic, last resort only) ===
   "final-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
   "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
+}
+
+// Pre-defined batch dispatch patterns for common multi-model workflows
+const BATCH_PATTERNS: Record<string, Array<{ provider: string; model: string }>> = {
+  // Multi-model code review: 3 free models from different families
+  "multi-review": [
+    { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "ollama-cloud", model: "deepseek-v3.2" },
+    { provider: "ollama-cloud", model: "kimi-k2-thinking" },
+  ],
+  // Plan review: 3 free models critique a plan before approval
+  "plan-review": [
+    { provider: "zai-coding-plan", model: "glm-5" },
+    { provider: "ollama-cloud", model: "qwen3.5:397b" },
+    { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  ],
+  // Pre-implementation scan: 3 fast models check patterns before coding
+  "pre-impl-scan": [
+    { provider: "zai-coding-plan", model: "glm-4.7-flash" },
+    { provider: "bailian-coding-plan-test", model: "qwen3-coder-next" },
+    { provider: "ollama-cloud", model: "deepseek-v3.2" },
+  ],
+  // Heavy architecture: 3 massive models for deep thinking
+  "heavy-architecture": [
+    { provider: "ollama-cloud", model: "kimi-k2:1t" },
+    { provider: "ollama-cloud", model: "deepseek-v3.1:671b" },
+    { provider: "ollama-cloud", model: "cogito-2.1:671b" },
+  ],
 }
 
 // --- Main tool ---
