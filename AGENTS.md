@@ -132,13 +132,14 @@ Each level gates the next:
 The main development loop for building from empty project to working MVP:
 
 ```
-/mvp → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /decompose → /build next (repeat) → /ship
 ```
 
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
 | `/mvp` | Define or refine product vision → `mvp.md` | Start of a new project or major pivot |
-| `/decompose` | Break MVP into dependency-sorted spec list → `specs/BUILD_ORDER.md` | After `/mvp`, or when re-planning |
+| `/prd` | Full product requirements document → `PRD.md` | After `/mvp`, detailed what + why + user stories |
+| `/decompose` | Break PRD into dependency-sorted spec list → `specs/BUILD_ORDER.md` | After `/prd`, or when re-planning |
 | `/build [next\|spec]` | Semi-auto: plan spec → approve → implement → validate → commit | The main loop — repeat until all specs done |
 | `/ship` | Full validation pyramid + T5 review + PR | When all specs complete |
 | `/sync` | Validate build state, re-sync context between sessions | After breaks, before heavy specs, every 3rd spec |
@@ -151,7 +152,7 @@ These are used internally by `/build` or available for manual use:
 | Command | What It Does | When to Use |
 |---------|-------------|-------------|
 | `/prime` | Load project context from memory + codebase | Start of every session |
-| `/planning [feature]` | 6-phase analysis → structured plan | Used internally by `/build` for heavy specs |
+| `/planning [feature]` | Interactive discovery → structured plan | Used internally by `/build` for standard/heavy specs |
 | `/execute [plan]` | Implement from plan, or fix code review issues | Used internally by `/build` |
 | `/code-loop` | Automated review → fix → review loop | Used internally by `/build` |
 | `/commit` | Conventional-format git commit | Used internally by `/build`, or manual |
@@ -335,10 +336,11 @@ opencode-coding-system/
 ### Workflow Pattern
 
 1. **Vision** (`/mvp`) → Defines `mvp.md` (what to build, who for, success signals)
-2. **Decompose** (`/decompose`) → Creates `specs/BUILD_ORDER.md` (dependency-sorted spec list)
-3. **Build** (`/build next`) → Plan + approve + implement + validate + commit (one spec per loop)
-4. **Sync** (`/sync`) → Checkpoint: validate state between sessions or before heavy specs
-5. **Ship** (`/ship`) → Full validation pyramid + T5 review + PR when all specs done
+2. **Requirements** (`/prd`) → Produces `PRD.md` (detailed product requirements, user stories, success criteria)
+3. **Decompose** (`/decompose`) → Creates `specs/BUILD_ORDER.md` (dependency-sorted spec list from PRD)
+4. **Build** (`/build next`) → Plan + approve + implement + validate + commit (one spec per loop)
+5. **Sync** (`/sync`) → Checkpoint: validate state between sessions or before heavy specs
+6. **Ship** (`/ship`) → Full validation pyramid + T5 review + PR when all specs done
 
 ## Optional: Archon MCP
 
@@ -377,4 +379,4 @@ opencode-coding-system/
    > /ship
    ```
 
-**Full pipeline**: `/prime` → `/mvp` → `/decompose` → `/build next` (repeat) → `/ship`
+**Full pipeline**: `/prime` → `/mvp` → `/prd` → `/decompose` → `/build next` (repeat) → `/ship`

@@ -1,5 +1,5 @@
 ---
-description: Break MVP into dependency-sorted spec list (BUILD_ORDER.md)
+description: Break PRD into dependency-sorted spec list (BUILD_ORDER.md)
 agent: build
 ---
 
@@ -20,18 +20,20 @@ Break the MVP vision into concrete, dependency-sorted specs. Produces `specs/BUI
 ## Pipeline Position
 
 ```
-/mvp → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /decompose → /build next (repeat) → /ship
 ```
 
-This is Step 2. Requires `mvp.md` to exist.
+This is Step 3. Requires a PRD document to exist (produced by `/prd`). Falls back to `mvp.md` if no PRD found.
 
 ---
 
-## Step 1: Read MVP
+## Step 1: Read Product Requirements
 
-Read `mvp.md`. If it doesn't exist, report: "No mvp.md found. Run `/mvp` first." and stop.
+1. Look for a PRD file (e.g., `PRD.md`, `docs/PRD.md`, or any file matching `*-prd.md`). This is the primary input — it contains detailed product requirements, user stories, and success criteria.
+2. If no PRD found, fall back to `mvp.md`. If neither exists, report: "No PRD or mvp.md found. Run `/prd` first (or `/mvp` for a quick vision doc)." and stop.
+3. Also read `mvp.md` if it exists alongside the PRD — it provides high-level vision context.
 
-Extract the Core Capabilities list — these become the high-level groupings for specs.
+Extract the Core Capabilities / Feature Requirements — these become the high-level groupings for specs.
 
 ---
 

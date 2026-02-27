@@ -22,10 +22,10 @@ Semi-automated builder that takes the next spec from BUILD_ORDER.md, auto-genera
 ## Pipeline Position
 
 ```
-/mvp → /decompose → /build next (repeat) → /ship
+/mvp → /prd → /decompose → /build next (repeat) → /ship
 ```
 
-This is Step 3 (the main loop). Repeat until all specs are done.
+This is Step 4 (the main loop). Repeat until all specs are done.
 
 ---
 
@@ -97,15 +97,17 @@ mypy {paths}
 
 Moderate plan with patterns and testing:
 
-Use the existing `/planning` template structure but trimmed:
-- Skip Phase 0 (MVP), Phase 0.5 (options scan)
-- Include: Feature Description, Solution Statement, Files, Patterns, Tasks, Testing, Validation
+Use the existing `/planning` interactive discovery flow, trimmed for scope:
+- Understand the spec intent (from BUILD_ORDER.md — no extended conversation needed)
+- Explore relevant codebase patterns
+- Make key design decisions
+- Produce plan: Feature Description, Solution Statement, Files, Patterns, Tasks, Testing, Validation
 - Each task gets: ACTION, TARGET, IMPLEMENT, VALIDATE
 
 ### Heavy (~700 lines)
 
-Full planning treatment:
-- Run the complete `/planning` Phase 1-5 process
+Full `/planning` interactive discovery treatment:
+- Run the complete `/planning` discovery process (Understand → Explore → Design → Preview → Write Plan)
 - Include all fields: patterns, code samples, edge cases, testing strategy
 - Consider running `/council` for architectural decisions within the spec
 
