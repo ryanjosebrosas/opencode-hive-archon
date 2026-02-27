@@ -82,7 +82,7 @@ const getConnectedProviders = async (baseUrl: string): Promise<string[]> => {
 // 5-Tier Cost-Optimized Model Cascade — 51 free models across 3 providers
 // T1: Implementation (FREE) — bailian-coding-plan-test (6 models: qwen3-coder-next, qwen3-coder-plus, qwen3.5-plus, qwen3-max, kimi-k2.5, minimax-m2.5)
 // T2: First Validation (FREE) — zai-coding-plan (5 GLM models: glm-5, glm-4.5, glm-4.7, glm-4.7-flash, glm-4.7-flashx)
-// T3: Second Validation (FREE) — ollama-cloud (33 models: deepseek, kimi, gemini, mistral, qwen, devstral)
+// T3: Second Validation (FREE) — ollama-cloud (33 models: deepseek, kimi, mistral, qwen, devstral)
 // T4: Code Review (PAID cheap) — openai Codex
 // T5: Final Review (PAID expensive) — anthropic Claude (last resort only)
 const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
@@ -148,8 +148,8 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   "deep-code-review": { provider: "ollama-cloud", model: "deepseek-v3.1:671b" },
   "reasoning-review": { provider: "ollama-cloud", model: "cogito-2.1:671b" },
   "test-review": { provider: "ollama-cloud", model: "devstral-2:123b" },
-  "multi-review": { provider: "ollama-cloud", model: "gemini-3-pro-preview" },
-  "fast-second-opinion": { provider: "ollama-cloud", model: "gemini-3-flash-preview" },
+  "multi-review": { provider: "zai-coding-plan", model: "glm-4.7" },
+  "fast-second-opinion": { provider: "zai-coding-plan", model: "glm-4.7" },
   "heavy-codegen": { provider: "ollama-cloud", model: "mistral-large-3:675b" },
   "big-code-review": { provider: "ollama-cloud", model: "qwen3-coder:480b" },
   "thinking-second": { provider: "ollama-cloud", model: "kimi-k2-thinking" },

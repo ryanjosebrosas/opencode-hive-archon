@@ -116,7 +116,7 @@ const PREFERRED_COUNCIL_MEMBERS: ModelTarget[] = [
   // FREE — ollama-cloud (diverse families)
   { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DeepSeek" },
   { provider: "ollama-cloud", model: "kimi-k2:1t", label: "Kimi-1T" },
-  { provider: "ollama-cloud", model: "gemini-3-pro-preview", label: "Gemini" },
+  { provider: "ollama-cloud", model: "qwen3-coder:480b", label: "Qwen3-Coder" },
   { provider: "ollama-cloud", model: "devstral-2:123b", label: "Devstral" },
   { provider: "ollama-cloud", model: "mistral-large-3:675b", label: "Mistral" },
   { provider: "ollama-cloud", model: "cogito-2.1:671b", label: "Cogito" },
