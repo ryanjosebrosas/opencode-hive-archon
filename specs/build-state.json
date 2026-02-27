@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-02",
-  "completed": ["P1-01", "P1-02"],
+  "lastSpec": "P1-03",
+  "completed": ["P1-01", "P1-02", "P1-03"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -8,7 +8,12 @@
     "type: ignore[attr-defined] for SDK imports without __all__",
     "pydantic_settings.BaseSettings for centralized config",
     "@lru_cache(maxsize=1) + get_settings() for config singleton",
-    "get_settings.cache_clear() in tests for isolation"
+    "get_settings.cache_clear() in tests for isolation",
+    "structlog.get_logger(name) for all module-level loggers",
+    "structlog.contextvars for correlation_id propagation",
+    "ProcessorFormatter.wrap_for_formatter as final structlog processor",
+    "try/finally with clear_correlation_id() at request boundaries",
+    "_CONFIGURED flag reset in conftest.py for test isolation"
   ],
   "decisionsLog": [
     {
@@ -30,6 +35,21 @@
       "spec": "P1-02",
       "decision": "Scope config.py to deps.py only, service files keep os.getenv fallback",
       "reason": "Service files have direct instantiation paths for testing; centralizing everything in one spec increases risk"
+    },
+    {
+      "spec": "P1-03",
+      "decision": "structlog with ProcessorFormatter for JSON rendering, not dual JSONRenderer",
+      "reason": "Avoids double JSON rendering bug — structlog processors prepare dict, ProcessorFormatter renders once"
+    },
+    {
+      "spec": "P1-03",
+      "decision": "Conditional correlation_id set in planner (preserve upstream ID)",
+      "reason": "MCP server sets request-level correlation_id; planner only sets if none exists to avoid overwriting"
+    },
+    {
+      "spec": "P1-03",
+      "decision": "unbind_contextvars for cleanup, not clear_contextvars",
+      "reason": "clear_contextvars wipes ALL structlog contextvars; unbind only removes correlation_id key"
     }
   ]
 }

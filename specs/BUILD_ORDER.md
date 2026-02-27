@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 2/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 3/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -16,7 +16,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 2/83 complete
   - touches: deps.py (refactor), config.py (new), tests/test_config.py (new)
   - acceptance: All env vars read from one Settings class. Missing required var raises ValidationError with field name. Existing tests pass with env vars set.
 
-- [ ] `P1-03` **structured-json-logging** (standard) — Replace print/logging.info with structlog JSON output. Add correlation_id to all operations. Log level configurable via Settings.
+- [x] `P1-03` **structured-json-logging** (standard) — Replace print/logging.info with structlog JSON output. Add correlation_id to all operations. Log level configurable via Settings.
   - depends: P1-02
   - touches: logging_config.py (new), all service files (add correlation_id), deps.py
   - acceptance: All log output is valid JSON with timestamp, level, correlation_id, module. Log level changes via env var. No bare print() statements remain.
