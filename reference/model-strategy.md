@@ -65,6 +65,8 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 **Requires**: `opencode serve` running (server at `http://127.0.0.1:4096`).
 **Primer**: `_dispatch-primer.md` auto-prepended to every dispatch and council — ensures all models have project context, core principles, and methodology.
 
+**Pre-dispatch**: Always run `/prime` before your first dispatch in any session to ensure models have fresh project context.
+
 ### Shared Relay Utilities
 
 File: `.opencode/tools/_relay-utils.ts`

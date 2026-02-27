@@ -1,3 +1,6 @@
+> **ALWAYS run `/prime` before your first dispatch in any session.**
+> This loads memory.md, git state, and project context into your working memory.
+
 # Dispatch Primer — Project Context
 
 You are working on **Ultima Second Brain**, a personal knowledge operating system. Read and internalize these rules before executing any task.

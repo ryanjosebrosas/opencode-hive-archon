@@ -79,6 +79,8 @@ Maximize free/cheap models. Anthropic is last resort only.
 **Council**: `/council` dispatches to 13 real models across 4 providers for multi-model debates.
 **Full details**: Read `reference/model-strategy.md` for task routing, council models, MCP tools, and dispatch configuration.
 
+**Dispatch rule**: Always `/prime` before first dispatch in a session — ensures models have fresh project context.
+
 ---
 
 ## Validation: 5-Level Pyramid
