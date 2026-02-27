@@ -1,13 +1,12 @@
 """Supabase pgvector memory provider."""
 
-import logging
 import os
 from typing import Any, Optional
 
+from second_brain.logging_config import get_logger
 from second_brain.services.memory import MemorySearchResult
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _VALID_KNOWLEDGE_TYPES = {
     "note",

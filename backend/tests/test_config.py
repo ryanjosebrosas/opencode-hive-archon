@@ -328,3 +328,35 @@ class TestSettingsEdgeCases:
         with patch.dict(os.environ, {"MEM0_USER_ID": "user with spaces"}):
             settings = Settings()
             assert settings.mem0_user_id == "user with spaces"
+
+
+class TestSettingsLogLevel:
+    """Test Settings log_level field."""
+
+    def test_log_level_default(self):
+        """log_level defaults to INFO."""
+        get_settings.cache_clear()
+        
+        for key in ["LOG_LEVEL"]:
+            os.environ.pop(key, None)
+        
+        settings = Settings()
+        assert settings.log_level == "INFO"
+
+    def test_log_level_from_env(self):
+        """log_level can be set via environment variable."""
+        get_settings.cache_clear()
+        
+        with patch.dict(os.environ, {"LOG_LEVEL": "DEBUG"}):
+            settings = Settings()
+            assert settings.log_level == "DEBUG"
+
+    def test_log_level_to_dict(self):
+        """log_level is included in to_dict() output."""
+        get_settings.cache_clear()
+        
+        settings = Settings()
+        config_dict = settings.to_dict()
+        
+        assert "log_level" in config_dict
+        assert config_dict["log_level"] == "INFO"

@@ -1,14 +1,14 @@
 """Memory service with Mem0 provider."""
 
-import logging
 import os
 import threading
 from dataclasses import dataclass
 from typing import Any, Optional
+
 from second_brain.contracts.context_packet import ContextCandidate
+from second_brain.logging_config import get_logger
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 _MEM0_ENV_LOCK = threading.Lock()
 
 

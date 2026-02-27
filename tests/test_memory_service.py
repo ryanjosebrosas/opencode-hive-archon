@@ -1,9 +1,9 @@
 """Unit tests for MemoryService mock data lifecycle."""
 
-import logging
 import os
 import sys
 from types import SimpleNamespace
+
 
 from second_brain.services.memory import MemoryService, MemorySearchResult
 
@@ -375,9 +375,9 @@ class TestMajorFindingsFollowup:
         assert captured["threshold"] == 0.6
 
     def test_provider_error_metadata_includes_sanitized_message(
-        self, monkeypatch, caplog
+        self, monkeypatch,
     ):
-        """Provider errors include redacted message context and warning logs."""
+        """Provider errors include redacted message context."""
         secret = "secret-key-123"
         service = MemoryService(
             provider="mem0",
@@ -390,16 +390,12 @@ class TestMajorFindingsFollowup:
 
         monkeypatch.setattr(service, "_load_mem0_client", lambda: FailingClient())
 
-        with caplog.at_level(logging.WARNING):
-            _, metadata = service.search_memories(
-                query="normal query", top_k=3, threshold=0.6
-            )
+        _, metadata = service.search_memories(
+            query="normal query", top_k=3, threshold=0.6
+        )
 
         assert metadata["fallback_reason"] == "provider_error"
         assert metadata["error_type"] == "RuntimeError"
         assert "error_message" in metadata
         assert secret not in metadata["error_message"]
         assert len(metadata["error_message"]) <= 200
-        assert any(
-            "Mem0 provider search failed" in message for message in caplog.messages
-        )

@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +37,16 @@ class Settings(BaseSettings):
     
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen3-coder-next"
+    log_level: str = "INFO"
+    
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        upper = v.upper()
+        if upper not in valid_levels:
+            raise ValueError(f"Invalid log_level '{v}'. Must be one of: {', '.join(sorted(valid_levels))}")
+        return upper
     
     def to_dict(self) -> dict[str, Any]:
         """Convert settings to dictionary for backward compatibility."""
@@ -51,6 +62,7 @@ class Settings(BaseSettings):
             "voyage_use_real_rerank": self.voyage_use_real_rerank,
             "ollama_base_url": self.ollama_base_url,
             "ollama_model": self.ollama_model,
+            "log_level": self.log_level,
         }
 
 

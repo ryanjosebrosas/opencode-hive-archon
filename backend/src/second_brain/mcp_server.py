@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import logging
 import threading
+import uuid
 from typing import TYPE_CHECKING, Any, Literal, Optional, cast
+
+from second_brain.logging_config import configure_logging, get_logger, set_correlation_id, clear_correlation_id
 from second_brain.agents.recall import RecallOrchestrator
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
@@ -17,13 +19,18 @@ if TYPE_CHECKING:
 
 RetrievalMode = Literal["fast", "accurate", "conversation"]
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MCPServer:
     """MCP server exposing recall flow as tools."""
 
     def __init__(self) -> None:
+        from second_brain.config import get_settings
+        
+        settings = get_settings()
+        configure_logging(log_level=settings.log_level)
+        
         self.debug_mode = False
         self.trace_collector: TraceCollector | None = None
         self._conversation_store: ConversationStore | None = None
@@ -71,33 +78,40 @@ class MCPServer:
         from second_brain.contracts.context_packet import RetrievalRequest
         from second_brain.deps import get_feature_flags, get_provider_status
 
-        request = RetrievalRequest(
-            query=query,
-            mode=mode,
-            top_k=top_k,
-            threshold=threshold,
-            provider_override=provider_override,
-        )
+        correlation_id = f"recall-{uuid.uuid4().hex[:8]}"
+        set_correlation_id(correlation_id)
+        try:
+            logger.info("recall_search_request", query=query[:100], mode=mode, top_k=top_k)
 
-        memory_service = MemoryService(provider="mem0")
-        rerank_service = VoyageRerankService(enabled=True)
+            request = RetrievalRequest(
+                query=query,
+                mode=mode,
+                top_k=top_k,
+                threshold=threshold,
+                provider_override=provider_override,
+            )
 
-        orchestrator = RecallOrchestrator(
-            memory_service=memory_service,
-            rerank_service=rerank_service,
-            feature_flags=get_feature_flags(),
-            provider_status=get_provider_status(),
-            trace_collector=self.trace_collector,
-        )
+            memory_service = MemoryService(provider="mem0")
+            rerank_service = VoyageRerankService(enabled=True)
 
-        response = orchestrator.run(request)
+            orchestrator = RecallOrchestrator(
+                memory_service=memory_service,
+                rerank_service=rerank_service,
+                feature_flags=get_feature_flags(),
+                provider_status=get_provider_status(),
+                trace_collector=self.trace_collector,
+            )
 
-        compatibility = MCPCompatibilityResponse.from_retrieval_response(
-            response=response,
-            include_legacy=True,
-        )
+            response = orchestrator.run(request)
 
-        return compatibility.model_dump()
+            compatibility = MCPCompatibilityResponse.from_retrieval_response(
+                response=response,
+                include_legacy=True,
+            )
+
+            return compatibility.model_dump()
+        finally:
+            clear_correlation_id()
 
     def validate_branch(
         self,
@@ -116,65 +130,70 @@ class MCPServer:
         """
         from second_brain.validation.manual_branch_scenarios import get_scenario_by_id
 
-        scenario = get_scenario_by_id(scenario_id)
-        if not scenario:
-            return {
-                "success": False,
-                "error": f"Scenario {scenario_id} not found",
-            }
+        correlation_id = f"validate-{uuid.uuid4().hex[:8]}"
+        set_correlation_id(correlation_id)
+        try:
+            logger.info("validate_branch_request", scenario_id=scenario_id)
 
-        is_validation_tagged = "validation" in scenario.tags
+            scenario = get_scenario_by_id(scenario_id)
+            if not scenario:
+                return {
+                    "success": False,
+                    "error": f"Scenario {scenario_id} not found",
+                }
 
-        if is_validation_tagged and not self.debug_mode:
+            is_validation_tagged = "validation" in scenario.tags
+
+            if is_validation_tagged and not self.debug_mode:
+                return {
+                    "success": False,
+                    "gated": True,
+                    "error": (
+                        f"Scenario {scenario_id} is validation-only. "
+                        "Enable debug mode to execute validation-tagged scenarios."
+                    ),
+                    "scenario_id": scenario_id,
+                    "description": scenario.description,
+                }
+
+            memory_service = MemoryService(provider="mem0")
+            rerank_service = VoyageRerankService(enabled=True)
+
+            orchestrator = RecallOrchestrator(
+                memory_service=memory_service,
+                rerank_service=rerank_service,
+                feature_flags=scenario.feature_flags,
+                provider_status=scenario.provider_status,
+                trace_collector=self.trace_collector,
+            )
+
+            force_branch = None
+            if is_validation_tagged and self.debug_mode:
+                force_branch = scenario.expected_branch
+
+            response = orchestrator.run(
+                request=scenario.request,
+                validation_mode=self.debug_mode,
+                force_branch=force_branch,
+            )
+
             return {
-                "success": False,
-                "gated": True,
-                "error": (
-                    f"Scenario {scenario_id} is validation-only. "
-                    "Enable debug mode to execute validation-tagged scenarios."
-                ),
+                "success": True,
                 "scenario_id": scenario_id,
                 "description": scenario.description,
+                "expected_branch": scenario.expected_branch,
+                "actual_branch": response.context_packet.summary.branch,
+                "expected_action": scenario.expected_action,
+                "actual_action": response.next_action.action,
+                "rerank_type": response.routing_metadata.get("rerank_type"),
+                "provider": response.routing_metadata.get("selected_provider"),
+                "branch_match": response.context_packet.summary.branch == scenario.expected_branch,
+                "action_match": response.next_action.action == scenario.expected_action,
+                "forced_branch": force_branch,
+                "gated": False,
             }
-
-        # Placeholder service - orchestrator resolves provider-consistent instance via
-        # _resolve_memory_service_for_provider based on scenario's feature_flags/provider_status
-        memory_service = MemoryService(provider="mem0")
-        rerank_service = VoyageRerankService(enabled=True)
-
-        orchestrator = RecallOrchestrator(
-            memory_service=memory_service,
-            rerank_service=rerank_service,
-            feature_flags=scenario.feature_flags,
-            provider_status=scenario.provider_status,
-            trace_collector=self.trace_collector,
-        )
-
-        force_branch = None
-        if is_validation_tagged and self.debug_mode:
-            force_branch = scenario.expected_branch
-
-        response = orchestrator.run(
-            request=scenario.request,
-            validation_mode=self.debug_mode,
-            force_branch=force_branch,
-        )
-
-        return {
-            "success": True,
-            "scenario_id": scenario_id,
-            "description": scenario.description,
-            "expected_branch": scenario.expected_branch,
-            "actual_branch": response.context_packet.summary.branch,
-            "expected_action": scenario.expected_action,
-            "actual_action": response.next_action.action,
-            "rerank_type": response.routing_metadata.get("rerank_type"),
-            "provider": response.routing_metadata.get("selected_provider"),
-            "branch_match": response.context_packet.summary.branch == scenario.expected_branch,
-            "action_match": response.next_action.action == scenario.expected_action,
-            "forced_branch": force_branch,
-            "gated": False,
-        }
+        finally:
+            clear_correlation_id()
 
     def enable_debug_mode(self) -> None:
         """Enable debug mode for validation endpoints."""
@@ -209,38 +228,43 @@ class MCPServer:
         from second_brain.deps import create_planner, create_llm_service
         from second_brain.services.conversation import ConversationStore
 
-        with self._chat_lock:
-            if self._conversation_store is None:
-                self._conversation_store = ConversationStore()
+        correlation_id = f"chat-{uuid.uuid4().hex[:8]}"
+        set_correlation_id(correlation_id)
+        try:
+            logger.info("chat_request", query=query[:100], session_id=session_id, mode=mode)
 
-            # Reject arbitrary client-supplied session IDs unless previously issued
-            # by this server instance.
-            safe_session_id = session_id
-            if safe_session_id and safe_session_id not in self._issued_session_ids:
-                safe_session_id = None
-            if safe_session_id and not self._conversation_store.has_session(safe_session_id):
-                safe_session_id = None
+            with self._chat_lock:
+                if self._conversation_store is None:
+                    self._conversation_store = ConversationStore()
 
-            if self._planner is None:
-                llm = create_llm_service()
-                self._planner = create_planner(
-                    conversation_store=self._conversation_store,
-                    trace_collector=self.trace_collector,
-                    llm_service=llm,
+                safe_session_id = session_id
+                if safe_session_id and safe_session_id not in self._issued_session_ids:
+                    safe_session_id = None
+                if safe_session_id and not self._conversation_store.has_session(safe_session_id):
+                    safe_session_id = None
+
+                if self._planner is None:
+                    llm = create_llm_service()
+                    self._planner = create_planner(
+                        conversation_store=self._conversation_store,
+                        trace_collector=self.trace_collector,
+                        llm_service=llm,
+                    )
+
+                response = self._planner.chat(
+                    query=query,
+                    session_id=safe_session_id,
+                    mode=mode,
+                    top_k=top_k,
+                    threshold=threshold,
                 )
-
-            response = self._planner.chat(
-                query=query,
-                session_id=safe_session_id,
-                mode=mode,
-                top_k=top_k,
-                threshold=threshold,
-            )
-            self._issued_session_ids.add(response.session_id)
-            self._issued_session_ids.intersection_update(
-                self._conversation_store.list_session_ids()
-            )
-        return response.model_dump()
+                self._issued_session_ids.add(response.session_id)
+                self._issued_session_ids.intersection_update(
+                    self._conversation_store.list_session_ids()
+                )
+            return response.model_dump()
+        finally:
+            clear_correlation_id()
 
 
 # Global MCP server instance
@@ -300,7 +324,7 @@ def create_fastmcp_server() -> Any | None:
     try:
         from fastmcp import FastMCP
     except ImportError:
-        logger.warning("fastmcp not installed - MCP transport unavailable")
+        logger.warning("fastmcp_not_installed", error="import_failed")
         return None
 
     mcp = FastMCP("Second Brain")

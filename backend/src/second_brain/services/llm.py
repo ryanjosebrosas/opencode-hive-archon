@@ -1,11 +1,11 @@
 """LLM synthesis service via Ollama REST API."""
 
-import logging
 import os
 from typing import Any
 
+from second_brain.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "qwen3-coder-next"

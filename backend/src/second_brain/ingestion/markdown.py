@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import uuid
 from pathlib import Path
@@ -14,8 +13,9 @@ from second_brain.contracts.knowledge import (
     KnowledgeTypeValue,
     SourceOriginValue,
 )
+from second_brain.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 DEFAULT_MAX_CHUNK_CHARS = 2000
 DEFAULT_MIN_CHUNK_CHARS = 100

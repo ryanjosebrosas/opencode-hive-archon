@@ -1,10 +1,12 @@
 """Planning module - interprets retrieval results and manages conversation flow."""
 
 import time
+import uuid
 from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from second_brain.logging_config import get_correlation_id, get_logger, set_correlation_id
 from second_brain.contracts.context_packet import (
     RetrievalRequest,
     RetrievalResponse,
@@ -18,6 +20,8 @@ from second_brain.contracts.trace import RetrievalTrace
 from second_brain.agents.recall import RecallOrchestrator
 from second_brain.services.conversation import ConversationStore
 from second_brain.services.trace import TraceCollector
+
+logger = get_logger(__name__)
 
 MAX_CANDIDATE_CHARS = 300
 
@@ -56,7 +60,12 @@ class Planner:
         6. Record assistant turn
         7. Return PlannerResponse
         """
-        # 1. Session management
+        correlation_id = f"planner-{uuid.uuid4().hex[:8]}"
+        if not get_correlation_id():
+            set_correlation_id(correlation_id)
+        
+        logger.info("planner_chat_start", query=query[:100], session_id=session_id, mode=mode)
+        
         state = self.conversations.get_or_create(session_id)
 
         # 2. Record user turn

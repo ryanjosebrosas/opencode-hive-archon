@@ -1,13 +1,12 @@
 """Voyage AI reranking and embedding service."""
 
-import logging
 import os
 from typing import Any, Sequence
 
 from second_brain.contracts.context_packet import ContextCandidate
+from second_brain.logging_config import get_logger
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class VoyageRerankService:
