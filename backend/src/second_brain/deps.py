@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
+
+from second_brain.config import get_settings
 from second_brain.services.memory import MemoryService
 from second_brain.services.voyage import VoyageRerankService
 from second_brain.services.trace import TraceCollector
@@ -25,8 +26,6 @@ def get_feature_flags() -> dict[str, bool]:
 
 def get_provider_status() -> dict[str, str]:
     """Get provider health status snapshot."""
-    # In production, this would check actual provider health
-    # For testing, return deterministic defaults
     return {
         "mem0": "available",
         "supabase": "available",
@@ -49,18 +48,21 @@ def create_voyage_rerank_service(
     embed_enabled: bool | None = None,
     use_real_rerank: bool | None = None,
 ) -> VoyageRerankService:
-    """Create voyage rerank service instance with env-var defaults."""
-    _embed_model = embed_model or os.getenv("VOYAGE_EMBED_MODEL") or "voyage-4-large"
+    """Create voyage rerank service instance with settings defaults."""
+    settings = get_settings()
+    
+    _embed_model = embed_model or settings.voyage_embed_model
     _embed_enabled = (
         embed_enabled
         if embed_enabled is not None
-        else os.getenv("VOYAGE_EMBED_ENABLED", "false").lower() == "true"
+        else settings.voyage_embed_enabled
     )
     _use_real_rerank = (
         use_real_rerank
         if use_real_rerank is not None
-        else os.getenv("VOYAGE_USE_REAL_RERANK", "false").lower() == "true"
+        else settings.voyage_use_real_rerank
     )
+    
     return VoyageRerankService(
         enabled=enabled,
         model=model,
@@ -127,19 +129,20 @@ def create_planner(
 
 
 def get_default_config() -> dict[str, Any]:
-    """Get configuration from environment variables with safe defaults."""
+    """Get configuration from settings with safe defaults."""
+    settings = get_settings()
+    
     return {
         "default_mode": "conversation",
         "default_top_k": 5,
         "default_threshold": 0.6,
         "mem0_rerank_native": True,
         "mem0_skip_external_rerank": True,
-        "mem0_use_real_provider": os.getenv("MEM0_USE_REAL_PROVIDER", "false").lower() == "true",
-        "mem0_user_id": os.getenv("MEM0_USER_ID"),
-        "mem0_api_key": os.getenv("MEM0_API_KEY"),
-        "supabase_use_real_provider": os.getenv("SUPABASE_USE_REAL_PROVIDER", "false").lower()
-        == "true",
-        "supabase_url": os.getenv("SUPABASE_URL"),
-        "supabase_key": os.getenv("SUPABASE_KEY"),
-        "voyage_embed_model": os.getenv("VOYAGE_EMBED_MODEL", "voyage-4-large"),
+        "mem0_use_real_provider": settings.mem0_use_real_provider,
+        "mem0_user_id": settings.mem0_user_id,
+        "mem0_api_key": settings.mem0_api_key,
+        "supabase_use_real_provider": settings.supabase_use_real_provider,
+        "supabase_url": settings.supabase_url,
+        "supabase_key": settings.supabase_key,
+        "voyage_embed_model": settings.voyage_embed_model,
     }

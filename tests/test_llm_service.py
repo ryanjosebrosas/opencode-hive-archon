@@ -264,9 +264,13 @@ class TestDepsEnvConfig:
         assert config["supabase_use_real_provider"] is False
 
     def test_default_config_reads_env(self, monkeypatch):
+        from second_brain.config import get_settings
+        get_settings.cache_clear()
+        
         monkeypatch.setenv("MEM0_USE_REAL_PROVIDER", "true")
         monkeypatch.setenv("SUPABASE_USE_REAL_PROVIDER", "TRUE")
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+        
         from second_brain.deps import get_default_config
 
         config = get_default_config()
