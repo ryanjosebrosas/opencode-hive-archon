@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-06",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06"],
+  "lastSpec": "P1-07",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -21,7 +21,10 @@
     "DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT for migration pattern",
     "Pure comparison functions for drift detection (no DB dependency)",
     "Strict regex for migration filename parsing",
-    "SchemaError with structured context for drift reporting"
+    "SchemaError with structured context for drift reporting",
+    "Protocol-based executor for DB abstraction in tests",
+    "Advisory lock (int key) before state reads",
+    "MigrationResult model for structured operation feedback"
   ],
   "decisionsLog": [
     {
@@ -78,6 +81,11 @@
       "spec": "P1-06",
       "decision": "SchemaManager uses pure functions: scan_migrations (filesystem), detect_drift (comparison), validate_schema_integrity (orchestrator)",
       "reason": "Testable without DB. Core logic is pure Python comparison. DB integration deferred to migration-runner spec (P1-07)."
+    },
+    {
+      "spec": "P1-07",
+      "decision": "MigrationExecutor as Protocol (structural typing), not ABC",
+      "reason": "Protocol enables duck typing — any object with matching methods works. No inheritance needed for mock in tests."
     }
   ]
 }

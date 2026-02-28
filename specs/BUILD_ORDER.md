@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 6/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 7/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -38,7 +38,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 6/83 complete
   - touches: migrations/003_schema_versions.sql (new), services/schema_manager.py (new), tests/test_schema_manager.py (new)
   - acceptance: schema_versions table tracks all applied migrations with SHA-256 checksums. Startup check detects drift (modified migration file). Drift = structured error with details.
 
-- [ ] `P1-07` **migration-runner** (standard) — Python migration runner: auto-apply pending, dry-run mode, rollback support, concurrent lock (advisory lock prevents parallel runs).
+- [x] `P1-07` **migration-runner** (standard) — Python migration runner: auto-apply pending, dry-run mode, rollback support, concurrent lock (advisory lock prevents parallel runs).
   - depends: P1-06
   - touches: services/migration_runner.py (new), tests/test_migration_runner.py (new)
   - acceptance: Runner applies pending migrations in order. Dry-run shows SQL without executing. Two concurrent runners: one waits, other proceeds. Rollback reverses last migration.
