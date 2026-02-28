@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 12/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 13/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -70,7 +70,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 12/83 complete
   - touches: services/supabase.py, tests/test_concurrent_writes.py (new)
   - acceptance: Two parallel ingestion jobs writing overlapping chunks: no data corruption, no lost updates. Audit log shows conflict resolution.
 
-- [ ] `P1-13` **data-integrity-constraints** (standard) — Add NOT NULL, CHECK, UNIQUE, FK constraints to all tables. Enforce at DB level what contracts enforce at Python level.
+- [x] `P1-13` **data-integrity-constraints** (standard) — Add NOT NULL, CHECK, UNIQUE, FK constraints to all tables. Enforce at DB level what contracts enforce at Python level.
   - depends: P1-05
   - touches: migrations/004_integrity_constraints.sql (new), tests/test_constraints.py (new)
   - acceptance: Insert with NULL required field fails at DB. Duplicate content_hash rejected by UNIQUE. FK violation on non-existent source_id rejected. All constraints documented.

@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-12",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12"],
+  "lastSpec": "P1-13",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -30,7 +30,8 @@
     "CircuitBreaker with single-probe HALF_OPEN enforcement",
     "Thread-safe metrics via lock context manager",
     "Executor-first pattern in transaction context managers: call executor before mutating state",
-    "Thread-safe mock executor with threading.Lock for concurrent write tests"
+    "Thread-safe mock executor with threading.Lock for concurrent write tests",
+    "FK ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities; CASCADE only for owned/child rows"
   ],
   "decisionsLog": [
     {
@@ -107,6 +108,11 @@
       "spec": "P1-12",
       "decision": "MockChunkWriteExecutor lives in test file, not service file",
       "reason": "Production service files should not contain test helpers. Protocol-based executor abstraction allows mocks to live in tests without polluting service modules."
+    },
+    {
+      "spec": "P1-13",
+      "decision": "ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities",
+      "reason": "Relationships reference entities but don't own them. CASCADE would silently delete all relationships when an entity is deleted. RESTRICT forces explicit cleanup."
     }
   ]
 }
