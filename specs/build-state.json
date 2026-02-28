@@ -1,8 +1,8 @@
 {
-  "lastSpec": "P1-18",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16", "P1-17", "P1-18"],
+  "lastSpec": "P1-19",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16", "P1-17", "P1-18", "P1-19"],
   "currentPillar": 1,
-  "totalSpecs": 83,
+  "totalSpecs": 92,
   "patternsEstablished": [
     "dict[str, Any] for all unparameterized dicts",
     "type: ignore[attr-defined] for SDK imports without __all__",
@@ -36,7 +36,10 @@
     "FK ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities; CASCADE only for owned/child rows",
     "frozenset of (from, to) tuples for state machine transition validation",
     "ChunkNotFoundError vs StaleDataError: not-found (404) and version-mismatch (409) are distinct exception types",
-    "RRF hybrid search: subquery ORDER BY before LIMIT to guarantee correct pool selection; COALESCE(weight/(60.0+rank), 0.0) handles NULL ranks for one-sided matches; secondary kc.id sort for determinism"
+    "RRF hybrid search: subquery ORDER BY before LIMIT to guarantee correct pool selection; COALESCE(weight/(60.0+rank), 0.0) handles NULL ranks for one-sided matches; secondary kc.id sort for determinism",
+    "pg_trgm GIN index: use ke.name % search_term (% operator) in WHERE clause to trigger GIN index scan; similarity() only in SELECT/ORDER BY for scoring — WHERE similarity() >= threshold does NOT use index",
+    "set_config('pg_trgm.similarity_threshold', threshold::text, true) before % operator query to control match threshold per-query",
+    "fuzzy_search_entities() short-circuits on empty-after-strip: returns ([], {fallback_reason: 'empty_query'}) immediately — test asserts rpc.assert_not_called()"
   ],
   "decisionsLog": [
     {
@@ -148,6 +151,11 @@
       "spec": "P1-18",
       "decision": "confidence = max(0.0, min(1.0, rrf_score)) mirrors existing search() clamping",
       "reason": "RRF scores are 0-1 range for default weights (k=60, weight=1.0 → max score ≈ 0.033). Clamping is consistent with existing pattern. Semantic normalization deferred to application layer."
+    },
+    {
+      "spec": "P1-19",
+      "decision": "fuzzy_search_entities returns tuple[list[dict], dict] (raw dicts, NOT MemorySearchResult)",
+      "reason": "Entity search is a graph/metadata lookup, not a semantic chunk retrieval. MemorySearchResult is for KnowledgeChunk results. Keeping raw dicts avoids forcing entities into chunk schema."
     }
   ]
 }

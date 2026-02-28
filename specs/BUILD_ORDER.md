@@ -1,8 +1,8 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 92 | Status: 19/83 complete
 
-## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
+## Pillar 1: Data Infrastructure — PLUS ULTRA (73 specs)
 
 ### A. Type Safety & Config (4 specs)
 
@@ -90,7 +90,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: contracts/knowledge.py, services/supabase.py, migrations/007_optimistic_locking.sql (new), tests/test_optimistic_locking.py (new)
   - acceptance: Update with correct version succeeds, version incremented. Update with stale version raises StaleDataError. Concurrent updates: exactly one wins.
 
-### D. Supabase Search Infrastructure (8 specs)
+### D. Supabase Search Infrastructure (10 specs)
 
 - [x] `P1-17` **full-text-search** (standard) — Add tsvector column to knowledge_chunks, GIN index. PostgreSQL full-text search RPC function. Supports AND/OR/phrase queries.
   - depends: P1-13
@@ -102,7 +102,17 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: migrations/009_hybrid_search.sql (new), services/supabase.py, tests/test_hybrid_search.py (new)
   - acceptance: Hybrid search returns better results than vector-only or keyword-only for test queries. RRF weights configurable. Single RPC call, not two separate calls merged in Python.
 
-- [ ] `P1-19` **trigram-fuzzy-entity-search** (standard) — pg_trgm extension + GIN trigram index on entity names. Fuzzy search handles typos: "Jonh Smth" finds "John Smith".
+- [ ] `P1-72` **search-score-thresholds** (light) — Minimum cosine similarity threshold in hybrid search RPC: reject results where similarity < threshold (default 0.3, configurable). Source-level boost multipliers in RRF scoring: primary source = 1.2x, secondary = 1.0x, tertiary = 0.8x. Extends source priority into search ranking.
+  - depends: P1-18, P1-53
+  - touches: services/supabase.py, config.py (add MIN_SEARCH_SCORE, SOURCE_BOOST_WEIGHTS), tests/test_search_thresholds.py (new)
+  - acceptance: Query returning results below MIN_SEARCH_SCORE filtered out. Primary source chunks rank above tertiary with equivalent RRF score. Threshold and boost weights configurable via Settings.
+
+- [ ] `P1-73` **result-diversity-mmr** (standard) — Maximal Marginal Relevance (MMR) in Python retrieval layer. Given top-k HNSW results, select diverse subset penalizing near-duplicate chunks. Configurable λ (0=pure diversity, 1=pure relevance, default 0.7). Reduces redundant context sent to LLM.
+  - depends: P1-18
+  - touches: services/mmr.py (new), services/supabase.py, config.py (add MMR_LAMBDA, MMR_ENABLED), tests/test_mmr.py (new)
+  - acceptance: 5 near-identical chunks → MMR selects at most 2. λ=1.0 disables diversity. λ=0.0 maximizes diversity. MMR_ENABLED=false skips MMR (backward compatible). Result set demonstrably more diverse than raw top-k.
+
+- [x] `P1-19` **trigram-fuzzy-entity-search** (standard) — pg_trgm extension + GIN trigram index on entity names. Fuzzy search handles typos: "Jonh Smth" finds "John Smith".
   - depends: P1-13
   - touches: migrations/010_trigram_search.sql (new), services/supabase.py, tests/test_trigram_search.py (new)
   - acceptance: pg_trgm enabled. "Jonh" finds "John" with similarity > 0.3. "Acme Crp" finds "Acme Corp". Index used (EXPLAIN shows GIN scan).
@@ -132,7 +142,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: migrations/015_statistics.sql (new), tests/test_statistics.py (new)
   - acceptance: All functions return correct counts matching actual data. Zero data = zero counts (not errors).
 
-### E. Indexing & Query Optimization (5 specs)
+### E. Indexing & Query Optimization (6 specs)
 
 - [ ] `P1-25` **hnsw-tuning** (standard) — Tune HNSW parameters: m=24, ef_construction=128. Benchmark at 1K, 10K, 100K vectors. Document recall@10 and latency at each scale.
   - depends: P1-13
@@ -158,6 +168,11 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - depends: P1-28
   - touches: scripts/query_baselines.py (new), tests/test_query_performance.py (new), docs/query_baselines.md (generated)
   - acceptance: 10+ queries baselined with p50/p95. Regression test fails if any query exceeds 2x baseline. Results documented.
+
+- [ ] `P1-65` **vector-index-lifecycle** (standard) — HNSW VACUUM scheduling after bulk deletes/re-embeds to reclaim dead graph nodes. CREATE INDEX CONCURRENTLY strategy for zero-downtime rebuilds. Runtime hnsw.ef_search tuning per query class: low (40) for exploratory, high (150) for precision RAG. Benchmarked recall vs. latency table.
+  - depends: P1-25, P1-27
+  - touches: scripts/vacuum_vector_indexes.py (new), scripts/rebuild_index_concurrent.py (new), docs/hnsw_operations.md (new), tests/test_vector_index_ops.py (new)
+  - acceptance: VACUUM ANALYZE on knowledge_chunks after batch delete removes dead HNSW nodes. Concurrent rebuild completes without downtime. ef_search=40 vs ef_search=150 latency/recall tradeoff documented.
 
 ### F. Knowledge Graph Infrastructure (4 specs)
 
@@ -225,7 +240,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: contracts/knowledge.py, services/supabase.py, migrations/026_lineage.sql (new), tests/test_lineage.py (new)
   - acceptance: Chunk source_chain shows: [original_file, chunk_step, embed_step, enrich_step]. Query "all chunks from file X" returns correct set. Lineage preserved through re-ingestion.
 
-### I. Pipeline Resilience (4 specs)
+### I. Pipeline Resilience (6 specs)
 
 - [ ] `P1-42` **ingestion-job-tracking** (standard) — Table tracking ingestion jobs: job_id, status (pending/running/completed/failed), source_file, chunk_count, idempotency_key. Prevents double-ingestion.
   - depends: P1-11
@@ -246,6 +261,16 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - depends: P1-10, P1-44
   - touches: services/health.py (new), tests/test_health.py (new)
   - acceptance: Health check returns status per provider. Unhealthy provider logged with structured error. Health endpoint returns JSON with all provider statuses. Startup fails gracefully if critical provider down.
+
+- [ ] `P1-66` **pipeline-telemetry** (standard) — OpenTelemetry trace spans on all DB operations (db.system.name, db.query.summary, db.operation.name). Embedding latency histograms p50/p95/p99 per provider. Ingestion throughput metrics (chunks/sec). DLQ age histogram: alert when items >24h old.
+  - depends: P1-43, P1-44, P1-45
+  - touches: services/telemetry.py (new), services/voyage.py, services/health.py, tests/test_telemetry.py (new)
+  - acceptance: OTel spans emitted for every Supabase RPC call (stdout exporter default, no external collector required). Embedding p99 latency trackable. DLQ items older than 24h trigger structured warning. All metrics accessible via existing metrics dict.
+
+- [ ] `P1-67` **semantic-query-cache** (standard) — In-memory LRU semantic cache for search results. Cache key: cosine similarity against recent query embeddings. Cache value: result set with TTL. Invalidation: new chunk ingestion for a source_origin evicts cached queries for that source. Optional Redis backend.
+  - depends: P1-18, P1-35
+  - touches: services/query_cache.py (new), services/supabase.py, config.py (add CACHE_MAX_ENTRIES, CACHE_TTL_SECONDS, CACHE_BACKEND), tests/test_query_cache.py (new)
+  - acceptance: Identical query issued twice = second call is cache hit (no HNSW scan). Similar query (cosine sim > 0.95 against cached key) = cache hit. New chunk ingestion invalidates cache entries for matching source_origin. Cache hit rate exposed in metrics dict.
 
 ### J. Data Operations (5 specs)
 
@@ -274,7 +299,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: contracts/knowledge.py (add last_accessed, staleness_score), services/supabase.py, migrations/029_staleness.sql (new), tests/test_staleness.py (new)
   - acceptance: last_accessed updated on retrieval. Staleness score computed based on age + access pattern. Stale chunks ranked lower in search. TTL configurable per source_origin.
 
-### K. Audit, Compliance & Recovery (5 specs)
+### K. Audit, Compliance & Recovery (7 specs)
 
 - [ ] `P1-51` **audit-log-triggers** (standard) — Trigger-based audit log: every INSERT, UPDATE, DELETE on knowledge_chunks, knowledge_entities, knowledge_relationships captured with old/new data, timestamp, operation type.
   - depends: P1-13
@@ -301,6 +326,11 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: docs/disaster_recovery.md (new), scripts/nightly_backup.sh (new), tests/test_disaster_recovery.py (new)
   - acceptance: Nightly backup script works. Restore procedure documented and tested. PITR enabled or documented (Supabase Pro feature). RTO/RPO targets documented.
 
+- [ ] `P1-68` **security-hardening** (standard) — Column-level encryption for high-sensitivity fields via pgcrypto (pgp_sym_encrypt, opt-in per source_origin). PII masking in structured logs: audit events log sha256(content) preview, not raw content. Secret scanning CI hook on migrations/ directory. Parameterized query enforcement audit for dynamic search/filter paths.
+  - depends: P1-03, P1-51
+  - touches: migrations/036_pgcrypto.sql (new), services/encryption.py (new), logging_config.py, scripts/scan_secrets.sh (new), tests/test_security.py (new)
+  - acceptance: ENABLE_FIELD_ENCRYPTION=true encrypts content field on write, decrypts on read. Audit log entries contain sha256 preview not raw content. Secret scanner fails if API key pattern found in migrations/. Dynamic filter queries pass ruff security rule for parameterization.
+
 ### L. Multi-Modal & Future-Proofing (3 specs)
 
 - [ ] `P1-56` **content-type-column** (light) — Add content_type column to knowledge_chunks: text, code, image_description, audio_transcript, structured_data. Default "text" for existing rows. Queries can filter by content_type.
@@ -317,6 +347,23 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - depends: P1-40
   - touches: docs/metadata_conventions.md (new)
   - acceptance: Document lists metadata fields per source_origin. Required vs optional clearly marked. Examples for each source type.
+
+### M. DB Observability & Operations (3 specs)
+
+- [ ] `P1-69` **query-observability** (standard) — Enable pg_stat_statements + auto_explain on Supabase. Configure statement_timeout, lock_timeout, idle_in_transaction_session_timeout at application role level. Python service reads top-10 slow queries from pg_stat_statements, exports as structured metrics.
+  - depends: P1-02, P1-29
+  - touches: config.py (add timeout settings), services/db_observability.py (new), migrations/037_pg_stat_statements.sql (new), tests/test_db_observability.py (new)
+  - acceptance: pg_stat_statements enabled. Queries >2s appear in top slow queries list. statement_timeout, lock_timeout, idle_in_transaction_session_timeout all set via Settings. Python dict with top-10 queries by mean_exec_time returned.
+
+- [ ] `P1-70` **bloat-and-vacuum-monitoring** (standard) — pgstattuple extension for dead_tuple_percent + free_percent per table. Per-table autovacuum overrides on knowledge_chunks and ingestion_jobs (scale_factor=0.01 vs default 0.2). XID wraparound age check on startup: alert if age(datfrozenxid) > 1.5B.
+  - depends: P1-29, P1-42
+  - touches: migrations/038_pgstattuple.sql (new), services/db_observability.py, tests/test_bloat_monitoring.py (new)
+  - acceptance: pgstattuple enabled. dead_tuple_percent queryable for all tables. knowledge_chunks has autovacuum_vacuum_scale_factor=0.01 set. XID age checked on startup; age > 1.5B logs structured alert. All stats flow into storage metrics dashboard.
+
+- [ ] `P1-71` **lock-contention-ops** (light) — pg_locks + pg_stat_activity monitoring script for blocking/blocked query pairs. Alert if lock wait > 30s. log_lock_waits enabled. Operational runbook: detect → identify → resolve live lock contention.
+  - depends: P1-10, P1-12
+  - touches: scripts/lock_monitor.py (new), docs/lock_contention_runbook.md (new), tests/test_lock_monitor.py (new)
+  - acceptance: lock_monitor.py returns list of blocking/blocked pairs from pg_stat_activity. Lock wait >30s produces structured warning log. Runbook covers 3 most common lock patterns (ingestion vs search, migration vs reads, concurrent re-embed).
 
 ### Integration Proof & Tests (6 specs)
 
@@ -350,8 +397,8 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
   - touches: services/llm.py, deps.py, tests/test_llm_service.py
   - acceptance: OllamaLLMService works with no key (local) and with API key (cloud mock). Health check + model list works for both modes.
 
-- [ ] `P1-GATE` **pillar-1-gate** — Run ALL Pillar 1 gate criteria from PILLARS.md (42 criteria)
-  - depends: P1-01 through P1-64
+- [ ] `P1-GATE` **pillar-1-gate** — Run ALL Pillar 1 gate criteria from PILLARS.md (51 criteria)
+  - depends: P1-01 through P1-73
   - acceptance: Every gate criterion in PILLARS.md Pillar 1 section passes. Full test suite green. ruff + mypy --strict + pytest all pass. E2E fortress test passes.
 
 ## Pillar 2: Entity Extraction Pipeline (4 specs)
@@ -477,12 +524,12 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
 
 | Pillar | Specs | Gate | Light | Standard | Heavy |
 |--------|-------|------|-------|----------|-------|
-| 1: Data Infrastructure (PLUS ULTRA) | 64 | P1-GATE | 10 | 51 | 3 |
+| 1: Data Infrastructure (PLUS ULTRA) | 73 | P1-GATE | 11 | 59 | 3 |
 | 2: Entity Extraction | 4 | P2-GATE | 0 | 3 | 1 |
 | 3: Multi-Format Ingestion | 4 | P3-GATE | 1 | 2 | 1 |
 | 4: Retrieval + Accuracy | 5 | P4-GATE | 1 | 3 | 1 |
 | 5: Pydantic AI + Docker | 6 | P5-GATE | 0 | 4 | 2 |
-| **Total** | **83** | **5** | **12** | **63** | **8** |
+| **Total** | **92** | **5** | **13** | **72** | **8** |
 
 ## Dependency Graph (Pillar Level)
 
@@ -518,9 +565,16 @@ Pillar 1 (Data Infrastructure) ──── P1-GATE
 - **Track J** (Operations): P1-46 -> P1-47 | P1-48, P1-49, P1-50 (parallel)
 - **Track K** (Audit): P1-51 -> P1-52 | P1-53, P1-54, P1-55 (parallel)
 - **Track L** (Future): P1-56, P1-57, P1-58 (independent after dependencies met)
+- **Track M (new)**: P1-69 → P1-70 (sequential) | P1-71 parallel with P1-70
 - **Integration**: P1-59 -> P1-60 (fortress depends on all) | P1-61, P1-62, P1-63, P1-64 (parallel)
 
 ### Cross-Pillar:
 - Pillars 2 and 3 can begin in parallel after P1-GATE
 - Pillar 4 requires both P2-GATE and P3-GATE
 - Pillar 5 requires P4-GATE
+
+### Extended Tracks (Enterprise Gaps):
+- **Track D (extended)**: P1-72, P1-73 can run parallel after P1-18
+- **Track E (extended)**: P1-65 after P1-27 (sequential)
+- **Track I (extended)**: P1-66, P1-67 parallel after P1-45
+- **Track K (extended)**: P1-68 parallel with P1-53, P1-54, P1-55
