@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-15",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15"],
+  "lastSpec": "P1-16",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -33,7 +33,8 @@
     "Executor-first pattern in transaction context managers: call executor before mutating state",
     "Thread-safe mock executor with threading.Lock for concurrent write tests",
     "FK ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities; CASCADE only for owned/child rows",
-    "frozenset of (from, to) tuples for state machine transition validation"
+    "frozenset of (from, to) tuples for state machine transition validation",
+    "ChunkNotFoundError vs StaleDataError: not-found (404) and version-mismatch (409) are distinct exception types"
   ],
   "decisionsLog": [
     {
@@ -125,6 +126,11 @@
       "spec": "P1-15",
       "decision": "superseded→active transition intentionally blocked",
       "reason": "Superseded means explicitly replaced by re-ingestion. Direct reinstatement bypasses audit trail. Restore path is: new re-ingestion (not state flip)."
+    },
+    {
+      "spec": "P1-16",
+      "decision": "Separate ChunkNotFoundError from StaleDataError",
+      "reason": "CHUNK_NOT_FOUND and STALE_VERSION are fundamentally different: not-found means no retry, stale means re-fetch-and-retry. Conflating them forces callers to string-match error codes."
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 15/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 16/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -85,7 +85,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 15/83 complete
   - touches: contracts/knowledge.py, services/supabase.py, migrations/006_chunk_status.sql (new), tests/test_chunk_lifecycle.py (new)
   - acceptance: New chunk = active. Re-ingested chunk supersedes old. Archived chunk excluded from search. Deleted = soft delete, restorable. Invalid transition (deleted->active) raises error.
 
-- [ ] `P1-16` **optimistic-locking** (light) — Add version column to knowledge_chunks. Updates must include current version. Concurrent update to same chunk: one succeeds, other gets StaleDataError.
+- [x] `P1-16` **optimistic-locking** (light) — Add version column to knowledge_chunks. Updates must include current version. Concurrent update to same chunk: one succeeds, other gets StaleDataError.
   - depends: P1-15
   - touches: contracts/knowledge.py, services/supabase.py, migrations/007_optimistic_locking.sql (new), tests/test_optimistic_locking.py (new)
   - acceptance: Update with correct version succeeds, version incremented. Update with stale version raises StaleDataError. Concurrent updates: exactly one wins.
