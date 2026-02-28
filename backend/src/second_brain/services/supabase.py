@@ -12,6 +12,15 @@ logger = get_logger(__name__)
 _VALID_KNOWLEDGE_TYPES = set(get_args(KnowledgeTypeValue))
 _VALID_SOURCE_ORIGINS = set(get_args(SourceOriginValue))
 
+# Parameter validation constants
+_MAX_TOP_K = 100
+_MIN_TOP_K = 1
+_MAX_WEIGHT = 100.0
+_MIN_WEIGHT = 0.0
+_MAX_THRESHOLD = 1.0
+_MIN_THRESHOLD = 0.0
+_MAX_RESULTS_LIMIT = 1000
+
 
 class SupabaseProvider:
     """Supabase pgvector search provider."""
@@ -48,6 +57,25 @@ class SupabaseProvider:
         filter_type: str | None = None,
     ) -> tuple[list[MemorySearchResult], dict[str, Any]]:
         """Search using Supabase pgvector. Returns (results, metadata)."""
+        # Validate parameters
+        if not isinstance(query_embedding, list):
+            raise TypeError("query_embedding must be a list")
+        if not isinstance(top_k, int):
+            raise TypeError("top_k must be an integer")
+        if not isinstance(threshold, (int, float)):
+            raise TypeError("threshold must be a number")
+        
+        # Clamp top_k to valid range
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+        
+        # Validate and clamp threshold
+        if threshold < _MIN_THRESHOLD or threshold > _MAX_THRESHOLD:
+            logger.warning(
+                "threshold %s out of range [%s, %s], clamping",
+                threshold, _MIN_THRESHOLD, _MAX_THRESHOLD,
+            )
+        threshold = max(_MIN_THRESHOLD, min(_MAX_THRESHOLD, float(threshold)))
+        
         metadata: dict[str, Any] = {"provider": "supabase"}
         try:
             client = self._load_client()
@@ -88,6 +116,17 @@ class SupabaseProvider:
         if not rpc_results:
             return results
 
+        # Limit input size to prevent memory issues
+        if len(rpc_results) > _MAX_RESULTS_LIMIT:
+            logger.warning(
+                "Truncating %d results to maximum limit %d",
+                len(rpc_results), _MAX_RESULTS_LIMIT,
+            )
+            rpc_results = rpc_results[:_MAX_RESULTS_LIMIT]
+
+        # Ensure top_k is within bounds
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+
         for i, row in enumerate(rpc_results):
             similarity = row.get("similarity", 0.0)
             try:
@@ -105,6 +144,8 @@ class SupabaseProvider:
             chunk_index_raw = row.get("chunk_index", 0)
             try:
                 chunk_index = int(chunk_index_raw)
+                # Ensure chunk_index is non-negative
+                chunk_index = max(0, chunk_index)
             except (TypeError, ValueError):
                 chunk_index = 0
             raw_source_origin = str(row.get("source_origin", "manual"))
@@ -142,7 +183,210 @@ class SupabaseProvider:
     def _sanitize_error_message(self, error: Exception) -> str:
         """Return bounded and redacted error text safe for metadata."""
         message = str(error)
+        
+        # Redact sensitive configuration data
         for value in [self._supabase_url, self._supabase_key]:
             if value:
                 message = message.replace(value, "[REDACTED]")
-        return message[:200]
+        
+        # Redact common sensitive patterns with improved regex
+        import re
+        # Redact API keys that follow common formats
+        message = re.sub(r"[sS][kK]_[a-zA-Z0-9]{32,}", "[REDACTED_KEY]", message)
+        message = re.sub(r"sbp_[a-zA-Z0-9]{48}", "[REDACTED_KEY]", message)
+        message = re.sub(r"[a-zA-Z0-9]{32}\.[a-zA-Z0-9]{16}", "[REDACTED_TOKEN]", message)
+        
+        # Redact URLs to private resources
+        message = re.sub(
+            r"https://[a-z0-9-]{10,}\.supabase\.co",
+            "[REDACTED_URL]",
+            message,
+        )
+        
+        # Redact potential database connection strings
+        message = re.sub(r"postgresql[s]?://[^\"\s\']*[\s\']?", "[REDACTED_CONNECTION]", message)
+        
+        # Remove potential internal paths or stack traces
+        message = re.sub(r"File \"[^\"]+\"", "File [REDACTED]", message)
+        message = re.sub(r"\s+line\s+\d+,?\s*", " line [REDACTED] ", message)
+        
+        # Limit to 150 characters total to prevent large error messages
+        limited_message = message[:150]
+        
+        # Return only the first line to avoid multi-line stack traces
+        first_line = limited_message.split("\n")[0]
+        return first_line
+
+    def hybrid_search(
+        self,
+        query_embedding: list[float],
+        query_text: str,
+        top_k: int = 5,
+        threshold: float = 0.0,
+        vector_weight: float = 1.0,
+        text_weight: float = 1.0,
+        filter_type: str | None = None,
+        search_mode: str = "websearch",
+    ) -> tuple[list[MemorySearchResult], dict[str, Any]]:
+        """Hybrid search combining vector similarity + full-text (RRF).
+
+        Uses the hybrid_search_knowledge_chunks RPC which performs Reciprocal Rank
+        Fusion server-side. Returns (results, metadata).
+        """
+        # Validate required parameters
+        if not isinstance(query_embedding, list):
+            raise TypeError("query_embedding must be a list")
+        if not isinstance(query_text, str):
+            raise TypeError("query_text must be a string")
+        if not isinstance(top_k, int):
+            raise TypeError("top_k must be an integer")
+        if not isinstance(threshold, (int, float)):
+            raise TypeError("threshold must be a number")
+        if not isinstance(vector_weight, (int, float)):
+            raise TypeError("vector_weight must be a number")
+        if not isinstance(text_weight, (int, float)):
+            raise TypeError("text_weight must be a number")
+        
+        # Check if query_text is empty before proceeding with expensive operations
+        stripped_query_text = query_text.strip()
+        if not stripped_query_text:
+            # Early exit for empty query_text
+            return [], {"provider": "supabase", "mode": "hybrid", "fallback_reason": "empty_query"}
+        
+        # Clamp top_k to valid range
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+        
+        # Validate and clamp threshold
+        if threshold < _MIN_THRESHOLD or threshold > _MAX_THRESHOLD:
+            logger.warning(
+                "threshold %s out of range [%s, %s], clamping",
+                threshold, _MIN_THRESHOLD, _MAX_THRESHOLD,
+            )
+        threshold = max(_MIN_THRESHOLD, min(_MAX_THRESHOLD, float(threshold)))
+        
+        # Validate and clamp weights
+        if vector_weight < _MIN_WEIGHT or vector_weight > _MAX_WEIGHT:
+            logger.warning(
+                "vector_weight %s out of range [%s, %s], clamping",
+                vector_weight, _MIN_WEIGHT, _MAX_WEIGHT,
+            )
+        vector_weight = max(_MIN_WEIGHT, min(_MAX_WEIGHT, float(vector_weight)))
+        
+        if text_weight < _MIN_WEIGHT or text_weight > _MAX_WEIGHT:
+            logger.warning(
+                "text_weight %s out of range [%s, %s], clamping",
+                text_weight, _MIN_WEIGHT, _MAX_WEIGHT,
+            )
+        text_weight = max(_MIN_WEIGHT, min(_MAX_WEIGHT, float(text_weight)))
+        
+        metadata: dict[str, Any] = {"provider": "supabase", "mode": "hybrid"}
+        try:
+            client = self._load_client()
+            if client is None:
+                return [], {**metadata, "fallback_reason": "client_unavailable"}
+            response = client.rpc(
+                "hybrid_search_knowledge_chunks",
+                {
+                    "query_embedding": query_embedding,
+                    "query_text": query_text,
+                    "match_count": top_k,
+                    "match_threshold": threshold,
+                    "vector_weight": vector_weight,
+                    "text_weight": text_weight,
+                    "filter_type": filter_type,
+                    "search_mode": search_mode,
+                },
+            ).execute()
+            results = self._normalize_hybrid_results(response.data or [], top_k)
+            return results, {
+                **metadata,
+                "real_provider": True,
+                "raw_count": len(response.data or []),
+            }
+        except Exception as e:
+            logger.warning("Supabase hybrid search failed: %s", type(e).__name__)
+            return [], {
+                **metadata,
+                "fallback_reason": "provider_error",
+                "error_type": type(e).__name__,
+                "error_message": self._sanitize_error_message(e),
+            }
+
+    def _normalize_hybrid_results(
+        self,
+        rpc_results: list[dict[str, Any]],
+        top_k: int,
+    ) -> list[MemorySearchResult]:
+        """Normalize hybrid_search_knowledge_chunks RPC results to MemorySearchResult."""
+        results: list[MemorySearchResult] = []
+
+        if not rpc_results:
+            return results
+
+        # Limit input size to prevent memory issues
+        if len(rpc_results) > _MAX_RESULTS_LIMIT:
+            logger.warning(
+                "Truncating %d results to maximum limit %d",
+                len(rpc_results), _MAX_RESULTS_LIMIT,
+            )
+            rpc_results = rpc_results[:_MAX_RESULTS_LIMIT]
+
+        # Ensure top_k is within bounds
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+
+        for i, row in enumerate(rpc_results):
+            rrf_score = row.get("rrf_score", 0.0)
+            try:
+                confidence = max(0.0, min(1.0, float(rrf_score)))
+            except (TypeError, ValueError):
+                confidence = 0.0
+
+            content = str(row.get("content", ""))
+            raw_knowledge_type = str(row.get("knowledge_type", "document"))
+            knowledge_type = (
+                raw_knowledge_type if raw_knowledge_type in _VALID_KNOWLEDGE_TYPES else "document"
+            )
+            document_id = row.get("document_id")
+            chunk_index_raw = row.get("chunk_index", 0)
+            try:
+                chunk_index = int(chunk_index_raw)
+                # Ensure chunk_index is non-negative
+                chunk_index = max(0, chunk_index)
+            except (TypeError, ValueError):
+                chunk_index = 0
+            raw_source_origin = str(row.get("source_origin", "manual"))
+            source_origin = (
+                raw_source_origin if raw_source_origin in _VALID_SOURCE_ORIGINS else "manual"
+            )
+
+            extra_metadata = row.get("metadata", {})
+            if not isinstance(extra_metadata, dict):
+                extra_metadata = {}
+
+            vector_rank = row.get("vector_rank")
+            text_rank = row.get("text_rank")
+
+            results.append(
+                MemorySearchResult(
+                    id=str(row.get("id", f"supa-hybrid-{i}")),
+                    content=content,
+                    source="supabase",
+                    confidence=confidence,
+                    metadata={
+                        **extra_metadata,
+                        "real_provider": True,
+                        "knowledge_type": knowledge_type,
+                        "document_id": document_id,
+                        "chunk_index": chunk_index,
+                        "source_origin": source_origin,
+                        "vector_rank": vector_rank,
+                        "text_rank": text_rank,
+                        "rrf_score": rrf_score,
+                    },
+                )
+            )
+
+            if len(results) >= top_k:
+                break
+
+        return results
