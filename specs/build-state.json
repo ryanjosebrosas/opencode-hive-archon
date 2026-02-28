@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-14",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14"],
+  "lastSpec": "P1-15",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -32,7 +32,8 @@
     "Thread-safe metrics via lock context manager",
     "Executor-first pattern in transaction context managers: call executor before mutating state",
     "Thread-safe mock executor with threading.Lock for concurrent write tests",
-    "FK ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities; CASCADE only for owned/child rows"
+    "FK ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities; CASCADE only for owned/child rows",
+    "frozenset of (from, to) tuples for state machine transition validation"
   ],
   "decisionsLog": [
     {
@@ -119,6 +120,11 @@
       "spec": "P1-14",
       "decision": "Catch insert exception and retry as find-then-update for race condition safety",
       "reason": "find_by + insert is not atomic. Under concurrent load two writers can both see None and race to insert. DB unique index is the true guard; Python layer catches the violation and falls back to update path."
+    },
+    {
+      "spec": "P1-15",
+      "decision": "superseded→active transition intentionally blocked",
+      "reason": "Superseded means explicitly replaced by re-ingestion. Direct reinstatement bypasses audit trail. Restore path is: new re-ingestion (not state flip)."
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 14/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 15/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -80,7 +80,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 14/83 complete
   - touches: contracts/knowledge.py, services/supabase.py, migrations/005_content_hash.sql (new), tests/test_dedup.py (new)
   - acceptance: Same content ingested twice = one row. content_hash matches SHA-256 of content. Metadata updated on re-ingestion. Superseded chunk has status="superseded".
 
-- [ ] `P1-15` **chunk-status-lifecycle** (standard) — Chunks have status: active, superseded, archived, deleted (soft). Status transitions enforced (active->superseded, active->archived, any->deleted). Only active chunks returned in search by default.
+- [x] `P1-15` **chunk-status-lifecycle** (standard) — Chunks have status: active, superseded, archived, deleted (soft). Status transitions enforced (active->superseded, active->archived, any->deleted). Only active chunks returned in search by default.
   - depends: P1-14
   - touches: contracts/knowledge.py, services/supabase.py, migrations/006_chunk_status.sql (new), tests/test_chunk_lifecycle.py (new)
   - acceptance: New chunk = active. Re-ingested chunk supersedes old. Archived chunk excluded from search. Deleted = soft delete, restorable. Invalid transition (deleted->active) raises error.
