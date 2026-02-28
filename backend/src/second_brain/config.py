@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_key: str | None = None
     
+    # Pool configuration
+    supabase_max_retries: int = 3
+    supabase_retry_delay: float = 1.0
+    supabase_retry_backoff: float = 2.0
+    supabase_circuit_failure_threshold: int = 5
+    supabase_circuit_recovery_timeout: float = 30.0
+    
     voyage_embed_model: str = "voyage-4-large"
     voyage_embed_enabled: bool = False
     voyage_use_real_rerank: bool = False
@@ -57,6 +64,11 @@ class Settings(BaseSettings):
             "supabase_use_real_provider": self.supabase_use_real_provider,
             "supabase_url": self.supabase_url,
             "supabase_key": self.supabase_key,
+            "supabase_max_retries": self.supabase_max_retries,
+            "supabase_retry_delay": self.supabase_retry_delay,
+            "supabase_retry_backoff": self.supabase_retry_backoff,
+            "supabase_circuit_failure_threshold": self.supabase_circuit_failure_threshold,
+            "supabase_circuit_recovery_timeout": self.supabase_circuit_recovery_timeout,
             "voyage_embed_model": self.voyage_embed_model,
             "voyage_embed_enabled": self.voyage_embed_enabled,
             "voyage_use_real_rerank": self.voyage_use_real_rerank,
