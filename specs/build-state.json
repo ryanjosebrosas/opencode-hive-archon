@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-07",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07"],
+  "lastSpec": "P1-08",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -24,7 +24,8 @@
     "SchemaError with structured context for drift reporting",
     "Protocol-based executor for DB abstraction in tests",
     "Advisory lock (int key) before state reads",
-    "MigrationResult model for structured operation feedback"
+    "MigrationResult model for structured operation feedback",
+    "importlib.util for importing standalone scripts in tests"
   ],
   "decisionsLog": [
     {

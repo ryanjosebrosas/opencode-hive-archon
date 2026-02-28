@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 7/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 8/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -43,7 +43,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 7/83 complete
   - touches: services/migration_runner.py (new), tests/test_migration_runner.py (new)
   - acceptance: Runner applies pending migrations in order. Dry-run shows SQL without executing. Two concurrent runners: one waits, other proceeds. Rollback reverses last migration.
 
-- [ ] `P1-08` **schema-documentation** (light) — Auto-generate schema docs from migration files. Table descriptions, column types, indexes, constraints in markdown.
+- [x] `P1-08` **schema-documentation** (light) — Auto-generate schema docs from migration files. Table descriptions, column types, indexes, constraints in markdown.
   - depends: P1-06
   - touches: scripts/generate_schema_docs.py (new), docs/schema.md (generated)
   - acceptance: Running script produces accurate markdown doc matching actual DB schema. All tables, columns, indexes documented.
