@@ -116,22 +116,29 @@ class SupabaseProvider:
         if not rpc_results:
             return results
 
+        # Apply top_k limit early before processing
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+
         # Limit input size to prevent memory issues
         if len(rpc_results) > _MAX_RESULTS_LIMIT:
             logger.warning(
                 "Truncating %d results to maximum limit %d",
                 len(rpc_results), _MAX_RESULTS_LIMIT,
             )
+            # Limit to top_k first, then limit by _MAX_RESULTS_LIMIT if needed
             rpc_results = rpc_results[:_MAX_RESULTS_LIMIT]
 
-        # Ensure top_k is within bounds
-        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
-
         for i, row in enumerate(rpc_results):
+            # Validate that row is actually a dictionary before accessing it
+            if not isinstance(row, dict):
+                logger.warning("Skipping non-dict row at index %d", i)
+                continue
+
             similarity = row.get("similarity", 0.0)
             try:
                 confidence = max(0.0, min(1.0, float(similarity)))
             except (TypeError, ValueError):
+                logger.warning("Invalid similarity value %s, using 0.0", similarity)
                 confidence = 0.0
 
             # Read from real columns — not nested metadata blob
@@ -141,13 +148,16 @@ class SupabaseProvider:
                 raw_knowledge_type if raw_knowledge_type in _VALID_KNOWLEDGE_TYPES else "document"
             )
             document_id = row.get("document_id")
+            
             chunk_index_raw = row.get("chunk_index", 0)
             try:
                 chunk_index = int(chunk_index_raw)
-                # Ensure chunk_index is non-negative
+                # Ensure chunk_index is non-negative with bounds checking
                 chunk_index = max(0, chunk_index)
             except (TypeError, ValueError):
+                logger.warning("Invalid chunk_index value %s, using 0", chunk_index_raw)
                 chunk_index = 0
+                
             raw_source_origin = str(row.get("source_origin", "manual"))
             source_origin = (
                 raw_source_origin if raw_source_origin in _VALID_SOURCE_ORIGINS else "manual"
@@ -156,6 +166,7 @@ class SupabaseProvider:
             # Preserve any extra jsonb metadata from the row
             extra_metadata = row.get("metadata", {})
             if not isinstance(extra_metadata, dict):
+                logger.warning("Non-dict metadata found at index %d, using empty dict", i)
                 extra_metadata = {}
 
             results.append(
@@ -323,22 +334,29 @@ class SupabaseProvider:
         if not rpc_results:
             return results
 
+        # Apply top_k limit early before processing
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+
         # Limit input size to prevent memory issues
         if len(rpc_results) > _MAX_RESULTS_LIMIT:
             logger.warning(
                 "Truncating %d results to maximum limit %d",
                 len(rpc_results), _MAX_RESULTS_LIMIT,
             )
+            # Limit to top_k first, then limit by _MAX_RESULTS_LIMIT if needed
             rpc_results = rpc_results[:_MAX_RESULTS_LIMIT]
 
-        # Ensure top_k is within bounds
-        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
-
         for i, row in enumerate(rpc_results):
+            # Validate that row is actually a dictionary before accessing it
+            if not isinstance(row, dict):
+                logger.warning("Skipping non-dict row at index %d", i)
+                continue
+
             rrf_score = row.get("rrf_score", 0.0)
             try:
                 confidence = max(0.0, min(1.0, float(rrf_score)))
             except (TypeError, ValueError):
+                logger.warning("Invalid rrf_score value %s, using 0.0", rrf_score)
                 confidence = 0.0
 
             content = str(row.get("content", ""))
@@ -347,13 +365,16 @@ class SupabaseProvider:
                 raw_knowledge_type if raw_knowledge_type in _VALID_KNOWLEDGE_TYPES else "document"
             )
             document_id = row.get("document_id")
+            
             chunk_index_raw = row.get("chunk_index", 0)
             try:
                 chunk_index = int(chunk_index_raw)
-                # Ensure chunk_index is non-negative
+                # Ensure chunk_index is non-negative with bounds checking
                 chunk_index = max(0, chunk_index)
             except (TypeError, ValueError):
+                logger.warning("Invalid chunk_index value %s, using 0", chunk_index_raw)
                 chunk_index = 0
+                
             raw_source_origin = str(row.get("source_origin", "manual"))
             source_origin = (
                 raw_source_origin if raw_source_origin in _VALID_SOURCE_ORIGINS else "manual"
@@ -361,6 +382,7 @@ class SupabaseProvider:
 
             extra_metadata = row.get("metadata", {})
             if not isinstance(extra_metadata, dict):
+                logger.warning("Non-dict metadata found at index %d, using empty dict", i)
                 extra_metadata = {}
 
             vector_rank = row.get("vector_rank")
@@ -390,3 +412,68 @@ class SupabaseProvider:
                 break
 
         return results
+
+    def fuzzy_search_entities(
+        self,
+        search_term: str,
+        top_k: int = 10,
+        threshold: float = 0.3,
+        filter_type: str | None = None,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        """Fuzzy entity search using pg_trgm trigram similarity.
+
+        Returns (results, metadata). Results are raw dicts with id, name,
+        entity_type, description, similarity.
+        """
+        # Validate required parameters
+        if not isinstance(search_term, str):
+            raise TypeError("search_term must be a string")
+        if not isinstance(top_k, int):
+            raise TypeError("top_k must be an integer")
+        if not isinstance(threshold, (int, float)):
+            raise TypeError("threshold must be a number")
+        
+        # Check if search_term is empty before proceeding
+        stripped = search_term.strip()
+        if not stripped:
+            return [], {"provider": "supabase", "mode": "fuzzy_entity", "fallback_reason": "empty_query"}
+        
+        # Clamp top_k to valid range
+        top_k = max(_MIN_TOP_K, min(_MAX_TOP_K, top_k))
+        
+        # Validate and clamp threshold
+        if threshold < _MIN_THRESHOLD or threshold > _MAX_THRESHOLD:
+            logger.warning(
+                "threshold %s out of range [%s, %s], clamping",
+                threshold, _MIN_THRESHOLD, _MAX_THRESHOLD,
+            )
+        clamped_threshold = max(_MIN_THRESHOLD, min(_MAX_THRESHOLD, float(threshold)))
+        
+        metadata: dict[str, Any] = {"provider": "supabase", "mode": "fuzzy_entity"}
+        try:
+            client = self._load_client()
+            if client is None:
+                return [], {**metadata, "fallback_reason": "client_unavailable"}
+            response = client.rpc(
+                "search_knowledge_entities_fuzzy",
+                {
+                    "search_term": stripped,
+                    "similarity_threshold": clamped_threshold,
+                    "match_count": top_k,
+                    "filter_type": filter_type,
+                },
+            ).execute()
+            results: list[dict[str, Any]] = response.data or []
+            return results, {
+                **metadata,
+                "real_provider": True,
+                "raw_count": len(results),
+            }
+        except Exception as e:
+            logger.warning("Supabase fuzzy entity search failed: %s", type(e).__name__)
+            return [], {
+                **metadata,
+                "fallback_reason": "provider_error",
+                "error_type": type(e).__name__,
+                "error_message": self._sanitize_error_message(e),
+            }
