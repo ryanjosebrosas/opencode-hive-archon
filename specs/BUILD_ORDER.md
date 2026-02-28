@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 11/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 12/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -65,7 +65,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 11/83 complete
   - touches: services/supabase.py, services/transaction.py (new), tests/test_transactions.py (new)
   - acceptance: Multi-table insert in transaction: success = all committed, failure = all rolled back. Savepoint in nested transaction: inner failure rolls back to savepoint, outer succeeds.
 
-- [ ] `P1-12` **concurrent-write-safety** (standard) — Ensure parallel ingestion jobs don't corrupt data. Row-level locking on chunk upserts. Conflict resolution: last-write-wins with audit trail.
+- [x] `P1-12` **concurrent-write-safety** (standard) — Ensure parallel ingestion jobs don't corrupt data. Row-level locking on chunk upserts. Conflict resolution: last-write-wins with audit trail.
   - depends: P1-11
   - touches: services/supabase.py, tests/test_concurrent_writes.py (new)
   - acceptance: Two parallel ingestion jobs writing overlapping chunks: no data corruption, no lost updates. Audit log shows conflict resolution.
