@@ -1,0 +1,40 @@
+name: Claude Auto-Fix (from Codex Review)
+
+on:
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.event.issue.number }}-claude-fix
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  claude-fix:
+    if: |
+      (github.event.comment.user.login == 'chatgpt-codex-connector' ||
+       github.event.comment.user.login == 'coderabbitai[bot]') &&
+      github.event.comment.pull_request_url != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--model claude-sonnet-4-5 --max-turns 5"
+          prompt: |
+            Read all Codex review comments on this PR posted by chatgpt-codex-connector.
+            Apply fixes for all P0 and P1 issues identified following the Review guidelines
+            in AGENTS.md. Do not fix style issues or P2/minor findings.
+            Commit all fixes in a single commit with message:
+            "fix: apply Codex review suggestions [auto]"
+            If a fix requires clarification, post a comment instead of guessing.

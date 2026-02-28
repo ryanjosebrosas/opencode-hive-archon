@@ -1,28 +1,29 @@
 # Infrastructure Pillars
 <!-- Generated: 2026-02-27 | Source: PRD.md | Status: 0/5 complete -->
 <!-- Council validated: 5 models (Claude, GPT, Qwen, GLM-5, DeepSeek), 3 rounds structured debate -->
-<!-- PLUS ULTRA: Pillar 1 expanded from 4 → 63 specs based on world-class data infrastructure research -->
+<!-- PLUS ULTRA: Pillar 1 expanded from 4 → 73 specs based on world-class data infrastructure research -->
 
 ## Pillar 1: Data Infrastructure (PLUS ULTRA)
 - **Status**: [ ] not started
 - **Why first**: Every downstream pillar reads from the knowledge schema, uses Ollama for LLM synthesis, and depends on reliable storage, search, and retrieval primitives. This pillar builds the fortress — hybrid search, graph traversal, content deduplication, embedding versioning, audit logs, disaster recovery, temporal queries — all at the database level where they're fastest. Without this, Pillars 2-5 build on sand.
-- **Scope** (12 sub-sections):
+- **Scope** (15 sub-sections):
   - **A. Type Safety & Config (4)**: mypy strict, Pydantic Settings config, structured JSON logging, error taxonomy
   - **B. Schema & Migrations (5)**: flexible metadata, schema versioning with checksums, migration runner, schema docs, additive-only migration policy
   - **C. Database Core (7)**: connection pool + circuit breaker, transaction management, concurrent write safety, data integrity constraints, content-addressable deduplication (SHA-256), chunk status lifecycle (active/superseded/archived/deleted), optimistic locking
-  - **D. Supabase Search Infrastructure (8)**: full-text search (tsvector + GIN), hybrid search RPC (vector + keyword with RRF fusion), trigram fuzzy entity search, graph traversal recursive CTEs, temporal query functions, database views, materialized views, statistics functions
-  - **E. Indexing & Query Optimization (5)**: HNSW tuning (m=24, ef_construction=128), partial HNSW indexes per knowledge_type, halfvec migration (50% storage reduction), composite/covering indexes, query performance baselines with EXPLAIN ANALYZE
+  - **D. Supabase Search Infrastructure (10)**: full-text search (tsvector + GIN), hybrid search RPC (vector + keyword with RRF fusion), trigram fuzzy entity search, graph traversal recursive CTEs, temporal query functions, database views, materialized views, statistics functions, search score thresholds + source boost rules, result diversity MMR
+  - **E. Indexing & Query Optimization (6)**: HNSW tuning (m=24, ef_construction=128), partial HNSW indexes per knowledge_type, halfvec migration (50% storage reduction), composite/covering indexes, query performance baselines with EXPLAIN ANALYZE, vector index lifecycle (VACUUM scheduling, concurrent rebuild, ef_search tuning)
   - **F. Knowledge Graph Infrastructure (4)**: entity contract hardening, entity alias table with trigram index, entity name embedding (halfvec), temporal relationship indexing
   - **G. Embedding Infrastructure (4)**: embedding model registry, embedding cache table, batch re-embedding pipeline, embedding pipeline validation
   - **H. Data Quality (4)**: input validation layer, chunk quality scoring, metadata enrichment (word count, language, topic), data lineage tracking (source_chain)
-  - **I. Pipeline Resilience (4)**: ingestion job tracking with idempotency keys, dead letter queue for failed chunks, provider rate limiter (token bucket), unified provider health monitor
+  - **I. Pipeline Resilience (6)**: ingestion job tracking with idempotency keys, dead letter queue for failed chunks, provider rate limiter (token bucket), unified provider health monitor, pipeline telemetry (OTel spans, latency histograms, SLA tracking), semantic query cache
   - **J. Data Operations (5)**: backup/restore (full JSON), embedding-free backup (vendor independence), bulk operations (re-embed, re-index), data cleanup tools, TTL/staleness scoring
-  - **K. Audit, Compliance & Recovery (5)**: trigger-based audit log, full data export (GDPR-style), source priority system, conflict detection view, disaster recovery prep (PITR + nightly backup)
+  - **K. Audit, Compliance & Recovery (7)**: trigger-based audit log, full data export (GDPR-style), source priority system, conflict detection view, disaster recovery prep (PITR + nightly backup), security hardening (pgcrypto field encryption, PII masking in logs, secret scanning)
   - **L. Multi-Modal & Future-Proofing (3)**: content_type column, multi-vector readiness, metadata conventions doc
+  - **M. DB Observability & Operations (3)**: query observability (pg_stat_statements, auto_explain, statement timeouts), bloat & vacuum monitoring (pgstattuple, per-table autovacuum, XID age), lock contention ops
   - **Integration Proof + Tests (6)**: storage metrics dashboard, E2E fortress test, test fixtures/seed data, real provider test harness, RLS policies prep, Ollama cloud auth
 - **Not included**: Entity extraction logic (Pillar 2), new file format parsers (Pillar 3), retrieval accuracy harness (Pillar 4), Pydantic AI migration (Pillar 5), content generation agents (Phase 2)
 - **Depends on**: None (foundation)
-- **Estimated specs**: ~63 (light: 10, standard: 50, heavy: 3)
+- **Estimated specs**: ~73 (light: 10, standard: 50, heavy: 3)
 - **Gate criteria**:
   - [ ] `mypy --strict backend/src/second_brain` = 0 errors
   - [ ] Centralized config validates on startup — bad config = immediate structured error
@@ -67,6 +68,19 @@
   - [ ] Real provider tests: Supabase + Voyage + Ollama integration verified
   - [ ] E2E fortress test: ingest → deduplicate → embed → store → hybrid search → entity search → graph traverse → temporal query → backup → restore → concurrent ingestion → soft delete → restore → audit log — ALL PASS
   - [ ] `ruff check backend/src/ && python -m pytest tests/ -q` all pass
+  - [ ] Search score threshold enforced: results below MIN_SEARCH_SCORE rejected from hybrid search results
+  - [ ] Result diversity via MMR: top-k results de-duplicated before LLM context window, λ configurable
+  - [ ] HNSW VACUUM scheduled post-re-embed: dead graph nodes reclaimed, concurrent index rebuild strategy documented
+  - [ ] ef_search runtime tuning: low (40) and high (150) presets benchmarked and configurable per query class
+  - [ ] OTel spans on all DB operations: db.query.summary and db.operation.name present, stdout exporter works
+  - [ ] Embedding p99 latency trackable per provider: histogram available in metrics dict
+  - [ ] DLQ age monitored: items >24h trigger structured warning log
+  - [ ] Semantic query cache operational: repeated similar queries (cosine sim > 0.95) hit cache, invalidated on ingestion
+  - [ ] Security hardened: PII masked in audit logs (sha256 preview), secret scan passes on migrations/, field encryption opt-in works
+  - [ ] pg_stat_statements enabled: top-10 slow queries queryable, statement/lock/idle timeouts configured at role level
+  - [ ] Table bloat monitored: dead_tuple_percent tracked via pgstattuple, per-table autovacuum overrides on knowledge_chunks
+  - [ ] XID wraparound age checked on startup: structured alert if age(datfrozenxid) > 1.5B transactions
+  - [ ] Lock contention detectable: blocking/blocked pairs identifiable via lock_monitor.py, runbook documented
 
 ## Pillar 2: Entity Extraction Pipeline
 - **Status**: [ ] not started
@@ -172,13 +186,13 @@
 ## Pillar Order Summary
 | # | Pillar | Depends On | Est. Specs | Status |
 |---|--------|-----------|------------|--------|
-| 1 | Data Infrastructure (PLUS ULTRA) | None | ~63 | [ ] |
+| 1 | Data Infrastructure (PLUS ULTRA) | None | ~73 | [ ] |
 | 2 | Entity Extraction Pipeline | 1 | ~4 | [ ] |
 | 3 | Multi-Format Ingestion | 1, 2 | ~4 | [ ] |
 | 4 | Retrieval Engine + Accuracy | 1, 2, 3 | ~5 | [ ] |
 | 5 | Pydantic AI + Docker Deployment | 1, 2, 3, 4 | ~6 | [ ] |
 
-**Total: ~82 specs across 5 pillars**
+**Total: ~92 specs across 5 pillars**
 
 ## Council Validation Notes
 - **Validated by**: Claude Sonnet, GPT-5 Codex, Qwen 3.5 Plus, GLM-5, DeepSeek v3.2
