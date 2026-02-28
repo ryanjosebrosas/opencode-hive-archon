@@ -101,15 +101,28 @@ Print progress dashboard:
 
 #### Single Plan Mode (Default)
 
-4. **Dispatch plan writing to T1 (FREE):**
+4. **Dispatch plan writing to T1 (FREE) — using native command mode:**
     ```
+    // Step 1: prime the session first
     dispatch({
-      mode: "agent",
+      mode: "command",
+      command: "prime",
+      prompt: "",
       provider: "bailian-coding-plan-test",
       model: "qwen3.5-plus",
-      prompt: "/prime\n\nThen run /planning {spec-id} {spec-name}\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}"
+    })
+
+    // Step 2: run /planning with spec context as arguments
+    dispatch({
+      mode: "command",
+      command: "planning",
+      prompt: "{spec-id} {spec-name}\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}",
+      provider: "bailian-coding-plan-test",
+      model: "qwen3.5-plus",
+      timeout: 600,
     })
     ```
+    - Command mode invokes `/planning` natively — no model interpretation of slash commands as prose
     - The T1 model runs /planning which writes the plan following `templates/STRUCTURED-PLAN-TEMPLATE.md`
     - Plan MUST be 700-1000 lines — this is a hard requirement
     - Plan MUST include actual code samples (copy-pasteable), not summaries
@@ -123,13 +136,19 @@ Print progress dashboard:
 
 #### Master + Sub-Plan Mode (Exception)
 
-4. **Dispatch master plan writing to T1 (FREE):**
+4. **Dispatch master plan writing to T1 (FREE) — using native command mode:**
     ```
+    // Step 1: prime
+    dispatch({ mode: "command", command: "prime", prompt: "", provider: "bailian-coding-plan-test", model: "qwen3.5-plus" })
+
+    // Step 2: planning with master mode hint
     dispatch({
-      mode: "agent",
+      mode: "command",
+      command: "planning",
+      prompt: "{spec-id} {spec-name}\n\nThis is a complex spec — use Master + Sub-Plan mode.\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}",
       provider: "bailian-coding-plan-test",
       model: "qwen3.5-plus",
-      prompt: "/prime\n\nThen run /planning {spec-id} {spec-name}\n\nThis is a complex spec — use Master + Sub-Plan mode.\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}"
+      timeout: 900,
     })
     ```
     - The T1 model runs /planning in master mode which writes the master plan + all sub-plans
@@ -214,35 +233,47 @@ This is the rollback point. If implementation fails, `git stash` to here and ret
 
 #### Single Plan Mode (Default)
 
-Dispatch implementation to T1:
+Dispatch implementation to T1 using native command mode:
 
 ```
+// Step 1: prime
+dispatch({ mode: "command", command: "prime", prompt: "", provider: "bailian-coding-plan-test", model: "qwen3.5-plus" })
+
+// Step 2: execute the plan
 dispatch({
-  mode: "agent",
+  mode: "command",
+  command: "execute",
+  prompt: "requests/{spec-id}-{spec-name}-plan.md",
   provider: "bailian-coding-plan-test",
   model: "qwen3.5-plus",
-  prompt: "/prime\n\nThen: /execute requests/{spec-id}-{spec-name}-plan.md"
+  timeout: 900,
 })
 ```
 
-**Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
+**Fallback:** If `bailian-coding-plan-test` fails, dispatch.ts automatically tries `zai-coding-plan/glm-4.7` then `ollama-cloud/devstral-2:123b`.
 
 #### Master + Sub-Plan Mode (Exception)
 
 Execute with master plan — `/execute` handles sub-plan looping automatically:
 
 ```
+// Step 1: prime
+dispatch({ mode: "command", command: "prime", prompt: "", provider: "bailian-coding-plan-test", model: "qwen3.5-plus" })
+
+// Step 2: execute master plan
 dispatch({
-  mode: "agent",
+  mode: "command",
+  command: "execute",
+  prompt: "requests/{spec-id}-{spec-name}-master-plan.md",
   provider: "bailian-coding-plan-test",
   model: "qwen3.5-plus",
-  prompt: "/prime\n\nThen: /execute requests/{spec-id}-{spec-name}-master-plan.md"
+  timeout: 1200,
 })
 ```
 
 `/execute` detects master plans automatically and loops through sub-plans sequentially (Step 0.5 + Step 2.5). No need for manual per-phase dispatch loops.
 
-**Fallback:** If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
+**Fallback:** Automatic via dispatch.ts fallback chain.
 
 ---
 

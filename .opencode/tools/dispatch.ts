@@ -433,13 +433,15 @@ function getFallbackChain(provider: string): Array<{ provider: string; model: st
 export default tool({
   description:
     "Dispatch a prompt to any connected AI model via the OpenCode server. " +
-    "Two modes: 'text' (default) for prompt-response, 'agent' for full tool access " +
-    "(works with ALL providers via OpenCode's native agent framework). " +
+    "Three modes: 'text' (default) for prompt-response, 'agent' for full tool access, " +
+    "'command' to invoke a slash command natively (e.g. /prime, /execute, /planning). " +
     "Agent mode lets models read files, edit code, run bash commands, and search the knowledge base. " +
+    "Command mode uses the OpenCode command API directly — more reliable than asking a model to interpret slash commands as text. " +
     "5-tier cost-optimized cascade: T1 Implementation (FREE: bailian-coding-plan-test qwen3), " +
     "T2 First Validation (FREE: zai glm-5), T3 Second Validation (FREE: ollama deepseek), " +
     "T4 Code Review (PAID cheap: openai codex), T5 Final Review (PAID: anthropic, last resort). " +
     "Auto-routes via taskType or explicit provider/model. " +
+    "Use mode:'command' + command:'execute' + prompt:'requests/plan.md' to run /execute natively. " +
     "Use mode:'agent' for implementation tasks, mode:'text' for reviews/opinions. " +
     "taskType examples: boilerplate, complex-codegen, code-review, thinking-review, " +
     "second-validation, codex-review, final-review. " +
@@ -463,15 +465,30 @@ export default tool({
     prompt: tool.schema
       .string()
       .min(1, "prompt is required")
-      .describe("The full prompt to send to the target model"),
+      .describe(
+        "In text/agent mode: the full prompt to send to the model. " +
+        "In command mode: the arguments to pass to the slash command " +
+        "(e.g. 'requests/P1-11-plan.md' for /execute, 'P1-11 transaction-management' for /planning)."
+      ),
     mode: tool.schema
       .string()
       .optional()
       .describe(
-        "Dispatch mode: 'text' (default) for prompt-response only, " +
-        "'agent' for full tool access (works with ALL providers via native agent framework). " +
-        "Agent mode lets the model read code, make edits, run validation, and search knowledge base autonomously. " +
+        "Dispatch mode: " +
+        "'text' (default) for prompt-response only, " +
+        "'agent' for full tool access (model reads/edits files, runs bash, searches knowledge base), " +
+        "'command' to invoke a slash command natively via the OpenCode command API. " +
+        "Use 'command' + command arg for /prime, /execute, /planning — more reliable than text instructions. " +
         "Use 'agent' for implementation tasks, 'text' for reviews/opinions.",
+      ),
+    command: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Slash command name to invoke in command mode (without the leading /). " +
+        "Examples: 'prime', 'execute', 'planning', 'build', 'code-review'. " +
+        "Only used when mode is 'command'. " +
+        "The 'prompt' arg becomes the command arguments.",
       ),
     steps: tool.schema
       .number()
@@ -573,11 +590,18 @@ export default tool({
     }
 
     // Validate mode arg
-    if (args.mode && args.mode !== "text" && args.mode !== "agent") {
-      return `[dispatch error] Invalid mode: "${args.mode}". Must be "text" or "agent".`
+    if (args.mode && args.mode !== "text" && args.mode !== "agent" && args.mode !== "command") {
+      return `[dispatch error] Invalid mode: "${args.mode}". Must be "text", "agent", or "command".`
     }
 
-
+    // Command mode validation
+    const isCommandMode = effectiveMode === "command"
+    if (isCommandMode && !args.command) {
+      return `[dispatch error] mode:'command' requires a 'command' arg (e.g. command:'execute', command:'prime').`
+    }
+    if (args.command && !isCommandMode) {
+      return `[dispatch error] 'command' arg is only valid when mode is 'command'.`
+    }
 
     // Update mode flags after potential fallback
     const finalIsAgentMode = effectiveMode === "agent"
@@ -631,6 +655,65 @@ export default tool({
         `Connected providers: ${connectedProviders.join(", ")}\n` +
         `Run '/connect ${resolvedProvider}' in OpenCode to connect it.`
       )
+    }
+
+    // 2.2. COMMAND MODE — invoke slash command natively via OpenCode command API
+    // More reliable than asking a model to interpret "/execute ..." as prose instructions.
+    // Use for: /prime, /execute <plan>, /planning <spec>, /build <spec>, /code-review, etc.
+    if (isCommandMode) {
+      const cmdTimeout = args.timeout ?? 600 // commands can take a while
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), cmdTimeout * 1000)
+
+      let cmdSessionId: string | undefined
+      try {
+        // Create a session for the command
+        const sessionResp = await client.session.create({
+          title: `cmd → /${args.command} ${args.prompt.slice(0, 40)}`,
+        } as any)
+        cmdSessionId = sessionResp.data?.id
+        if (!cmdSessionId) {
+          clearTimeout(timeoutId)
+          return `[dispatch error] command mode: failed to create session.`
+        }
+
+        // Invoke the slash command via the command API
+        const cmdResult = await (client.session as any).command(
+          {
+            sessionID: cmdSessionId,
+            command: args.command,
+            arguments: args.prompt,
+            ...(resolvedProvider && resolvedModel
+              ? { model: { providerID: resolvedProvider, modelID: resolvedModel } }
+              : {}),
+          },
+          { signal: controller.signal }
+        )
+        clearTimeout(timeoutId)
+
+        // Cleanup
+        try { await client.session.delete({ sessionID: cmdSessionId }) } catch { /* best effort */ }
+
+        // Extract text
+        const cmdData = asRecord(asRecord(cmdResult)?.data)
+        const responseText =
+          extractTextFromParts(cmdData?.parts) ||
+          `[dispatch note] /${args.command} executed (no text output).`
+
+        return (
+          `--- dispatch response: /${args.command} [command-mode, ${resolvedProvider}/${resolvedModel}] ---\n` +
+          responseText
+        )
+      } catch (err: unknown) {
+        clearTimeout(timeoutId)
+        if (cmdSessionId) {
+          try { await client.session.delete({ sessionID: cmdSessionId }) } catch { /* best effort */ }
+        }
+        if ((err instanceof Error && err.name === "AbortError") || controller.signal.aborted) {
+          return `[dispatch error] command mode timeout: /${args.command} did not complete within ${cmdTimeout}s.`
+        }
+        return `[dispatch error] command mode: /${args.command} failed: ${getErrorMessage(err)}`
+      }
     }
 
     // 2.5. Set up timeout (mandatory — agent mode gets longer default)
