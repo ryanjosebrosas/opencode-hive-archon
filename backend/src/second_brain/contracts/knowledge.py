@@ -120,6 +120,7 @@ class KnowledgeChunk(BaseModel):
     source_origin: SourceOriginValue = "manual"
     content_hash: str | None = None
     status: ChunkStatusValue = "active"
+    version: int = Field(default=1, ge=1)  # optimistic lock version
     # embedding is not stored on the model — it lives in the DB column
     # and is produced by VoyageRerankService.embed() at ingestion time
     metadata: dict[str, Any] = Field(default_factory=dict)
