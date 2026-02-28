@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-16",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16"],
+  "lastSpec": "P1-17",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16", "P1-17"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -27,8 +27,9 @@
     "Advisory lock (int key) before state reads",
     "MigrationResult model for structured operation feedback",
     "importlib.util for importing standalone scripts in tests",
-    "Regex-based SQL policy checker with allowed/blocked pattern categories",
+"Regex-based SQL policy checker with allowed/blocked pattern categories",
     "CircuitBreaker with single-probe HALF_OPEN enforcement",
+    "Create trigger BEFORE backfill UPDATE in migrations — closes race window for concurrent inserts during migration",
     "Thread-safe metrics via lock context manager",
     "Executor-first pattern in transaction context managers: call executor before mutating state",
     "Thread-safe mock executor with threading.Lock for concurrent write tests",
@@ -127,10 +128,15 @@
       "decision": "superseded→active transition intentionally blocked",
       "reason": "Superseded means explicitly replaced by re-ingestion. Direct reinstatement bypasses audit trail. Restore path is: new re-ingestion (not state flip)."
     },
-    {
+{
       "spec": "P1-16",
       "decision": "Separate ChunkNotFoundError from StaleDataError",
       "reason": "CHUNK_NOT_FOUND and STALE_VERSION are fundamentally different: not-found means no retry, stale means re-fetch-and-retry. Conflating them forces callers to string-match error codes."
+    },
+    {
+      "spec": "P1-17",
+      "decision": "Trigger on UPDATE OF content only, not all column updates",
+      "reason": "content_tsv is derived solely from content. Metadata/status/version updates don't require tsvector refresh — UPDATE OF content correctly scopes the trigger."
     }
   ]
 }

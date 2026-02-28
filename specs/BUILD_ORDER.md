@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 16/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 17/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -92,7 +92,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 16/83 complete
 
 ### D. Supabase Search Infrastructure (8 specs)
 
-- [ ] `P1-17` **full-text-search** (standard) — Add tsvector column to knowledge_chunks, GIN index. PostgreSQL full-text search RPC function. Supports AND/OR/phrase queries.
+- [x] `P1-17` **full-text-search** (standard) — Add tsvector column to knowledge_chunks, GIN index. PostgreSQL full-text search RPC function. Supports AND/OR/phrase queries.
   - depends: P1-13
   - touches: migrations/008_fulltext_search.sql (new), services/supabase.py, tests/test_fulltext_search.py (new)
   - acceptance: tsvector column auto-populated via trigger. GIN index created. RPC: search "machine learning" returns chunks containing both words. Phrase search works.
