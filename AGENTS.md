@@ -75,6 +75,12 @@ A comprehensive AI-assisted development methodology combining systematic plannin
 
 ---
 
+## Archon MCP — Knowledge Base & Task Tracking
+
+@reference/archon-workflow.md
+
+---
+
 ## On-Demand Guides
 
 All guides in `reference/`. Load when the task requires it.
@@ -88,7 +94,7 @@ All guides in `reference/`. Load when the task requires it.
 | `file-structure` | File location lookup |
 | `command-design-framework` | Slash command design |
 | `subagents-deep-dive` | Subagent creation |
-| `archon-workflow` | Archon tasks / RAG |
+| `archon-workflow` | Full Archon tasks / RAG reference |
 | `implementation-discipline` | Execution best practices |
 | `global-rules-optimization` | AGENTS.md optimization patterns |
 | `plan-quality-assessment` | Plan scoring rubric |

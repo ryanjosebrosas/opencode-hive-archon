@@ -68,6 +68,233 @@ const safeStringify = (value: unknown, maxChars = 2000): string => {
 
 const DEFAULT_TIMEOUT_SECONDS = 120
 
+/**
+ * Attempt a single dispatch with given provider/model
+ * Returns success/failure result for fallback handling
+ */
+async function attemptDispatch(
+  args: any,
+  resolvedProvider: string,
+  resolvedModel: string,
+  client: any,
+  baseUrl: string,
+  effectiveTimeout: number,
+  _primerContent: string | null,
+  parsedFormat: any,
+  isReusedSession: boolean,
+  finalIsAgentMode: boolean,
+  shouldCleanup: boolean,
+  sessionId: string | null = null
+): Promise<{
+  success: boolean
+  text?: string
+  error?: string
+  sessionId?: string
+  cleanupNote?: string
+}> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), effectiveTimeout * 1000)
+  
+  let attemptSessionId = sessionId
+  let cleanupNote = ""
+  
+  // Create session if not provided
+  if (!attemptSessionId) {
+    try {
+      const sessionParams: Record<string, unknown> = {
+        title: finalIsAgentMode
+          ? `agent → ${resolvedProvider}/${resolvedModel}`
+          : `dispatch → ${resolvedProvider}/${resolvedModel}`,
+      }
+
+      if (finalIsAgentMode) {
+        sessionParams.permission = [
+          { permission: "read", pattern: "*", action: "allow" },
+          { permission: "edit", pattern: "*", action: "allow" },
+          { permission: "bash", pattern: "*", action: "allow" },
+          { permission: "glob", pattern: "*", action: "allow" },
+          { permission: "grep", pattern: "*", action: "allow" },
+          { permission: "list", pattern: "*", action: "allow" },
+          { permission: "todoread", pattern: "*", action: "allow" },
+          { permission: "todowrite", pattern: "*", action: "allow" },
+          { permission: "task", pattern: "*", action: "deny" },
+          { permission: "external_directory", pattern: "*", action: "deny" },
+          { permission: "webfetch", pattern: "*", action: "deny" },
+          { permission: "websearch", pattern: "*", action: "deny" },
+        ]
+      }
+
+      const session = await client.session.create(sessionParams as any)
+      attemptSessionId = session.data?.id
+      if (!attemptSessionId) {
+        clearTimeout(timeoutId)
+        return {
+          success: false,
+          error: `[dispatch error] Session creation returned no ID. Response: ${safeStringify(session.data)}`
+        }
+      }
+    } catch (err: unknown) {
+      clearTimeout(timeoutId)
+      return {
+        success: false,
+        error: `[dispatch error] Failed to create session: ${getErrorMessage(err)}`
+      }
+    }
+  }
+
+  // Build prompt — prepend primer in BOTH text and agent mode
+  // Agent mode previously skipped primer assuming the model reads AGENTS.md itself,
+  // but AGENTS.md has no Archon RAG instructions — the primer is the only way to
+  // tell dispatched agents how to use the knowledge base.
+  let promptText = _primerContent
+    ? `${_primerContent}\n\n---\n\n${args.prompt}`
+    : args.prompt
+
+  // Send prompt
+  let result: unknown
+  try {
+    const promptParams: Record<string, unknown> = {
+      sessionID: attemptSessionId,
+      model: {
+        providerID: resolvedProvider,
+        modelID: resolvedModel,
+      },
+      system: args.systemPrompt,
+      format: parsedFormat,
+      parts: [{ type: "text" as const, text: promptText }],
+    }
+
+    if (finalIsAgentMode) {
+      promptParams.agent = "build"
+    }
+
+    result = await client.session.prompt(
+      promptParams as any,
+      { signal: controller.signal },
+    )
+  } catch (err: unknown) {
+    clearTimeout(timeoutId)
+    
+    // Cleanup session on error
+    if (shouldCleanup && attemptSessionId) {
+      try {
+        await client.session.delete({ sessionID: attemptSessionId })
+      } catch { /* best effort */ }
+    }
+    
+    // Check if this was a timeout abort
+    if (
+      (err instanceof Error && err.name === "AbortError") ||
+      controller.signal.aborted
+    ) {
+      return {
+        success: false,
+        error: `[dispatch error] Timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.`
+      }
+    }
+    
+    return {
+      success: false,
+      error: `[dispatch error] Prompt failed for ${resolvedProvider}/${resolvedModel}: ${getErrorMessage(err)}`
+    }
+  }
+
+  // Clear timeout if prompt completed successfully
+  clearTimeout(timeoutId)
+
+  // Check for empty response or swallowed timeout
+  const resultRecord = asRecord(result)
+  const resultError = asRecord(resultRecord?.error) ?? resultRecord?.error
+  const resultData = asRecord(resultRecord?.data)
+
+  // Check if SDK swallowed a timeout abort
+  if (controller.signal.aborted || (resultError && (resultError as any)?.name === "AbortError")) {
+    if (shouldCleanup && attemptSessionId) {
+      try { await client.session.delete({ sessionID: attemptSessionId }) } catch { /* best effort */ }
+    }
+    return {
+      success: false,
+      error: `[dispatch error] Timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.`
+    }
+  }
+
+  if (!resultData || Object.keys(resultData).length === 0) {
+    if (shouldCleanup && attemptSessionId) {
+      try { await client.session.delete({ sessionID: attemptSessionId }) } catch { /* best effort */ }
+    }
+    return {
+      success: false,
+      error: `[dispatch error] Empty response from ${resolvedProvider}/${resolvedModel}.`
+    }
+  }
+
+  // Extract response text
+  let responseText = ""
+  try {
+    const data = resultData
+    const info = asRecord(data?.info)
+    if (parsedFormat) {
+      const structured = info?.structured
+      if (structured !== undefined && structured !== null) {
+        responseText = typeof structured === "string"
+          ? structured
+          : JSON.stringify(structured, null, 2)
+      } else {
+        const error = asRecord(info?.error)
+        const errorName = error?.name
+        const errorData = asRecord(error?.data)
+        if (errorName === "StructuredOutputError") {
+          const retries = errorData?.retries ?? "unknown"
+          const message = errorData?.message ?? "unknown error"
+          responseText = `[dispatch error] Structured output failed after ${retries} retries: ${message}`
+        } else {
+          responseText = extractTextFromParts(data?.parts)
+          if (!responseText) {
+            responseText = `[dispatch warning] No structured output or text parts. Raw: ${safeStringify(data)}`
+          }
+        }
+      }
+    } else {
+      responseText = extractTextFromParts(data?.parts)
+      if (!responseText) {
+        const infoError = asRecord(info?.error)
+        if (infoError) {
+          const errName = infoError.name ?? "unknown"
+          const errData = asRecord(infoError.data)
+          const errMsg = errData?.message ?? "unknown error"
+          const statusCode = errData?.statusCode ?? ""
+          responseText = (
+            `[dispatch error] ${resolvedProvider}/${resolvedModel} returned an API error.\n` +
+            `Error: ${errName} ${statusCode ? `(${statusCode})` : ""} — ${errMsg}`
+          )
+        } else {
+          responseText = `[dispatch warning] No text parts in response. Raw: ${safeStringify(data)}`
+        }
+      }
+    }
+  } catch (err: unknown) {
+    responseText = `[dispatch warning] Could not parse response: ${getErrorMessage(err)}. Raw: ${safeStringify(result)}`
+  }
+
+  // Cleanup session if appropriate
+  if (shouldCleanup && attemptSessionId) {
+    try {
+      await client.session.delete({ sessionID: attemptSessionId })
+    } catch {
+      cleanupNote = "\n[dispatch note] Session cleanup failed (non-critical)."
+    }
+  } else if (!shouldCleanup && !isReusedSession) {
+    cleanupNote = `\n[dispatch note] Session preserved: ${attemptSessionId} (pass sessionId to continue conversation)`
+  }
+
+  return {
+    success: true,
+    text: responseText,
+    sessionId: attemptSessionId,
+    cleanupNote
+  }
+}
+
 const getConnectedProviders = async (baseUrl: string): Promise<string[]> => {
   try {
     const resp = await fetch(`${baseUrl}/provider`)
@@ -164,6 +391,43 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
 }
 
+// Fallback chains by primary provider — tried in order on timeout/error/rate-limit
+// Each entry: [primaryProviderPrefix, fallbackChain[]]
+const FALLBACK_CHAINS: Array<{
+  matchProvider: string  // prefix match on resolvedProvider
+  fallbacks: Array<{ provider: string; model: string }>
+}> = [
+  {
+    matchProvider: "bailian-coding-plan",  // matches bailian-coding-plan AND bailian-coding-plan-test
+    fallbacks: [
+      { provider: "zai-coding-plan", model: "glm-4.7" },
+      { provider: "ollama-cloud", model: "devstral-2:123b" },
+    ],
+  },
+  {
+    matchProvider: "zai-coding-plan",
+    fallbacks: [
+      { provider: "ollama-cloud", model: "deepseek-v3.2" },
+      { provider: "ollama-cloud", model: "devstral-2:123b" },
+    ],
+  },
+  {
+    matchProvider: "zai",  // plain zai (non coding-plan)
+    fallbacks: [
+      { provider: "ollama-cloud", model: "deepseek-v3.2" },
+      { provider: "ollama-cloud", model: "devstral-2:123b" },
+    ],
+  },
+]
+
+function getFallbackChain(provider: string): Array<{ provider: string; model: string }> {
+  for (const entry of FALLBACK_CHAINS) {
+    if (provider.startsWith(entry.matchProvider)) {
+      return entry.fallbacks
+    }
+  }
+  return []
+}
 
 
 export default tool({
@@ -377,8 +641,6 @@ export default tool({
     if (effectiveTimeout > MAX_TIMEOUT_SECONDS) {
       return `[dispatch error] timeout must be <= ${MAX_TIMEOUT_SECONDS} seconds`
     }
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), effectiveTimeout * 1000)
 
     // 2.6. Parse structured output format if requested
     let parsedFormat:
@@ -388,7 +650,6 @@ export default tool({
       try {
         const schema = JSON.parse(args.jsonSchema)
         if (!asRecord(schema) || Array.isArray(schema)) {
-          clearTimeout(timeoutId)
           return (
             "[dispatch error] jsonSchema must parse to a JSON object schema\n" +
             `Example:\n` +
@@ -397,7 +658,6 @@ export default tool({
         }
         parsedFormat = { type: "json_schema" as const, schema, retryCount: 2 }
       } catch (parseErr: unknown) {
-        clearTimeout(timeoutId)
         return (
           `[dispatch error] Invalid jsonSchema: ${getErrorMessage(parseErr)}\n` +
           `The jsonSchema arg must be a valid JSON string. Example:\n` +
@@ -412,217 +672,78 @@ export default tool({
     const shouldCleanup = args.cleanup ?? (finalIsAgentMode ? false : !isReusedSession)
     let sessionId = args.sessionId
 
-    if (!sessionId) {
-      try {
-        // Agent mode: create session with tool permissions so the model can
-        // read files, edit code, run bash (ruff/mypy/pytest), and search the codebase
-        const sessionParams: Record<string, unknown> = {
-          title: finalIsAgentMode
-            ? `agent → ${resolvedProvider}/${resolvedModel}`
-            : `dispatch → ${resolvedProvider}/${resolvedModel}`,
-        }
+    // Get fallback chain for this provider
+    const fallbackChain = getFallbackChain(resolvedProvider)
+    const attemptedModels: Array<{ provider: string; model: string; error?: string }> = []
 
-        if (finalIsAgentMode) {
-          sessionParams.permission = [
-            { permission: "read", pattern: "*", action: "allow" },
-            { permission: "edit", pattern: "*", action: "allow" },
-            { permission: "bash", pattern: "*", action: "allow" },
-            { permission: "glob", pattern: "*", action: "allow" },
-            { permission: "grep", pattern: "*", action: "allow" },
-            { permission: "list", pattern: "*", action: "allow" },
-            { permission: "todoread", pattern: "*", action: "allow" },
-            { permission: "todowrite", pattern: "*", action: "allow" },
-            // Deny recursive dispatch and external access
-            { permission: "task", pattern: "*", action: "deny" },
-            { permission: "external_directory", pattern: "*", action: "deny" },
-            { permission: "webfetch", pattern: "*", action: "deny" },
-            { permission: "websearch", pattern: "*", action: "deny" },
-          ]
-        }
-
-        const session = await client.session.create(sessionParams as any)
-        sessionId = session.data?.id
-        if (!sessionId) {
-          clearTimeout(timeoutId)
-          return `[dispatch error] Session creation returned no ID. Response: ${safeStringify(session.data)}`
-        }
-      } catch (err: unknown) {
-        clearTimeout(timeoutId)
-        return `[dispatch error] Failed to create session: ${getErrorMessage(err)}`
-      }
+    // Try primary model first
+    attemptedModels.push({ provider: resolvedProvider, model: resolvedModel })
+    
+    let finalResult: {
+      success: boolean
+      text?: string
+      error?: string
+      sessionId?: string
+      cleanupNote?: string
     }
 
-    // 4. Build prompt with optional primer prefix
-    // Agent mode: skip primer — agent runs /prime and reads AGENTS.md itself
-    // Text mode: prepend primer (model has no file access)
-    let promptText = (!finalIsAgentMode && _primerContent)
-      ? `${_primerContent}\n\n---\n\n${args.prompt}`
-      : args.prompt
+    // Attempt primary dispatch
+    finalResult = await attemptDispatch(
+      args, resolvedProvider, resolvedModel, client, baseUrl, effectiveTimeout,
+      _primerContent, parsedFormat, isReusedSession, finalIsAgentMode, shouldCleanup, sessionId
+    )
 
-    // 4.1. Handle normal prompt
-    let result: unknown
-
-    // Normal mode (text or agent)
-    try {
-      // Agent mode: set agent to "general" for tool access, pass steps limit
-      const promptParams: Record<string, unknown> = {
-        sessionID: sessionId,
-        model: {
-          providerID: resolvedProvider,
-          modelID: resolvedModel,
-        },
-        system: args.systemPrompt,
-        format: parsedFormat,
-        parts: [{ type: "text" as const, text: promptText }],
-      }
-
-      if (finalIsAgentMode) {
-        // "build" agent has full tool access in OpenCode
-        promptParams.agent = "build"
-      }
-
-      result = await client.session.prompt(
-        promptParams as any,
-        { signal: controller.signal },
-      )
-    } catch (err: unknown) {
-      clearTimeout(timeoutId)
-      // Check if this was a timeout abort
-      if (
-        (err instanceof Error && err.name === "AbortError") ||
-        controller.signal.aborted
-      ) {
-        // Cleanup session on timeout
-        if (shouldCleanup && sessionId) {
-          try {
-            await client.session.delete({ sessionID: sessionId })
-          } catch {
-            // Best effort cleanup
-          }
-        }
-        return (
-          `[dispatch error] Timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.\n` +
-          (args.timeout !== undefined
-            ? `Consider increasing the timeout or using a faster model.`
-            : `This was the default ${DEFAULT_TIMEOUT_SECONDS}s timeout. Set 'timeout' arg for a custom value.`)
+    // If primary failed, try fallbacks
+    if (!finalResult.success && fallbackChain.length > 0) {
+      for (const fallback of fallbackChain) {
+        attemptedModels.push({ 
+          provider: fallback.provider, 
+          model: fallback.model 
+        })
+        
+        // Try fallback dispatch
+        finalResult = await attemptDispatch(
+          args, fallback.provider, fallback.model, client, baseUrl, effectiveTimeout,
+          _primerContent, parsedFormat, isReusedSession, finalIsAgentMode, shouldCleanup
         )
-      }
-      // Attempt cleanup on failure if we created the session
-      if (shouldCleanup && sessionId) {
-        try {
-          await client.session.delete({ sessionID: sessionId })
-        } catch {
-          // Best effort cleanup
-        }
-      }
-      return (
-        `[dispatch error] Prompt failed for ${resolvedProvider}/${resolvedModel}: ${getErrorMessage(err)}\n` +
-        `Common causes: model not connected (run '/connect ${resolvedProvider}'), ` +
-        `invalid model ID, or provider auth missing.`
-      )
-    }
-
-    // Clear timeout if prompt completed successfully
-    clearTimeout(timeoutId)
-
-    // 4.5. Check for empty response or swallowed timeout
-    // SDK doesn't throw on AbortError — it puts it in result.error and returns { data: {} }
-    const resultRecord = asRecord(result)
-    const resultError = asRecord(resultRecord?.error) ?? resultRecord?.error
-    const resultData = asRecord(resultRecord?.data)
-
-    // Check if SDK swallowed a timeout abort (AbortError in result.error, data is empty)
-    if (controller.signal.aborted || (resultError && (resultError as any)?.name === "AbortError")) {
-      if (shouldCleanup && sessionId) {
-        try { await client.session.delete({ sessionID: sessionId }) } catch { /* best effort */ }
-      }
-      return (
-        `[dispatch error] Timeout: ${resolvedProvider}/${resolvedModel} did not respond within ${effectiveTimeout}s.\n` +
-        (args.timeout !== undefined
-          ? `Consider increasing the timeout or using a faster model.`
-          : `This was the default ${DEFAULT_TIMEOUT_SECONDS}s timeout. Set 'timeout' arg for a custom value.`)
-      )
-    }
-
-    if (!resultData || Object.keys(resultData).length === 0) {
-      if (shouldCleanup && sessionId) {
-        try { await client.session.delete({ sessionID: sessionId }) } catch { /* best effort */ }
-      }
-      return (
-        `[dispatch error] Empty response from ${resolvedProvider}/${resolvedModel}.\n` +
-        `The model did not produce any output. Possible causes:\n` +
-        `- Model is not connected or authenticated (run '/connect ${resolvedProvider}')\n` +
-        `- Model ID '${resolvedModel}' is incorrect for provider '${resolvedProvider}'\n` +
-        `- Provider is rate-limiting or temporarily unavailable`
-      )
-    }
-
-    // 5. Extract response
-    let responseText = ""
-    try {
-      const data = resultData  // Already parsed in step 4.5
-      const info = asRecord(data?.info)
-      if (parsedFormat) {
-        // Structured output mode — extract from info.structured
-        const structured = info?.structured
-        if (structured !== undefined && structured !== null) {
-          responseText =
-            typeof structured === "string"
-              ? structured
-              : JSON.stringify(structured, null, 2)
+        
+        if (finalResult.success) {
+          // Update to the fallback model that succeeded
+          resolvedProvider = fallback.provider
+          resolvedModel = fallback.model
+          break
         } else {
-          // Check for StructuredOutputError
-          const error = asRecord(info?.error)
-          const errorName = error?.name
-          const errorData = asRecord(error?.data)
-          if (errorName === "StructuredOutputError") {
-            const retries = errorData?.retries ?? "unknown"
-            const message = errorData?.message ?? "unknown error"
-            responseText = `[dispatch error] Structured output failed after ${retries} retries: ${message}`
-          } else {
-            // Fallback to text parts even in structured mode
-            responseText = extractTextFromParts(data?.parts)
-            if (!responseText) {
-              responseText = `[dispatch warning] No structured output or text parts. Raw: ${safeStringify(data)}`
-            }
-          }
-        }
-      } else {
-        // Text mode — existing extraction logic
-        responseText = extractTextFromParts(data?.parts)
-        if (!responseText) {
-          // Check for upstream API error in info.error (server returns 200 but model errored)
-          const infoError = asRecord(info?.error)
-          if (infoError) {
-            const errName = infoError.name ?? "unknown"
-            const errData = asRecord(infoError.data)
-            const errMsg = errData?.message ?? "unknown error"
-            const statusCode = errData?.statusCode ?? ""
-            responseText = (
-              `[dispatch error] ${resolvedProvider}/${resolvedModel} returned an API error.\n` +
-              `Error: ${errName} ${statusCode ? `(${statusCode})` : ""} — ${errMsg}\n` +
-              `This usually means the model ID is invalid or the provider has an upstream issue.`
-            )
-          } else {
-            responseText = `[dispatch warning] No text parts in response. Raw: ${safeStringify(data)}`
-          }
+          // Record the error for this fallback attempt
+          attemptedModels[attemptedModels.length - 1].error = finalResult.error
         }
       }
-    } catch (err: unknown) {
-      responseText = `[dispatch warning] Could not parse response: ${getErrorMessage(err)}. Raw: ${safeStringify(result)}`
     }
 
-    // 6. Cleanup session if appropriate
-    let cleanupNote = ""
-    if (shouldCleanup && sessionId) {
-      try {
-        await client.session.delete({ sessionID: sessionId })
-      } catch {
-        cleanupNote =
-          "\n[dispatch note] Session cleanup failed (non-critical)."
-      }
-    } else if (!shouldCleanup && !isReusedSession) {
-      cleanupNote = `\n[dispatch note] Session preserved: ${sessionId} (pass sessionId to continue conversation)`
+    // If all attempts failed, return comprehensive error
+    if (!finalResult.success) {
+      const errorMessages = attemptedModels.map(attempt => {
+        if (attempt.error) {
+          // Extract just the error type (timeout, rate-limit, etc.)
+          const match = attempt.error.match(/\[(dispatch error)\]\s*(\w+):/)
+          return match ? match[2].toLowerCase() : "error"
+        }
+        return "unknown"
+      })
+
+      const attemptedList = attemptedModels.map(attempt => 
+        `${attempt.provider}/${attempt.model}`
+      ).join(", ")
+
+      const errorList = attemptedModels.map((attempt, index) => 
+        `${attempt.provider}/${attempt.model} (${errorMessages[index]})`
+      ).join(", ")
+
+      return (
+        `--- dispatch error: all models failed ---\n` +
+        `Tried: ${errorList}\n` +
+        `\nPrimary attempt failed: ${attemptedModels[0].error}\n` +
+        (attemptedModels.length > 1 ? `Fallback attempts also failed.\n` : "")
+      )
     }
 
     // 7. Return response with metadata header
@@ -634,9 +755,16 @@ export default tool({
     if (parsedFormat) modifiers.push("structured-json")
     if (args.timeout !== undefined) modifiers.push(`timeout-${effectiveTimeout}s`)
     if (finalIsAgentMode && args.steps) modifiers.push(`steps-${args.steps}`)
+    
+    // Add fallback indicator if we used a fallback
+    if (attemptedModels.length > 1) {
+      const primaryModel = `${attemptedModels[0].provider}/${attemptedModels[0].model}`
+      modifiers.push(`fallback-from: ${primaryModel}`)
+    }
+    
     const modifierStr =
       modifiers.length > 0 ? ` [${modifiers.join(", ")}]` : ""
     const header = `--- dispatch response from ${resolvedProvider}/${resolvedModel}${modifierStr} ---\n`
-    return header + responseText + cleanupNote
+    return header + finalResult.text! + (finalResult.cleanupNote || "")
   },
 })
