@@ -24,6 +24,12 @@
 > - Editing memory.md (session notes only)
 > - Dispatching to T1-T5 models via dispatch/batch-dispatch tools
 >
+> **BUILD PIPELINE — NO STEP SKIPPING (EVER):**
+> - Every spec runs ALL 11 steps: Pick → Plan → T4 Plan Review → Commit Plan → Execute → Validate → Code Review + T4 Panel → Commit+Push → Update State → Gate Check → Loop
+> - Depth label (light/standard/heavy) ONLY changes free-model count in Step 7a (3/5/5). It does NOT skip Step 3, Step 6, or Step 7d.
+> - Step 7d (T4 panel: codex + sonnet-4-5 + sonnet-4-6) runs for EVERY spec, EVERY depth.
+> - This applies in fully autonomous mode. "Run like hell" never means "skip steps".
+>
 > **COUNCIL OUTPUT RULE — Never Pre-Summarize:**
 > - When running /council or batch-dispatch, present the RAW model outputs to the user FIRST
 > - Do NOT summarize, synthesize, or interpret council results before showing them
@@ -294,3 +300,32 @@ Gauntlet = `free-review-gauntlet` batch pattern (5 free models in parallel). If 
    ```
 
 **Full pipeline**: `/prime` → `/mvp` → `/prd` → `/pillars` → `/decompose` → `/build next` (repeat) → `/ship`
+
+---
+
+## Review guidelines
+
+Codex reviews every PR automatically. Claude Code applies fixes to P0/P1 issues found.
+
+**Focus on (P0 — block merge):**
+- Migrations: any DROP COLUMN, DROP TABLE, ALTER TYPE to smaller type, or destructive change
+- SQL safety: dynamic query construction not using parameterized queries (SQL injection risk)
+- Transaction safety: multi-table writes not going through TransactionManager context manager
+- Chunk search: any RPC or query returning chunks without filtering status='active'
+
+**Focus on (P1 — fix before merge):**
+- Error handling: exceptions not using SecondBrainError taxonomy from errors.py
+- Type safety: bare `Any` without `# type: ignore` comment, untyped dicts, mypy --strict violations
+- Tests: new service file added without corresponding tests/test_<service>.py
+- Optimistic locking: chunk updates not including current version (StaleDataError risk)
+
+**Ignore (not worth flagging):**
+- Style/formatting (ruff handles this)
+- Minor naming conventions
+- Comment quality
+- Test verbosity
+
+**Fix scope for Claude Code:**
+Apply fixes for all P0 and P1 issues. Do not refactor beyond the identified issue.
+Commit message format: `fix: apply Codex review suggestions [auto]`
+One commit per fix session. If unsure about a fix, leave a comment instead of guessing.

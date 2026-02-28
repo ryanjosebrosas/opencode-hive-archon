@@ -47,6 +47,39 @@ Gates that PASS trigger automatic continuation to the next pillar. Gates that FA
 
 ---
 
+## ENFORCEMENT — No Step Skipping (EVER)
+
+**This rule applies in ALL modes: autonomous, manual, `/build next`, single spec.**
+
+Every spec — regardless of depth label — MUST run every step in order:
+
+```
+Step 1 (Pick) → Step 2 (Plan) → Step 3 (T4 Plan Review) → Step 4 (Commit Plan)
+→ Step 5 (Execute) → Step 6 (Validate) → Step 7 (Code Review + T4 Panel)
+→ Step 8 (Commit + Push) → Step 9 (Update State) → Step 10 (Gate Check) → Step 11 (Loop)
+```
+
+The depth label (light/standard/heavy) ONLY controls:
+- How many free models run in Step 7a (3 / 5 / 5)
+- Whether T5 is called in Step 7e (heavy only, as last resort)
+
+**The depth label does NOT skip:**
+- Step 3 (T4 plan review) — runs for ALL depths
+- Step 6 (validate: ruff + mypy + pytest) — runs for ALL depths
+- Step 7d (T4 panel: codex + sonnet-4-5 + sonnet-4-6) — runs for ALL depths
+
+**Forbidden shortcuts (all VIOLATIONS):**
+- Skipping T4 plan review because "it's a standard spec"
+- Skipping the T4 panel sign-off because "gauntlet was clean"
+- Skipping validation because "implementation looked clean"
+- Dispatching T1 to implement before plan is written and T4-reviewed
+- Committing without running the T4 panel
+- Running only T5 instead of the full gauntlet + T4 panel
+
+If you find yourself skipping any step: STOP, go back, run the skipped step.
+
+---
+
 ## The Pipeline (Steps 1-11)
 
 ### Step 1: Pick Spec

@@ -51,6 +51,10 @@
 - **mvp.md handling**: Only used in Project Mode (application codebases). System Mode skips mvp.md and captures intent in plan's Solution Statement
 - **Pre-gate plans**: Plans created before strict gates need update before `/execute` — old plans lack required gate metadata
 
+## Build Pipeline Rules
+
+- **NO STEP SKIPPING — EVER**: Every spec runs ALL 11 steps in order, regardless of depth. Depth (light/standard/heavy) ONLY controls how many free models run in Step 7a (3/5/5). It does NOT skip: Step 3 T4 plan review, Step 6 validation, Step 7d T4 panel (codex + sonnet-4-5 + sonnet-4-6). This applies in autonomous mode too.
+
 ## Lessons Learned
 
 - **Documentation updates need README sync**: When adding new reference guides, update README "By the Numbers" and guide inventory to prevent doc drift
