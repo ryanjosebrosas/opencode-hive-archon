@@ -9,15 +9,29 @@ from second_brain.services.conversation import ConversationStore
 # Export pool-related classes
 from second_brain.services.pool import CircuitState, CircuitBreaker, ConnectionPool, PoolConfig
 
+# Export transaction-related classes
+from second_brain.services.transaction import (
+    TransactionContext,
+    TransactionError,
+    TransactionExecutor,
+    TransactionManager,
+    TransactionState,
+)
+
 __all__ = [
-    "ConversationStore",
+    "CircuitBreaker",
     "CircuitState",
-    "CircuitBreaker", 
     "ConnectionPool",
-    "MemoryService",
+    "ConversationStore",
     "MemorySearchResult",
+    "MemoryService",
     "PoolConfig",
     "SupabaseProvider",
-    "TraceCollector", 
+    "TraceCollector",
+    "TransactionContext",
+    "TransactionError",
+    "TransactionExecutor",
+    "TransactionManager",
+    "TransactionState",
     "VoyageRerankService",
 ]
