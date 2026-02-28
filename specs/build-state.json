@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-10",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10"],
+  "lastSpec": "P1-11",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -28,7 +28,8 @@
     "importlib.util for importing standalone scripts in tests",
     "Regex-based SQL policy checker with allowed/blocked pattern categories",
     "CircuitBreaker with single-probe HALF_OPEN enforcement",
-    "Thread-safe metrics via lock context manager"
+    "Thread-safe metrics via lock context manager",
+    "Executor-first pattern in transaction context managers: call executor before mutating state"
   ],
   "decisionsLog": [
     {
@@ -95,6 +96,11 @@
       "spec": "P1-10",
       "decision": "Create pool.py as standalone, don't refactor supabase.py yet",
       "reason": "Pool is ready to integrate but forcing replacement of existing supabase.py client management increases risk. Integration deferred."
+    },
+    {
+      "spec": "P1-11",
+      "decision": "Executor-first pattern: call executor before mutating state in TransactionManager",
+      "reason": "If executor raises after state mutation, state is left inconsistent AND except block re-raises IndexError hiding original exception. Peek-then-pop on exit prevents double-pop."
     }
   ]
 }

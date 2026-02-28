@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 10/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 11/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -60,7 +60,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 10/83 complete
   - touches: services/supabase.py (refactor), services/pool.py (new), tests/test_pool.py (new)
   - acceptance: Pool retries 3x on connection failure. Circuit opens after 5 consecutive failures, half-opens after 30s. Health check returns pool stats. Metrics dict available.
 
-- [ ] `P1-11` **transaction-management** (standard) — Transaction context manager for multi-table atomic writes. Partial writes roll back. Nested transaction support via savepoints.
+- [x] `P1-11` **transaction-management** (standard) — Transaction context manager for multi-table atomic writes. Partial writes roll back. Nested transaction support via savepoints.
   - depends: P1-10
   - touches: services/supabase.py, services/transaction.py (new), tests/test_transactions.py (new)
   - acceptance: Multi-table insert in transaction: success = all committed, failure = all rolled back. Savepoint in nested transaction: inner failure rolls back to savepoint, outer succeeds.
