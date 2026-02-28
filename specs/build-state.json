@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-13",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13"],
+  "lastSpec": "P1-14",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -23,6 +23,7 @@
     "Strict regex for migration filename parsing",
     "SchemaError with structured context for drift reporting",
     "Protocol-based executor for DB abstraction in tests",
+    "Race condition fallback in upsert: try insert, on failure re-query and treat as duplicate (unique constraint is authoritative guard)",
     "Advisory lock (int key) before state reads",
     "MigrationResult model for structured operation feedback",
     "importlib.util for importing standalone scripts in tests",
@@ -113,6 +114,11 @@
       "spec": "P1-13",
       "decision": "ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities",
       "reason": "Relationships reference entities but don't own them. CASCADE would silently delete all relationships when an entity is deleted. RESTRICT forces explicit cleanup."
+    },
+    {
+      "spec": "P1-14",
+      "decision": "Catch insert exception and retry as find-then-update for race condition safety",
+      "reason": "find_by + insert is not atomic. Under concurrent load two writers can both see None and race to insert. DB unique index is the true guard; Python layer catches the violation and falls back to update path."
     }
   ]
 }

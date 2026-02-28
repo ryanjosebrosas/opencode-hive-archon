@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 13/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 14/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -75,7 +75,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 13/83 complete
   - touches: migrations/004_integrity_constraints.sql (new), tests/test_constraints.py (new)
   - acceptance: Insert with NULL required field fails at DB. Duplicate content_hash rejected by UNIQUE. FK violation on non-existent source_id rejected. All constraints documented.
 
-- [ ] `P1-14` **content-addressable-dedup** (standard) — SHA-256 hash of chunk content stored in content_hash column. UNIQUE constraint. On duplicate: update metadata, don't create new row. Track superseded chunks.
+- [x] `P1-14` **content-addressable-dedup** (standard) — SHA-256 hash of chunk content stored in content_hash column. UNIQUE constraint. On duplicate: update metadata, don't create new row. Track superseded chunks.
   - depends: P1-13
   - touches: contracts/knowledge.py, services/supabase.py, migrations/005_content_hash.sql (new), tests/test_dedup.py (new)
   - acceptance: Same content ingested twice = one row. content_hash matches SHA-256 of content. Metadata updated on re-ingestion. Superseded chunk has status="superseded".
