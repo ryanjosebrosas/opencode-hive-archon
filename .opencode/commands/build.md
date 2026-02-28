@@ -455,15 +455,24 @@ dispatch({
 
 On successful validation + clean review:
 
+**8a. Generate commit message via Haiku:**
+```
+dispatch({
+  taskType: "commit-message",
+  prompt: "Write a conventional commit message for spec {spec-name}.\n\nSpec description: {description from BUILD_ORDER}\nFiles changed: {touches list}\nGit diff summary:\n{git diff --stat HEAD}\nKnown skips (if any): {known-skips}\n\nFormat: feat({spec-name}): short description (imperative, max 50 chars)\n\nBody (3 bullets max): what was implemented and why.\n\nReturn ONLY the commit message."
+})
+```
+
+**8b. Commit and push:**
 ```bash
 git add -A
-git commit --no-verify -m "feat({spec-name}): {description from BUILD_ORDER}"
+git commit --no-verify -m "{haiku-generated message}"
 git push
 ```
 
 **Never include `Co-Authored-By` lines.** Commits are authored solely by the user.
 
-Push immediately after every spec commit — keeps remote in sync, enables rollback from any point, and follows incremental delivery best practices. Do not batch pushes to `/ship`.
+Push immediately after every spec — keeps remote in sync, enables rollback from any point, incremental delivery best practice.
 
 ---
 

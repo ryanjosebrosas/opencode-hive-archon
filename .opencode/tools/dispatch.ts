@@ -399,6 +399,11 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   // === T5: Final Review (last resort — only on T4 double-reject) ===
   "final-review":    { provider: "anthropic", model: "claude-sonnet-4-6" },
   "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
+
+  // === Haiku: Fast prose generation (commit messages, PR descriptions, changelogs) ===
+  "commit-message":  { provider: "anthropic", model: "claude-haiku-4-5" },
+  "pr-description":  { provider: "anthropic", model: "claude-haiku-4-5" },
+  "changelog":       { provider: "anthropic", model: "claude-haiku-4-5" },
 }
 
 // Fallback chains by primary provider — tried in order on timeout/error/rate-limit

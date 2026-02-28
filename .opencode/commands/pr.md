@@ -73,17 +73,25 @@ If branch name already exists on remote:
 
 ---
 
-## Step 4: Analyze Changes for PR Body
+## Step 4: Generate PR Title and Body via Haiku
 
 ```bash
-# Diff for the PR (commits on the new branch vs master)
+# Gather context for Haiku
 git log --oneline brain-ultimaum-fin/master..<branch-name>
 git diff brain-ultimaum-fin/master...<branch-name> --stat
+git diff brain-ultimaum-fin/master...<branch-name>
 ```
 
-From the commit(s), determine:
-- **PR title**: Conventional format `type(scope): description` from commit(s), or from `$ARGUMENTS`
-- **PR body**: Summarize changes grouped by area
+Dispatch to Haiku for PR title + body generation:
+
+```
+dispatch({
+  taskType: "pr-description",
+  prompt: "Write a GitHub pull request title and body for these changes.\n\nCommits:\n{git log --oneline}\n\nChanged files:\n{git diff --stat}\n\nDiff:\n{git diff}\n\nFormat:\nTITLE: type(scope): description (conventional commit format, max 72 chars)\n\nBODY:\n## What\n<What changed — 2-4 bullets, specific and concrete>\n\n## Why\n<Why this was needed — 1-2 sentences>\n\n## Changes\n<Files changed grouped by area with 1-line description each>\n\n## Testing\n<Test results, validation commands run, pass/fail>\n\n## Notes\n<Breaking changes, migration steps, known skips — or 'None'>\n\nReturn ONLY the title and body — no extra explanation."
+})
+```
+
+Use Haiku's output verbatim for both `--title` and `--body`.
 
 ---
 

@@ -22,9 +22,18 @@ git diff HEAD
 
 If staging specific files: `git diff HEAD -- $ARGUMENTS`
 
-### 2. Analyze Changes
+### 2. Generate Commit Message via Haiku
 
-Determine type (feat/fix/refactor/docs/test/chore/perf/style/plan), scope, and description (imperative mood, 50 chars). Add body if significant context needed.
+Dispatch to Haiku to write the commit message — fast, accurate prose generation:
+
+```
+dispatch({
+  taskType: "commit-message",
+  prompt: "Write a conventional commit message for these changes.\n\nGit diff:\n{git diff HEAD}\n\nGit status:\n{git status}\n\nFormat: type(scope): short description (imperative mood, max 50 chars)\n\nOptional body (if changes are significant): what changed and why, not how. Max 3 bullet points.\n\nTypes: feat, fix, refactor, docs, test, chore, perf, style, plan\n\nReturn ONLY the commit message — no explanation, no markdown fences."
+})
+```
+
+Use Haiku's output as the commit message verbatim.
 
 ### 3. Stage and Commit
 
@@ -34,7 +43,7 @@ Before staging, run artifact completion sweep (required):
 
 ```bash
 git add $ARGUMENTS  # or git add . if no files specified
-git commit -m "type(scope): description"
+git commit --no-verify -m "{haiku-generated message}"
 ```
 
 ### 4. Confirm Success

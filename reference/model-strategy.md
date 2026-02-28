@@ -58,6 +58,7 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 | T4 | sonnet-46-review | claude-sonnet-4-6 | PAID |
 | T4 | t4-sign-off (panel) | codex + sonnet-4-5 + sonnet-4-6 via batch-dispatch | PAID |
 | T5 | final-review, critical-review | claude-sonnet-4-6 | PAID |
+| Haiku | commit-message, pr-description, changelog | claude-haiku-4-5 | PAID (cheap) |
 
 ---
 
