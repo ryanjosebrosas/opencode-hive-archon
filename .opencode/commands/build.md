@@ -287,18 +287,62 @@ cd backend && python -m mypy src/second_brain/ --ignore-missing-imports
 cd backend && python -m pytest ../tests/ -q
 ```
 
-**On failure:**
-1. Collect all error messages
-2. Dispatch to T1: "Fix these validation errors: {errors}. The plan is at {path}."
+**On failure — classify before looping:**
+
+First, classify every failing error into one of two buckets:
+
+| Class | Examples | Action |
+|-------|---------|--------|
+| **Fixable** | type error in our code, import missing, test assertion wrong, ruff violation | Fix loop (Step 6a) |
+| **Unresolvable** | missing DB/Supabase, missing API key, third-party stub gap (`mem0`, `voyageai`), network-dependent test, false positive from external library | Skip fix loop → escalate to T4 (Step 6b) |
+
+**Unresolvable signals:**
+- Error originates in `node_modules/`, `site-packages/`, or a known stub-gap module (`mem0`, `voyageai`, `supabase` internals)
+- Test requires a live database, live API, or environment variable not set in CI
+- mypy error on a line we did not touch in this spec
+- Error message matches a known pre-existing issue in `memory.md`
+
+#### 6a: Fix Loop (fixable errors only)
+
+1. Collect all **fixable** errors
+2. Dispatch to T1: "Fix these validation errors: {errors}. Plan: {path}."
 3. Re-run validation
-4. Max 3 fix-validate loops
-5. If still failing after 3 loops: escalate (see Step 7 failure handling)
+4. Repeat until all fixable errors are resolved — **no iteration cap**
+5. **Stuck detection**: if the same error appears unchanged across 3 consecutive iterations without progress, classify it as potentially unresolvable and escalate to Step 6c
+
+#### 6b: Unresolvable Bypass
+
+For each unresolvable error:
+1. Document it: `# KNOWN SKIP: {error} — reason: {why unresolvable}`
+2. Dispatch to T4 (Codex) to confirm it is genuinely unresolvable:
+   ```
+   dispatch({
+     taskType: "codex-review",
+     prompt: "Is this validation error fixable within our codebase, or is it an external dependency issue that should be bypassed?\n\nError:\n{error}\n\nContext: {what the spec does}\n\nAnswer: BYPASS (with reason) or FIXABLE (with suggestion)."
+   })
+   ```
+3. If T4 says **BYPASS**: add to known-skips list, continue to Step 7
+4. If T4 says **FIXABLE**: treat as fixable, go back to Step 6a
+
+#### 6c: Escalate to T4 After Loop Exhaustion
+
+If 3 fix iterations still leave fixable errors unresolved:
+1. Dispatch full error list + git diff to T4 (Codex):
+   ```
+   dispatch({
+     taskType: "codex-review",
+     prompt: "3 fix iterations failed. Remaining errors:\n{errors}\n\nDiff:\n{git diff}\n\nProvide: root cause analysis + exact fix for each remaining error."
+   })
+   ```
+2. Apply T4's fixes via T1 dispatch
+3. Re-run validation once more
+4. If still failing → STOP, surface to user (cannot auto-resolve)
 
 ---
 
 ### Step 7: Code Review → Fix Loop
 
-This is the quality gate. Runs until code is clean or max iterations reached.
+This is the quality gate. Runs until code is clean or issues are classified as acceptable.
 
 #### 7a: Run Code Review
 
@@ -323,50 +367,82 @@ batch-dispatch({
 **Heavy specs (5 free models + T4 + T5):**
 - Run free-review-gauntlet first
 - Always dispatch to T4 (Codex) for code review
-- Always dispatch to T5 (Claude Sonnet) for final review
+- Always dispatch to T5 (Claude Sonnet 4) for final review
 
 #### 7b: Process Review Results
 
-Collect all findings from all reviewers. Deduplicate.
+Collect all findings. Deduplicate. Classify each finding:
+
+| Class | Examples | Action |
+|-------|---------|--------|
+| **Fixable** | real bug, logic error, missing null check, bad import | Fix loop (7c) |
+| **False positive** | reviewer complaining about intentional Protocol pattern, mypy limitation, pre-existing issue not introduced by this spec | Mark as acknowledged, do NOT fix |
+| **External dependency** | "this will fail without a real Supabase connection", "needs live DB for integration test" | Mark as known-skip, proceed |
 
 | Finding Level | Action |
 |--------------|--------|
-| **0 issues** (all reviewers clean) | Exit loop → Step 8 |
-| **Only Minor issues** | Exit loop → Step 8 (minor issues logged but don't block) |
-| **Critical/Major issues** | Continue to 7c |
+| **0 issues / only Minor / only false-positives** | Exit loop → Step 7d (T4 sign-off) |
+| **Critical/Major fixable** | Continue to 7c |
 
-**Consensus gating (standard specs only):**
-- If 4/5 free reviewers say clean → SKIP T4, go to Step 8
-- If 2-3/5 say clean → dispatch to T4 for tiebreaker
-- If 0-1/5 say clean → T1 fix → re-review
+**Consensus gating (standard specs):**
+- 4/5 free reviewers say clean → skip T4 gauntlet, go directly to Step 7d
+- 2-3/5 say clean → dispatch to T4 as tiebreaker
+- 0-1/5 say clean → T1 fix → re-review
 
-#### 7c: Fix Issues
+#### 7c: Fix Loop (unlimited — until fixed or stuck)
 
-1. Collect all Critical/Major findings into a fix list
-2. Dispatch to T1: "Fix these code review findings: {findings}. Plan at {path}."
+1. Collect all Critical/Major **fixable** findings
+2. Dispatch to T1: "Fix these review findings: {findings}. Plan: {path}."
 3. Re-run validation (Step 6)
 4. Re-run code review (Step 7a)
-5. Loop until clean OR max 3 iterations
+5. Repeat until all fixable findings are resolved — **no iteration cap**
 
-**If 3 iterations exhausted and still failing:**
-- Light spec → bump to standard depth review, try once more
-- Standard spec → bump to heavy depth review, try once more
-- Heavy spec → STOP, surface full failure report to user:
+**Stuck detection**: if the exact same Critical/Major finding appears unchanged across 3 consecutive fix attempts without any reduction in issue count, escalate to T4:
+- Dispatch to T4 (Codex) for root cause + fix:
   ```
-  SPEC FAILED: {name} — 3 code review iterations exhausted
-
-  Remaining issues:
-  - {Critical issue 1}
-  - {Major issue 2}
-
-  Last reviewer feedback: {summary}
-  Last validation: {pass/fail summary}
-
-  The pipeline has stopped. Review the issues and decide:
-  a) Re-plan with different approach
-  b) Skip and continue (mark as blocked)
-  c) Manual fix
+  dispatch({
+    taskType: "codex-review",
+    prompt: "Stuck in fix loop. Same finding repeating:\n{finding}\n\nDiff:\n{git diff}\n\nProvide: root cause + exact fix, OR confirm as false-positive/unresolvable."
+  })
   ```
+- Apply T4 fixes via T1, re-validate, re-review
+- If T4 says unresolvable/false-positive → classify as known-skip, proceed to 7d
+- If T4 fix resolves it → continue normal fix loop for any remaining findings
+
+#### 7d: T4 Final Sign-off (always runs)
+
+Before committing, always get T4 (Codex) sign-off:
+
+```
+dispatch({
+  taskType: "codex-review",
+  prompt: "Final review before commit.\n\nSpec: {spec-name}\nPlan summary: {plan summary}\nDiff:\n{git diff}\nKnown skips (if any):\n{known-skips list}\n\nVerdict: APPROVE (safe to commit) or REJECT (critical issue found, must fix)."
+})
+```
+
+| T4 Verdict | Action |
+|-----------|--------|
+| **APPROVE** | Proceed to Step 8 (commit + push) |
+| **REJECT** | Apply T4's specific fix via T1 → re-run validation → re-submit to T4 (max 1 retry) |
+| **REJECT after retry** | Escalate to T5 (claude-sonnet-4) for final decision |
+
+#### 7e: T5 Escalation (last resort only)
+
+Only reached if T4 rejects twice or flags something genuinely ambiguous:
+
+```
+dispatch({
+  taskType: "final-review",
+  provider: "anthropic",
+  model: "claude-sonnet-4-6",
+  prompt: "T4 rejected this spec twice. Make the final call.\n\nSpec: {spec-name}\nDiff:\n{git diff}\nT4 findings:\n{t4-findings}\nKnown skips:\n{known-skips}\n\nVerdict: APPROVE (commit as-is), APPROVE-WITH-NOTES (commit, log issues), or REJECT (describe exact blocker)."
+})
+```
+
+| T5 Verdict | Action |
+|-----------|--------|
+| **APPROVE / APPROVE-WITH-NOTES** | Commit + push. Log T5 notes in commit message. |
+| **REJECT** | STOP. Surface T5's exact blocker to user. Pipeline halted. |
 
 ---
 
