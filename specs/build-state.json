@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-09",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09"],
+  "lastSpec": "P1-10",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -26,7 +26,9 @@
     "Advisory lock (int key) before state reads",
     "MigrationResult model for structured operation feedback",
     "importlib.util for importing standalone scripts in tests",
-    "Regex-based SQL policy checker with allowed/blocked pattern categories"
+    "Regex-based SQL policy checker with allowed/blocked pattern categories",
+    "CircuitBreaker with single-probe HALF_OPEN enforcement",
+    "Thread-safe metrics via lock context manager"
   ],
   "decisionsLog": [
     {
@@ -88,6 +90,11 @@
       "spec": "P1-07",
       "decision": "MigrationExecutor as Protocol (structural typing), not ABC",
       "reason": "Protocol enables duck typing — any object with matching methods works. No inheritance needed for mock in tests."
+    },
+    {
+      "spec": "P1-10",
+      "decision": "Create pool.py as standalone, don't refactor supabase.py yet",
+      "reason": "Pool is ready to integrate but forcing replacement of existing supabase.py client management increases risk. Integration deferred."
     }
   ]
 }

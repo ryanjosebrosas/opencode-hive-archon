@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 9/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 10/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -55,7 +55,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 9/83 complete
 
 ### C. Database Core (7 specs)
 
-- [ ] `P1-10` **connection-pool-circuit-breaker** (standard) — Supabase connection pool with retry logic and circuit breaker. Pool configurable via Settings. Health check endpoint. Metrics: active connections, failed attempts, circuit state.
+- [x] `P1-10` **connection-pool-circuit-breaker** (standard) — Supabase connection pool with retry logic and circuit breaker. Pool configurable via Settings. Health check endpoint. Metrics: active connections, failed attempts, circuit state.
   - depends: P1-02, P1-04
   - touches: services/supabase.py (refactor), services/pool.py (new), tests/test_pool.py (new)
   - acceptance: Pool retries 3x on connection failure. Circuit opens after 5 consecutive failures, half-opens after 30s. Health check returns pool stats. Metrics dict available.
