@@ -324,9 +324,9 @@ For each unresolvable error:
 3. If T4 says **BYPASS**: add to known-skips list, continue to Step 7
 4. If T4 says **FIXABLE**: treat as fixable, go back to Step 6a
 
-#### 6c: Escalate to T4 After Loop Exhaustion
+#### 6c: Escalate to T4 After Stuck Detection
 
-If 3 fix iterations still leave fixable errors unresolved:
+If the same fixable error repeats unchanged across 3 consecutive iterations (stuck):
 1. Dispatch full error list + git diff to T4 (Codex):
    ```
    dispatch({
@@ -601,17 +601,19 @@ If context compacts mid-spec: read `build-state.json` + current plan file to res
 
 | Step | Tier | Cost per Spec |
 |------|------|---------------|
-| Plan (Step 2) | T1 | FREE |
-| Review Plan (Step 3) | T4 | ~$0.02-0.05 |
-| Execute (Step 5) | T1 | FREE |
+| Plan (Step 2) | T0 thinking cascade | FREE (haiku fallback ~$0.01) |
+| Review Plan (Step 3) | T4 Codex | ~$0.02-0.05 |
+| Execute (Step 5) | T1 FREE | FREE |
 | Validate (Step 6) | local | FREE |
 | Code Review — light | 3x free | FREE |
 | Code Review — standard | 5x free | FREE |
-| Code Review — heavy | 5x free + T4 + T5 | ~$0.10-0.30 |
-| **Total per light spec** | | **~$0.03-0.05** |
-| **Total per standard spec** | | **~$0.03-0.10** |
-| **Total per heavy spec** | | **~$0.15-0.40** |
-| **Full Pillar 1 (64 specs)** | | **~$3-8 estimated** |
+| Code Review — heavy | 5x free + T4 panel + T5 | ~$0.10-0.30 |
+| T4 panel sign-off (Step 7d) | codex + sonnet-4-5 + sonnet-4-6 | ~$0.05-0.10 |
+| Commit message (Step 8) | Haiku | ~$0.001 |
+| **Total per light spec** | | **~$0.08-0.15** |
+| **Total per standard spec** | | **~$0.10-0.20** |
+| **Total per heavy spec** | | **~$0.20-0.50** |
+| **Full Pillar 1 (64 specs)** | | **~$6-13 estimated** |
 
 ---
 
