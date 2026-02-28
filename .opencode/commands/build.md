@@ -409,40 +409,45 @@ Collect all findings. Deduplicate. Classify each finding:
 - If T4 says unresolvable/false-positive → classify as known-skip, proceed to 7d
 - If T4 fix resolves it → continue normal fix loop for any remaining findings
 
-#### 7d: T4 Final Sign-off (always runs)
+#### 7d: T4 Panel Sign-off (always runs)
 
-Before committing, always get T4 (Codex) sign-off:
+Before committing, run all three T4 reviewers in parallel:
 
 ```
-dispatch({
-  taskType: "codex-review",
-  prompt: "Final review before commit.\n\nSpec: {spec-name}\nPlan summary: {plan summary}\nDiff:\n{git diff}\nKnown skips (if any):\n{known-skips list}\n\nVerdict: APPROVE (safe to commit) or REJECT (critical issue found, must fix)."
+batch-dispatch({
+  models: "openai/gpt-5.3-codex,anthropic/claude-sonnet-4-5,anthropic/claude-sonnet-4-6",
+  prompt: "Final review before commit.\n\nSpec: {spec-name}\nPlan summary: {plan summary}\nDiff:\n{git diff}\nKnown skips (if any):\n{known-skips list}\n\nVerdict: APPROVE (safe to commit) or REJECT (critical issue found — describe exact fix needed)."
 })
 ```
 
-| T4 Verdict | Action |
-|-----------|--------|
-| **APPROVE** | Proceed to Step 8 (commit + push) |
-| **REJECT** | Apply T4's specific fix via T1 → re-run validation → re-submit to T4 (max 1 retry) |
-| **REJECT after retry** | Escalate to T5 (claude-sonnet-4) for final decision |
+**T4 panel consensus:**
 
-#### 7e: T5 Escalation (last resort only)
+| Result | Action |
+|--------|--------|
+| **3/3 APPROVE** | Commit + push (Step 8) |
+| **2/3 APPROVE** | Commit + push — log the single dissent in commit message |
+| **2/3 REJECT** | Collect all REJECT findings → T1 fix → re-run validation → re-submit T4 panel (unlimited until resolved or stuck) |
+| **3/3 REJECT** | Collect all findings → T1 fix → re-submit T4 panel |
+| **Stuck** (same REJECT findings across 2 panel runs unchanged) | Escalate to T5 |
 
-Only reached if T4 rejects twice or flags something genuinely ambiguous:
+#### 7e: T5 Escalation (last resort — stuck T4 panel only)
+
+Only reached when T4 panel is stuck on the same findings across 2 consecutive runs:
 
 ```
 dispatch({
   taskType: "final-review",
   provider: "anthropic",
   model: "claude-sonnet-4-6",
-  prompt: "T4 rejected this spec twice. Make the final call.\n\nSpec: {spec-name}\nDiff:\n{git diff}\nT4 findings:\n{t4-findings}\nKnown skips:\n{known-skips}\n\nVerdict: APPROVE (commit as-is), APPROVE-WITH-NOTES (commit, log issues), or REJECT (describe exact blocker)."
+  prompt: "T4 panel stuck on same findings across 2 runs. Make the final call.\n\nSpec: {spec-name}\nDiff:\n{git diff}\nT4 findings:\n{t4-findings}\nKnown skips:\n{known-skips}\n\nVerdict: APPROVE (commit as-is), APPROVE-WITH-NOTES (commit, log issues in message), or REJECT (exact blocker — must be something we can fix)."
 })
 ```
 
 | T5 Verdict | Action |
 |-----------|--------|
-| **APPROVE / APPROVE-WITH-NOTES** | Commit + push. Log T5 notes in commit message. |
-| **REJECT** | STOP. Surface T5's exact blocker to user. Pipeline halted. |
+| **APPROVE** | Commit + push |
+| **APPROVE-WITH-NOTES** | Commit + push, include T5 notes in commit message |
+| **REJECT** | Apply T5's exact fix via T1 → re-run validation → re-submit T4 panel → if still stuck, STOP and surface to user |
 
 ---
 

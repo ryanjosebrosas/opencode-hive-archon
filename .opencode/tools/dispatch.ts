@@ -385,12 +385,19 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   "thinking-second": { provider: "ollama-cloud", model: "kimi-k2-thinking" },
   "plan-critique": { provider: "ollama-cloud", model: "qwen3.5:397b" },
 
-  // === T4: Code Review gate (PAID cheap — openai Codex) ===
-  "codex-review": { provider: "openai", model: "gpt-5.3-codex" },
-  "codex-validation": { provider: "openai", model: "gpt-5.3-codex" },
+  // === T4: Code Review gate — Codex + Sonnet panel ===
+  // Codex: strong at code correctness, logic, security
+  // Sonnet-4-5: strong at architecture, intent alignment, reasoning
+  // Sonnet-4-6: latest, broad quality gate
+  "codex-review":    { provider: "openai",     model: "gpt-5.3-codex" },
+  "codex-validation": { provider: "openai",    model: "gpt-5.3-codex" },
+  "sonnet-45-review": { provider: "anthropic", model: "claude-sonnet-4-5" },
+  "sonnet-46-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
+  // Combined T4 sign-off — dispatches all three, collects consensus
+  "t4-sign-off":     { provider: "openai",     model: "gpt-5.3-codex" }, // primary; batch-dispatch handles the panel
 
-  // === T5: Final Review (PAID expensive — anthropic, last resort only) ===
-  "final-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
+  // === T5: Final Review (last resort — only on T4 double-reject) ===
+  "final-review":    { provider: "anthropic", model: "claude-sonnet-4-6" },
   "critical-review": { provider: "anthropic", model: "claude-sonnet-4-6" },
 }
 
@@ -451,7 +458,7 @@ export default tool({
     "Command mode uses the OpenCode command API directly — more reliable than asking a model to interpret slash commands as text. " +
     "5-tier cost-optimized cascade: T1 Implementation (FREE: bailian-coding-plan-test qwen3), " +
     "T2 First Validation (FREE: zai glm-5), T3 Second Validation (FREE: ollama deepseek), " +
-    "T4 Code Review (PAID cheap: openai codex), T5 Final Review (PAID: anthropic, last resort). " +
+    "T4 Code Review panel (PAID: openai codex + anthropic sonnet-4-5 + sonnet-4-6), T5 Final Review (PAID: anthropic sonnet-4-6, last resort). " +
     "Auto-routes via taskType or explicit provider/model. " +
     "Use mode:'command' + command:'execute' + prompt:'requests/plan.md' to run /execute natively. " +
     "Use mode:'agent' for implementation tasks, mode:'text' for reviews/opinions. " +
@@ -563,8 +570,8 @@ export default tool({
           "research, architecture, library-comparison, docs-lookup, docs-generation. " +
           "T2 First Validation (FREE): thinking-review, first-validation, code-review, security-review. " +
           "T3 Second Validation (FREE): second-validation, deep-research, independent-review. " +
-          "T4 Code Review (PAID cheap): codex-review, codex-validation. " +
-          "T5 Final Review (PAID expensive): final-review, critical-review.",
+          "T4 Code Review panel (PAID): codex-review, codex-validation, sonnet-45-review, sonnet-46-review, t4-sign-off. " +
+          "T5 Final Review (PAID, last resort): final-review, critical-review.",
       ),
   },
   async execute(args, _context) {

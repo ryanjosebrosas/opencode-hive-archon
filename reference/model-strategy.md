@@ -54,6 +54,9 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 | T3 (thinking) | thinking-second | kimi-k2-thinking | FREE |
 | T3 (plan) | plan-critique | qwen3.5:397b | FREE |
 | T4 | codex-review, codex-validation | gpt-5.3-codex | PAID |
+| T4 | sonnet-45-review | claude-sonnet-4-5 | PAID |
+| T4 | sonnet-46-review | claude-sonnet-4-6 | PAID |
+| T4 | t4-sign-off (panel) | codex + sonnet-4-5 + sonnet-4-6 via batch-dispatch | PAID |
 | T5 | final-review, critical-review | claude-sonnet-4-6 | PAID |
 
 ---
