@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 8/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 9/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -48,7 +48,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 8/83 complete
   - touches: scripts/generate_schema_docs.py (new), docs/schema.md (generated)
   - acceptance: Running script produces accurate markdown doc matching actual DB schema. All tables, columns, indexes documented.
 
-- [ ] `P1-09` **additive-migration-policy** (light) — CI check that new migrations are additive-only (no DROP COLUMN, no ALTER TYPE to smaller). Enforced via simple SQL parser.
+- [x] `P1-09` **additive-migration-policy** (light) — CI check that new migrations are additive-only (no DROP COLUMN, no ALTER TYPE to smaller). Enforced via simple SQL parser.
   - depends: P1-07
   - touches: scripts/check_migrations.py (new), tests/test_migration_policy.py (new)
   - acceptance: Migration with DROP COLUMN fails check. Migration with ADD COLUMN passes. ALTER TYPE from text to varchar fails.

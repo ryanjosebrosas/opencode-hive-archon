@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-08",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08"],
+  "lastSpec": "P1-09",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -25,7 +25,8 @@
     "Protocol-based executor for DB abstraction in tests",
     "Advisory lock (int key) before state reads",
     "MigrationResult model for structured operation feedback",
-    "importlib.util for importing standalone scripts in tests"
+    "importlib.util for importing standalone scripts in tests",
+    "Regex-based SQL policy checker with allowed/blocked pattern categories"
   ],
   "decisionsLog": [
     {
