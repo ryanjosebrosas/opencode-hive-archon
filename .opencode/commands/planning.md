@@ -65,20 +65,31 @@ After each major discovery, confirm:
 
 ---
 
-## Phase 2: Explore (Codebase Intelligence)
+## Phase 2: Explore (Codebase Intelligence + Archon RAG)
 
-Once the direction is clear, explore the codebase to ground the plan in reality:
+Once the direction is clear, explore both the codebase and Archon knowledge base:
 
+**2a. Archon RAG — always run first:**
+```
+archon_rag_get_available_sources()                                    # see what's indexed
+archon_rag_search_knowledge_base(query="{spec topic}", match_count=3) # find relevant docs
+archon_rag_search_code_examples(query="{implementation}", match_count=3) # find reference code
+archon_rag_read_full_page(page_id="...")                              # read top hits in full
+```
+Archon has Supabase, pgvector, Pydantic, FastAPI, PostgreSQL, Voyage AI, Mem0 indexed. Always check before writing plan patterns from memory.
+
+**2b. Codebase exploration:**
 1. **Find relevant files** — patterns to follow, code to integrate with
 2. **Check existing patterns** — naming, error handling, testing conventions
 3. **Map integration points** — what files need to change, what's new
 4. **Identify gotchas** — from `memory.md`, prior specs, or codebase inspection
 
-Share findings with the user as you go:
+Share findings as you go:
 - "Found this pattern in `file.py:42` — we should follow it."
+- "Archon RAG (Supabase docs) confirms the RPC pattern at {url} — using that."
 - "There's a gotcha here — `deps.py` uses lazy init, we need to match that."
 
-**Dispatch for research** (optional, when local exploration isn't enough):
+**Dispatch for research** (when Archon + local exploration isn't enough):
 
 | Need | taskType | Model |
 |------|----------|-------|

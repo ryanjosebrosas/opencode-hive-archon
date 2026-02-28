@@ -86,27 +86,25 @@ Required workflow:
 
 Do not skip Archon steps.
 
-### 1.6. Archon Knowledge Retrieval (recovery path only)
+### 1.6. Archon Knowledge Retrieval (always run — not recovery-only)
 
-The plan produced by `/planning` is the source of truth. It already contains all researched
-patterns, code samples, and external references needed for one-pass execution.
+Always search Archon before implementing. Archon has Supabase, pgvector, Pydantic, FastAPI, PostgreSQL, Voyage AI, Mem0 and more indexed. Use it.
 
-**Default behavior**: Trust the plan. Do NOT run upfront RAG searches before implementation.
+**Required upfront search (run in parallel):**
+1. Extract 2-3 search terms from the spec/plan name and description (2-5 keywords each)
+2. `archon_rag_get_available_sources()` — see what is indexed (if not already done in preflight)
+3. `archon_rag_search_knowledge_base(query="{primary term}", match_count=3)` — find relevant docs
+4. `archon_rag_search_code_examples(query="{implementation term}", match_count=3)` — find reference code
+5. For top results (similarity > 0.80): `archon_rag_read_full_page(page_id=...)` to get full content
 
-**Recovery trigger**: If during task execution you encounter any of these:
-- A plan reference that is ambiguous, incomplete, or conflicts with actual codebase state
+Record what was found in the execution report under "Archon RAG used".
+
+**During implementation** — search on-demand when you hit any of these:
+- A plan reference that is ambiguous or conflicts with actual codebase state
 - A library API or pattern not covered by the plan's code samples
-- An integration point the plan didn't anticipate (e.g., new import path, changed function signature)
+- An integration point the plan didn't anticipate
 
-Then — and only then — do targeted Archon RAG research:
-1. List sources with `archon_rag_get_available_sources` (if not already cached from preflight).
-2. Run a focused 2-5 keyword search using:
-   - `archon_rag_search_knowledge_base(query=..., return_mode="pages")`
-   - `archon_rag_search_code_examples(query=...)`
-3. Read full pages for top results using `archon_rag_read_full_page(page_id=...)`.
-4. Record what gap triggered the research and what was found in the execution report.
-
-If no gaps are encountered, record "No RAG recovery needed — plan was self-contained" in the report.
+If no RAG results are relevant, record "RAG searched, no applicable results" in the report. Never skip the search itself.
 
 ### 1.7. Multi-Model Dispatch (optional acceleration)
 

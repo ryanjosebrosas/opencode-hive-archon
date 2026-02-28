@@ -121,6 +121,7 @@ Print progress dashboard:
    - Read `specs/build-state.json` for context from prior specs (if exists)
    - Read relevant codebase files listed in the spec's `touches` field
    - Read patterns from recently completed specs in the same pillar
+   - **Embed the Archon RAG Context block fetched in Step 1b** — include it in the plan prompt as `## Archon RAG Context` so the T1 model has the pre-fetched documentation
 
 2. **Judgment call on user interaction:**
    - If the spec's approach is fully covered by BUILD_ORDER + PILLARS + PRD (acceptance criteria, files touched, approach is obvious): write the plan directly without asking questions.
