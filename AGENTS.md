@@ -109,6 +109,7 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 | Tier | Role | Models | Cost |
 |------|------|--------|------|
+| T0 | Planning (thinking) | `ollama`: kimi-k2-thinking, cogito-2.1:671b → `bailian`: qwen3-max → `anthropic`: claude-opus-4-5 | FREE→PAID |
 | T1 | Implementation | `bailian`: qwen3-coder-next, qwen3-coder-plus, qwen3.5-plus, qwen3-max, kimi-k2.5, minimax-m2.5 | FREE |
 | T2 | First Validation | `zai`: glm-5, glm-4.5, glm-4.7, glm-4.7-flash, glm-4.7-flashx | FREE |
 | T3 | Second Validation | `ollama`: deepseek-v3.2, kimi-k2:1t, cogito:671b, devstral-2:123b, gemini-3-pro, mistral-large:675b, qwen3-coder:480b | FREE |

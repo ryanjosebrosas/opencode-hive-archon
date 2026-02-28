@@ -10,6 +10,7 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 | Tier | Role | Provider/Model | Cost | Used By |
 |------|------|----------------|------|---------|
+| T0 | Planning (thinking) | `ollama-cloud/kimi-k2-thinking` → `cogito-2.1:671b` → `qwen3-max` → `claude-opus-4-5` | FREE→PAID | `/planning` dispatch |
 | T1 | Implementation | `bailian-coding-plan-test/qwen3.5-plus` (+ coder-next, coder-plus) | FREE | `/execute` dispatch |
 | T2 | First Validation | `zai-coding-plan/glm-5` | FREE | `/code-review`, `/code-loop` |
 | T3 | Second Validation | `ollama-cloud/deepseek-v3.2` | FREE | `/code-loop` second opinion |
@@ -17,7 +18,9 @@ Maximize free/cheap models. Anthropic is last resort only.
 | T5 | Final Review | `anthropic/claude-sonnet-4-6` | PAID (expensive) | `/final-review` last resort |
 
 **Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
+**Planning cascade**: `kimi-k2-thinking` (FREE) → `cogito-2.1:671b` (FREE) → `qwen3-max` (FREE) → `claude-opus-4-5` (PAID). Thinking models produce significantly better 700-1000 line plans.
 **Fallback**: If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
+**Push cadence**: Push after every spec commit — do not batch to `/ship`.
 
 ---
 
@@ -32,6 +35,7 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 | T1c (complex) | complex-codegen, complex-fix, research, architecture, library-comparison, pattern-scan | qwen3.5-plus | FREE |
 | T1d (long-ctx) | docs-lookup, long-context-review | kimi-k2.5 | FREE |
 | T1e (prose) | docs-generation, docstring-generation, changelog-generation | minimax-m2.5 | FREE |
+| T0 (thinking/planning) | planning | kimi-k2-thinking → cogito-2.1:671b → qwen3-max → claude-opus-4-5 | FREE→PAID |
 | T1f (reasoning) | deep-plan-review, complex-reasoning | qwen3-max-2026-01-23 | FREE |
 | T2a (thinking) | thinking-review, first-validation, code-review, security-review, plan-review, logic-review | glm-5 | FREE |
 | T2b (flagship) | architecture-audit, design-review | glm-4.5 | FREE |

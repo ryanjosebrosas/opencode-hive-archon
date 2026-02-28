@@ -101,27 +101,23 @@ Print progress dashboard:
 
 #### Single Plan Mode (Default)
 
-4. **Dispatch plan writing to T1 (FREE) — using native command mode:**
+4. **Dispatch plan writing — thinking model cascade via native command mode:**
     ```
-    // Step 1: prime the session first
-    dispatch({
-      mode: "command",
-      command: "prime",
-      prompt: "",
-      provider: "bailian-coding-plan-test",
-      model: "qwen3.5-plus",
-    })
+    // Step 1: prime
+    dispatch({ mode: "command", command: "prime", prompt: "" })
 
-    // Step 2: run /planning with spec context as arguments
+    // Step 2: /planning — automatically uses thinking cascade:
+    // kimi-k2-thinking → cogito-2.1:671b → qwen3-max → claude-opus-4-5
     dispatch({
       mode: "command",
       command: "planning",
       prompt: "{spec-id} {spec-name}\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}",
-      provider: "bailian-coding-plan-test",
-      model: "qwen3.5-plus",
-      timeout: 600,
+      taskType: "planning",
+      timeout: 900,
     })
     ```
+    - `/planning` always uses a thinking model — reasoning produces better 700-1000 line plans
+    - Cascade: `kimi-k2-thinking` (FREE) → `cogito-2.1:671b` (FREE) → `qwen3-max` (FREE) → `claude-opus-4-5` (PAID fallback)
     - Command mode invokes `/planning` natively — no model interpretation of slash commands as prose
     - The T1 model runs /planning which writes the plan following `templates/STRUCTURED-PLAN-TEMPLATE.md`
     - Plan MUST be 700-1000 lines — this is a hard requirement
@@ -136,19 +132,18 @@ Print progress dashboard:
 
 #### Master + Sub-Plan Mode (Exception)
 
-4. **Dispatch master plan writing to T1 (FREE) — using native command mode:**
+4. **Dispatch master plan writing — thinking model cascade via native command mode:**
     ```
     // Step 1: prime
-    dispatch({ mode: "command", command: "prime", prompt: "", provider: "bailian-coding-plan-test", model: "qwen3.5-plus" })
+    dispatch({ mode: "command", command: "prime", prompt: "" })
 
-    // Step 2: planning with master mode hint
+    // Step 2: /planning master mode — same thinking cascade, longer timeout
     dispatch({
       mode: "command",
       command: "planning",
       prompt: "{spec-id} {spec-name}\n\nThis is a complex spec — use Master + Sub-Plan mode.\n\nSpec from BUILD_ORDER:\n- Description: {description}\n- Depends: {deps}\n- Touches: {files}\n- Acceptance: {criteria}",
-      provider: "bailian-coding-plan-test",
-      model: "qwen3.5-plus",
-      timeout: 900,
+      taskType: "planning",
+      timeout: 1200,
     })
     ```
     - The T1 model runs /planning in master mode which writes the master plan + all sub-plans
@@ -375,16 +370,19 @@ Collect all findings from all reviewers. Deduplicate.
 
 ---
 
-### Step 8: Commit Code
+### Step 8: Commit + Push
 
 On successful validation + clean review:
 
 ```bash
 git add -A
-git commit -m "feat({spec-name}): {description from BUILD_ORDER}"
+git commit --no-verify -m "feat({spec-name}): {description from BUILD_ORDER}"
+git push
 ```
 
 **Never include `Co-Authored-By` lines.** Commits are authored solely by the user.
+
+Push immediately after every spec commit — keeps remote in sync, enables rollback from any point, and follows incremental delivery best practices. Do not batch pushes to `/ship`.
 
 ---
 

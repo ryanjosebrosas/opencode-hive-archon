@@ -340,6 +340,9 @@ const TASK_ROUTING: Record<string, { provider: string; model: string }> = {
   // T1f: Complex reasoning / plan review → qwen3-max
   "deep-plan-review": { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
   "complex-reasoning": { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+  // Planning — dedicated thinking model cascade (free first, opus-4-5 as fallback)
+  // kimi-k2-thinking → cogito-2.1:671b → qwen3-max → claude-opus-4-5
+  "planning": { provider: "ollama-cloud", model: "kimi-k2-thinking" },
   // T1b expanded: code quality review
   "code-quality-review": { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus" },
   // T1d expanded: long context review
@@ -412,12 +415,21 @@ const FALLBACK_CHAINS: Array<{
     ],
   },
   {
-    matchProvider: "zai",  // plain zai (non coding-plan)
+    // Ollama cloud — fallback within the pool
+    matchProvider: "ollama-cloud",
     fallbacks: [
-      { provider: "ollama-cloud", model: "deepseek-v3.2" },
       { provider: "ollama-cloud", model: "devstral-2:123b" },
+      { provider: "ollama-cloud", model: "kimi-k2:1t" },
     ],
   },
+]
+
+// Thinking model cascade specifically for /planning — overrides the generic fallback chain
+// Free-first: kimi-k2-thinking → cogito-2.1:671b → qwen3-max → claude-opus-4-5 (last resort)
+const PLANNING_FALLBACK_CHAIN: Array<{ provider: string; model: string }> = [
+  { provider: "ollama-cloud",            model: "cogito-2.1:671b" },
+  { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23" },
+  { provider: "anthropic",               model: "claude-opus-4-5" },
 ]
 
 function getFallbackChain(provider: string): Array<{ provider: string; model: string }> {
@@ -660,60 +672,77 @@ export default tool({
     // 2.2. COMMAND MODE — invoke slash command natively via OpenCode command API
     // More reliable than asking a model to interpret "/execute ..." as prose instructions.
     // Use for: /prime, /execute <plan>, /planning <spec>, /build <spec>, /code-review, etc.
+    // /planning uses a dedicated thinking-model cascade: kimi-k2-thinking → cogito → qwen3-max → opus-4-5
     if (isCommandMode) {
-      const cmdTimeout = args.timeout ?? 600 // commands can take a while
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), cmdTimeout * 1000)
+      const cmdTimeout = args.timeout ?? 600
 
-      let cmdSessionId: string | undefined
-      try {
-        // Create a session for the command
-        const sessionResp = await client.session.create({
-          title: `cmd → /${args.command} ${args.prompt.slice(0, 40)}`,
-        } as any)
-        cmdSessionId = sessionResp.data?.id
-        if (!cmdSessionId) {
+      // Build the model list to try for this command
+      // /planning always uses the thinking cascade regardless of explicit provider/model
+      const isPlanningCmd = args.command === "planning"
+      const cmdModels: Array<{ provider: string; model: string }> = isPlanningCmd
+        ? [
+            { provider: resolvedProvider ?? "ollama-cloud", model: resolvedModel ?? "kimi-k2-thinking" },
+            ...PLANNING_FALLBACK_CHAIN,
+          ]
+        : [{ provider: resolvedProvider!, model: resolvedModel! }]
+
+      let lastError = ""
+      for (const { provider: cmdProvider, model: cmdModel } of cmdModels) {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), cmdTimeout * 1000)
+        let cmdSessionId: string | undefined
+
+        try {
+          const sessionResp = await client.session.create({
+            title: `cmd → /${args.command} ${args.prompt.slice(0, 40)}`,
+          } as any)
+          cmdSessionId = sessionResp.data?.id
+          if (!cmdSessionId) {
+            clearTimeout(timeoutId)
+            lastError = `failed to create session for ${cmdProvider}/${cmdModel}`
+            continue
+          }
+
+          const cmdResult = await (client.session as any).command(
+            {
+              sessionID: cmdSessionId,
+              command: args.command,
+              arguments: args.prompt,
+              model: { providerID: cmdProvider, modelID: cmdModel },
+            },
+            { signal: controller.signal }
+          )
           clearTimeout(timeoutId)
-          return `[dispatch error] command mode: failed to create session.`
-        }
-
-        // Invoke the slash command via the command API
-        const cmdResult = await (client.session as any).command(
-          {
-            sessionID: cmdSessionId,
-            command: args.command,
-            arguments: args.prompt,
-            ...(resolvedProvider && resolvedModel
-              ? { model: { providerID: resolvedProvider, modelID: resolvedModel } }
-              : {}),
-          },
-          { signal: controller.signal }
-        )
-        clearTimeout(timeoutId)
-
-        // Cleanup
-        try { await client.session.delete({ sessionID: cmdSessionId }) } catch { /* best effort */ }
-
-        // Extract text
-        const cmdData = asRecord(asRecord(cmdResult)?.data)
-        const responseText =
-          extractTextFromParts(cmdData?.parts) ||
-          `[dispatch note] /${args.command} executed (no text output).`
-
-        return (
-          `--- dispatch response: /${args.command} [command-mode, ${resolvedProvider}/${resolvedModel}] ---\n` +
-          responseText
-        )
-      } catch (err: unknown) {
-        clearTimeout(timeoutId)
-        if (cmdSessionId) {
           try { await client.session.delete({ sessionID: cmdSessionId }) } catch { /* best effort */ }
+
+          const cmdData = asRecord(asRecord(cmdResult)?.data)
+          const responseText =
+            extractTextFromParts(cmdData?.parts) ||
+            `[dispatch note] /${args.command} executed (no text output).`
+
+          const fallbackNote = isPlanningCmd && cmdProvider !== (resolvedProvider ?? "ollama-cloud")
+            ? `, fallback-from: ${resolvedProvider ?? "ollama-cloud"}/${resolvedModel ?? "kimi-k2-thinking"}`
+            : ""
+          return (
+            `--- dispatch response: /${args.command} [command-mode, ${cmdProvider}/${cmdModel}${fallbackNote}] ---\n` +
+            responseText
+          )
+        } catch (err: unknown) {
+          clearTimeout(timeoutId)
+          if (cmdSessionId) {
+            try { await client.session.delete({ sessionID: cmdSessionId }) } catch { /* best effort */ }
+          }
+          if ((err instanceof Error && err.name === "AbortError") || controller.signal.aborted) {
+            lastError = `timeout after ${cmdTimeout}s on ${cmdProvider}/${cmdModel}`
+          } else {
+            lastError = `${cmdProvider}/${cmdModel}: ${getErrorMessage(err)}`
+          }
+          // Try next model in cascade
+          continue
         }
-        if ((err instanceof Error && err.name === "AbortError") || controller.signal.aborted) {
-          return `[dispatch error] command mode timeout: /${args.command} did not complete within ${cmdTimeout}s.`
-        }
-        return `[dispatch error] command mode: /${args.command} failed: ${getErrorMessage(err)}`
       }
+
+      return `[dispatch error] command mode: /${args.command} failed on all models. Last error: ${lastError}`
     }
 
     // 2.5. Set up timeout (mandatory — agent mode gets longer default)
