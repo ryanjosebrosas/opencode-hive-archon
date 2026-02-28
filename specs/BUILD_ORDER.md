@@ -1,6 +1,6 @@
 # Build Order — Ultima Second Brain
 
-Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 17/83 complete
+Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 18/83 complete
 
 ## Pillar 1: Data Infrastructure — PLUS ULTRA (64 specs)
 
@@ -97,7 +97,7 @@ Generated: 2026-02-27 | Pillars: 5 | Total Specs: 83 | Status: 17/83 complete
   - touches: migrations/008_fulltext_search.sql (new), services/supabase.py, tests/test_fulltext_search.py (new)
   - acceptance: tsvector column auto-populated via trigger. GIN index created. RPC: search "machine learning" returns chunks containing both words. Phrase search works.
 
-- [ ] `P1-18` **hybrid-search-rpc** (heavy) — RRF (Reciprocal Rank Fusion) function combining vector similarity + full-text relevance. Single RPC call returns fused results. Configurable weights.
+- [x] `P1-18` **hybrid-search-rpc** (heavy) — RRF (Reciprocal Rank Fusion) function combining vector similarity + full-text relevance. Single RPC call returns fused results. Configurable weights.
   - depends: P1-17
   - touches: migrations/009_hybrid_search.sql (new), services/supabase.py, tests/test_hybrid_search.py (new)
   - acceptance: Hybrid search returns better results than vector-only or keyword-only for test queries. RRF weights configurable. Single RPC call, not two separate calls merged in Python.

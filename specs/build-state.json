@@ -1,6 +1,6 @@
 {
-  "lastSpec": "P1-17",
-  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16", "P1-17"],
+  "lastSpec": "P1-18",
+  "completed": ["P1-01", "P1-02", "P1-03", "P1-04", "P1-05", "P1-06", "P1-07", "P1-08", "P1-09", "P1-10", "P1-11", "P1-12", "P1-13", "P1-14", "P1-15", "P1-16", "P1-17", "P1-18"],
   "currentPillar": 1,
   "totalSpecs": 83,
   "patternsEstablished": [
@@ -35,7 +35,8 @@
     "Thread-safe mock executor with threading.Lock for concurrent write tests",
     "FK ON DELETE RESTRICT for knowledge_relationships FKs to knowledge_entities; CASCADE only for owned/child rows",
     "frozenset of (from, to) tuples for state machine transition validation",
-    "ChunkNotFoundError vs StaleDataError: not-found (404) and version-mismatch (409) are distinct exception types"
+    "ChunkNotFoundError vs StaleDataError: not-found (404) and version-mismatch (409) are distinct exception types",
+    "RRF hybrid search: subquery ORDER BY before LIMIT to guarantee correct pool selection; COALESCE(weight/(60.0+rank), 0.0) handles NULL ranks for one-sided matches; secondary kc.id sort for determinism"
   ],
   "decisionsLog": [
     {
@@ -137,6 +138,16 @@
       "spec": "P1-17",
       "decision": "Trigger on UPDATE OF content only, not all column updates",
       "reason": "content_tsv is derived solely from content. Metadata/status/version updates don't require tsvector refresh — UPDATE OF content correctly scopes the trigger."
+    },
+    {
+      "spec": "P1-18",
+      "decision": "Single server-side RPC for hybrid search — no Python-side RRF merge",
+      "reason": "Calling RPC within RPC not supported in Supabase PostgREST. Inlining vector and FTS queries as CTEs with FULL OUTER JOIN achieves RRF in a single round-trip."
+    },
+    {
+      "spec": "P1-18",
+      "decision": "confidence = max(0.0, min(1.0, rrf_score)) mirrors existing search() clamping",
+      "reason": "RRF scores are 0-1 range for default weights (k=60, weight=1.0 → max score ≈ 0.033). Clamping is consistent with existing pattern. Semantic normalization deferred to application layer."
     }
   ]
 }
