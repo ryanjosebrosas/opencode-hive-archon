@@ -25,6 +25,8 @@ KnowledgeTypeValue = Literal[
     "transcript",
 ]
 
+ChunkStatusValue = Literal["active", "superseded", "archived", "deleted"]
+
 RelationshipTypeValue = Literal[
     "topic_link",
     "provenance",
@@ -116,6 +118,8 @@ class KnowledgeChunk(BaseModel):
     knowledge_type: KnowledgeTypeValue = "document"
     chunk_index: int = Field(default=0, ge=0)
     source_origin: SourceOriginValue = "manual"
+    content_hash: str | None = None
+    status: ChunkStatusValue = "active"
     # embedding is not stored on the model — it lives in the DB column
     # and is produced by VoyageRerankService.embed() at ingestion time
     metadata: dict[str, Any] = Field(default_factory=dict)
